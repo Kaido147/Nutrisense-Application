@@ -54,7 +54,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
             SizedBox(height: 15),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 21),
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: _goldTan,
                 borderRadius: BorderRadius.circular(20),
@@ -142,9 +142,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Button "Continue AHHH"
+                  // Button "Continue Workout"
                   Container(
-                  margin: const EdgeInsets.only(left: 8, right: 8, bottom: 20),
+                  margin: const EdgeInsets.only(left: 8, right: 8, bottom: 10),
                   child:   GestureDetector(
                     onTap: () async {
                           setState(() => _isPressed = true);
@@ -152,9 +152,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
                           setState(() => _isPressed = false);
                     },
 
-                    // Animation Ngani
+                    // Animation 
                     child: AnimatedScale(
-                      scale: _isPressed ? 1.05 : 1.0,
+                      scale: _isPressed ? 1.03 : 1.0,
                       duration: const Duration(milliseconds: 150),
                       curve: Curves.easeOut,
                       child: SizedBox(
@@ -166,7 +166,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             disabledForegroundColor: _navyBlue,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                             splashFactory: NoSplash.splashFactory,
                           ),
                           child: const Text(
@@ -188,7 +188,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
         );
   }
 
-  // ─── Header Stack ───────────────────────────────────────────────────────────
+  //  Header Stack 
   /// Combines the navy header and the overlapping tab toggle into a Stack.
   Widget _buildHeaderStack(BuildContext context) {
     return Stack(
@@ -197,7 +197,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 
-  // ─── Navy Header ────────────────────────────────────────────────────────────
+  // Navy Header 
   /// Dark blue rounded container showing the app title and subtitle.
   Widget _buildNavyHeader(BuildContext context) {
     return Container(
@@ -246,7 +246,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 
-  // ─── Tab Toggle ─────────────────────────────────────────────────────────────
+  // Tab Toggle
   /// Floating pill-shaped toggle that overlaps the bottom edge of the header.
   Widget _buildTabToggle() {
     return Positioned(
