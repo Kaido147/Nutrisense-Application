@@ -61,7 +61,7 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
             // Overlapping center FAB
             Positioned(
-              top: -20,
+              top: -10,
               left: 0,
               right: 0,
               child: Center(
@@ -75,7 +75,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -102,7 +102,7 @@ class _MainNavigationState extends State<MainNavigation> {
         children: [
           Icon(
             icon,
-            color: isSelected ? _goldTan : Colors.white.withOpacity(0.6),
+            color: isSelected ? _goldTan : Colors.white.withValues(alpha: 0.6),
             size: 24,
           ),
           const SizedBox(height: 2),
@@ -110,7 +110,7 @@ class _MainNavigationState extends State<MainNavigation> {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: isSelected ? _goldTan : Colors.white.withOpacity(0.6),
+              color: isSelected ? _goldTan : Colors.white.withValues(alpha: 0.6),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
