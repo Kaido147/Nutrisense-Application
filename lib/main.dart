@@ -3,10 +3,11 @@ import 'layout/main_navigation.dart';
 import 'package:flutter/services.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized(); // ← ADDED
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent, // Optional: make status bar background transparent
-    statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
-    statusBarBrightness: Brightness.light, // For iOS (dark icons)
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
   ));
   runApp(const MyApp());
 }
@@ -14,27 +15,16 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
         useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarIconBrightness: Brightness.light, 
-            statusBarBrightness: Brightness.dark,
-          ),
-        ),
+        // ← REMOVED duplicate AppBarTheme SystemUiOverlayStyle (was conflicting)
       ),
       debugShowCheckedModeBanner: false,
       title: "Nutrisense",
-      home: MainNavigation(),
+      home: const MainNavigation(), // ← ADDED const
     );
   }
 }
-
-
-
