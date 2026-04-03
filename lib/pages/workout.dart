@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'modals/exercise_modal.dart';
 
 class WorkoutPage extends StatefulWidget {
   const WorkoutPage({super.key});
@@ -11,24 +12,304 @@ class _WorkoutPageState extends State<WorkoutPage> {
   int _selectedTab = 0;
   bool _isPressed = false;
 
-  // ─── Kulay ng Buhay ──────────────────────────────────────────────────────────────
+  //
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _lightBg = Color(0xFFF5F0EA);
   static const Color _goldTan = Color(0xFFE0C58F);
   static const Color _cream = Color(0xFFF5F0E9);
 
-  // ─── Build ──────────────────────────────────────────────────────────────────
+  // Placeholdee for exercises list
+  final List<Map<String, dynamic>> _exercises = [
+    {'name': 'Push-ups', 'sets': '3 x 15 reps', 'done': true, 'num': 1},
+    {'name': 'Bench Press', 'sets': '4 x 10 reps', 'done': true, 'num': 2},
+    {'name': 'Shoulder Press', 'sets': '3 x 12 reps', 'done': false, 'num': 3},
+    {'name': 'Tricep Dips', 'sets': '3 x 15 reps', 'done': false, 'num': 4},
+  ];
+
+  // Weekly plan data
+  final List<Map<String, dynamic>> _weeklyPlan = [
+    {'day': 'Mon', 'activity': 'Cardio', 'completed': true},
+    {'day': 'Tue', 'activity': 'Upper Body', 'completed': true},
+    {'day': 'Wed', 'activity': 'Rest', 'completed': false},
+    {'day': 'Thu', 'activity': 'Lower Body', 'completed': false},
+    {'day': 'Fri', 'activity': 'Core', 'completed': false},
+  ];
+
+  //  Build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _lightBg,
-      body: Column(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeaderStack(context),
+            const SizedBox(height: 40),
+            workoutCard(),
+            const SizedBox(height: 24),
+            exerciseCard(),
+            const SizedBox(height: 12),
+            weeklyPlan(),
+            const SizedBox(height: 20), // bottom breathing room
+          ],
+        ),
+      ),
+    );
+  }
+
+  Padding exerciseCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeaderStack(context),
-          SizedBox(height: 40),
-          workoutCard(),
-          
+          // Exercises Title
+          Text(
+            'Exercises',
+            style: TextStyle(
+              color: _navyBlue,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Exercises List
+          Column(
+            children: _exercises.map((exercise) {
+              final isCompleted = exercise['done'];
+
+              return Opacity(
+                opacity: isCompleted ? 0.6 : 1.0,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Left side: Icon or Number
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isCompleted
+                              ? Colors.grey.withValues(alpha: 0.2)
+                              : Colors.grey.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: isCompleted
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.green,
+                                size: 24,
+                              )
+                            : Center(
+                                child: Text(
+                                  exercise['num'].toString(),
+                                  style: const TextStyle(
+                                    color: _navyBlue,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // Middle: Exercise name and sets
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              exercise['name'],
+                              style: const TextStyle(
+                                color: _navyBlue,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              exercise['sets'],
+                              style: TextStyle(
+                                color: _navyBlue.withValues(alpha: 0.6),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Right side: Check mark or Start button
+                      if (isCompleted)
+                        const SizedBox.shrink()
+                      else
+                        GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Starting ${exercise['name']}...',
+                                ),
+                                duration: const Duration(milliseconds: 1500),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _navyBlue,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Text(
+                              'Start',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Padding weeklyPlan() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // "Weekly Plan" Title with "View All"
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Weekly Plan',
+                style: TextStyle(
+                  color: _navyBlue,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('View All Plans'),
+                      duration: Duration(milliseconds: 1500),
+                    ),
+                  );
+                },
+                child: Text(
+                  'View All',
+                  style: TextStyle(
+                    color: _goldTan,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Weekly Plan Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with calendar icon and "This Week's Focus" (inside card)
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, color: _navyBlue, size: 20),
+                    const SizedBox(width: 10),
+                    Text(
+                      'This Week\'s Focus',
+                      style: TextStyle(
+                        color: _navyBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Weekly Plan List
+                ..._weeklyPlan.map((plan) {
+                  final isCompleted = plan['completed'] as bool;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: isCompleted
+                                ? Colors.green
+                                : Colors.grey.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '${plan['day']}: ${plan['activity']}',
+                          style: TextStyle(
+                            color: _navyBlue.withValues(
+                              alpha: isCompleted ? 1.0 : 1.0,
+                            ),
+                            fontWeight: isCompleted
+                                ? FontWeight.w400
+                                : FontWeight.w400,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -36,159 +317,160 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   Column workoutCard() {
     return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 20),
-              child: Text(
-                'Today\'s Routine',
-                style: TextStyle(
-                  color: _navyBlue,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 20),
+          child: Text(
+            'Today\'s Routine',
+            style: TextStyle(
+              color: _navyBlue,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
             ),
+          ),
+        ),
 
-            // Container na B
-            SizedBox(height: 15),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 21),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: _goldTan,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        // Container na B
+        SizedBox(height: 15),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 21),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: _goldTan,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Row: Icon, Title and SubTitle
+              Row(
                 children: [
-                  // Top Row: Icon, Title and SubTitle
-                  Row(
-                    children: [
-                      Container(
-                        margin: EdgeInsets.symmetric(horizontal: 10),
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: _cream.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        // Icon
-                        child: const Icon(
-                          Icons.fitness_center,
-                          color: Colors.black,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Upper Body Strength',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: _navyBlue,
-                            ),
-                          ),
-                          SizedBox(height: 3),
-                          Opacity(
-                            opacity: 0.5,
-                            child: Text(
-                              '45 minutes • Intermediate',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: _navyBlue,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  // Percentage Bar
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: LinearProgressIndicator(
-                              value: 0.4,
-                              minHeight: 10,
-                              backgroundColor: Colors.white.withValues(
-                                alpha: 0.4,
-                              ),
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        '0%',
-                        style: TextStyle(
-                          color: _navyBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Button "Continue Workout"
                   Container(
-                  margin: const EdgeInsets.only(left: 8, right: 8, bottom: 10),
-                  child:   GestureDetector(
-                    onTap: () async {
-                          setState(() => _isPressed = true);
-                          await Future.delayed(const Duration(milliseconds: 150));
-                          setState(() => _isPressed = false);
-                    },
-
-                    // Animation 
-                    child: AnimatedScale(
-                      scale: _isPressed ? 1.03 : 1.0,
-                      duration: const Duration(milliseconds: 150),
-                      curve: Curves.easeOut,
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: null,
-                          style: ElevatedButton.styleFrom(
-                            disabledBackgroundColor: Colors.white,
-                            disabledForegroundColor: _navyBlue,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                            splashFactory: NoSplash.splashFactory,
-                          ),
-                          child: const Text(
-                            'Continue Workout',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                            ),
-                          ),
-                          ),
-                      ),
-                      ),
+                    margin: EdgeInsets.symmetric(horizontal: 10),
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: _cream.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    // Icon
+                    child: const Icon(
+                      Icons.fitness_center,
+                      color: Colors.black,
+                      size: 22,
+                    ),
                   ),
-                  )
+                  const SizedBox(width: 6),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Upper Body Strength',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _navyBlue,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Opacity(
+                        opacity: 0.5,
+                        child: Text(
+                          '45 minutes • Intermediate',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: _navyBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ),
-          ],
-        );
+              // Percentage Bar
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: 0.4,
+                          minHeight: 10,
+                          backgroundColor: Colors.white.withValues(alpha: 0.4),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '0%',
+                    style: TextStyle(
+                      color: _navyBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Button "Continue Workout"
+              Container(
+                margin: const EdgeInsets.only(left: 8, right: 8, bottom: 10),
+                child: GestureDetector(
+                  onTap: () async {
+                    setState(() => _isPressed = true);
+                    await Future.delayed(const Duration(milliseconds: 150));
+                    setState(() => _isPressed = false);
+                    showExerciseModal(context);
+                  },
+
+                  // Animation
+                  child: AnimatedScale(
+                    scale: _isPressed ? 1.03 : 1.0,
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: null,
+                        style: ElevatedButton.styleFrom(
+                          disabledBackgroundColor: Colors.white,
+                          disabledForegroundColor: _navyBlue,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          splashFactory: NoSplash.splashFactory,
+                        ),
+                        child: const Text(
+                          'Continue Workout',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
-  //  Header Stack 
+  //  Header Stack
   /// Combines the navy header and the overlapping tab toggle into a Stack.
   Widget _buildHeaderStack(BuildContext context) {
     return Stack(
@@ -197,7 +479,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 
-  // Navy Header 
+  // Navy Header
   /// Dark blue rounded container showing the app title and subtitle.
   Widget _buildNavyHeader(BuildContext context) {
     return Container(
