@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:ui';
+import 'rest_timer_dialog.dart';
+import 'exercise_complete_dialog.dart';
 
-void showExerciseModal(BuildContext context) {
+void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Press'}) {
   bool isCompletePressed = false;
   bool isEndPressed = false;
   int currentSet = 0;
@@ -38,7 +42,7 @@ void showExerciseModal(BuildContext context) {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Shoulder Press',
+                            exerciseName,
                             style: TextStyle(
                               color: _navyBlue,
                               fontSize: 22,
@@ -140,7 +144,7 @@ void showExerciseModal(BuildContext context) {
                                           style: TextStyle(
                                             color: _goldTan,
                                             fontSize: 24,
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w800,
                                           ),
                                         ),
                                       ],
@@ -191,7 +195,7 @@ void showExerciseModal(BuildContext context) {
                                   color: isDone
                                       ? const Color(0xFFE8F7EC)
                                       : isActive
-                                      ? _navyBlue.withValues(alpha: 0.05)
+                                      ? Colors.grey.withValues(alpha: 0.05)
                                       : Colors.white,
                                   border: Border.all(
                                     color: isDone
@@ -201,7 +205,7 @@ void showExerciseModal(BuildContext context) {
                                         : Colors.grey.withValues(alpha: 0.2),
                                     width: isActive || isDone ? 2 : 1,
                                   ),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(18),
                                 ),
                                 child: Row(
                                   mainAxisAlignment:
@@ -221,7 +225,7 @@ void showExerciseModal(BuildContext context) {
                                                     alpha: 0.2,
                                                   ),
                                             borderRadius:
-                                                BorderRadius.circular(12),
+                                                BorderRadius.circular(18),
                                           ),
                                           child: Center(
                                             child: isDone
@@ -396,11 +400,41 @@ void showExerciseModal(BuildContext context) {
                                             setCompleted.length - 1)
                                           currentSet++;
                                       });
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Set completed!'),
+
+                                      // Show rest timer modal
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        barrierColor: Colors.black.withValues(
+                                          alpha: 0.3,
+                                        ),
+                                        builder: (dialogContext) => RestTimerDialog(
+                                          onSkipRest: () {
+                                            Navigator.pop(dialogContext);
+
+                                            // Check if all sets are completed
+                                            if (setCompleted.every((completed) => completed)) {
+                                              showDialog(
+                                                context: context,
+                                                barrierDismissible: false,
+                                                barrierColor: Colors.black.withValues(alpha: 0.3),
+                                                builder: (completionContext) => ExerciseCompleteDialog(
+                                                  setCompleted: setCompleted,
+                                                  onContinue: () {
+                                                    Navigator.pop(completionContext);
+                                                    Navigator.pop(context);
+                                                  },
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          onEndWorkout: () {
+                                            Navigator.pop(dialogContext);
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Workout ended.')),
+                                            );
+                                            Navigator.pop(context);
+                                          },
                                         ),
                                       );
                                     },

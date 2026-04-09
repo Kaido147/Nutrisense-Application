@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'modals/exercise_modal.dart';
+import 'modals/workout/exercise_modal.dart';
+import 'nutrition_tab.dart';
 
 class WorkoutPage extends StatefulWidget {
   const WorkoutPage({super.key});
@@ -46,16 +47,25 @@ class _WorkoutPageState extends State<WorkoutPage> {
           children: [
             _buildHeaderStack(context),
             const SizedBox(height: 40),
-            workoutCard(),
-            const SizedBox(height: 24),
-            exerciseCard(),
-            const SizedBox(height: 12),
-            weeklyPlan(),
+            // Conditionally show Workout or Nutrition content
+            if (_selectedTab == 0) ..._buildWorkoutContent(),
+            if (_selectedTab == 1) const NutritionTab(),
             const SizedBox(height: 20), // bottom breathing room
           ],
         ),
       ),
     );
+  }
+
+  /// Workout tab content
+  List<Widget> _buildWorkoutContent() {
+    return [
+      workoutCard(),
+      const SizedBox(height: 24),
+      exerciseCard(),
+      const SizedBox(height: 12),
+      weeklyPlan(),
+    ];
   }
 
   Padding exerciseCard() {
