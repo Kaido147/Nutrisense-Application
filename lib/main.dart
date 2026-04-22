@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:nutrisense/login.dart';
+import 'landing_page.dart';
 import 'layout/main_navigation.dart';
+import 'pages/register.dart';
+import 'setgoals.dart';
 import 'package:flutter/services.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized(); // ← ADDED
+  WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
@@ -18,13 +22,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(
-        useMaterial3: true,
-        // ← REMOVED duplicate AppBarTheme SystemUiOverlayStyle (was conflicting)
-      ),
       debugShowCheckedModeBanner: false,
       title: "Nutrisense",
-      home: const MainNavigation(), // ← ADDED const
+      theme: ThemeData(useMaterial3: true),
+
+      home: const LandingPage(),
+
+
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/setgoals': (context) => const SetGoalsPage(),
+        '/main': (context) => const MainNavigation(),
+      },
     );
   }
 }
