@@ -60,7 +60,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                     '4+ hours/day',
                     '2-3 hours/day',
                     '1-2 hours/day',
-                    'Flexible'
+                    'Flexible',
                   ]),
 
                   const SizedBox(height: 20),
@@ -71,7 +71,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                     'Daily workout',
                     '3-4x per week',
                     '1-2x per week',
-                    'Casual'
+                    'Casual',
                   ]),
 
                   const SizedBox(height: 20),
@@ -82,7 +82,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                     'Better sleep',
                     'Reduce stress',
                     'Healthy eating',
-                    'Mindfulness'
+                    'Mindfulness',
                   ]),
 
                   const SizedBox(height: 32),
@@ -139,10 +139,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                           ),
                           child: const Text(
                             'Continue',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
+                            style: TextStyle(color: Colors.white, fontSize: 16),
                           ),
                         ),
                       ),

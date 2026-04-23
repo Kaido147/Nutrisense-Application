@@ -38,11 +38,7 @@ List<StudyTask> buildStudyTasks() {
       title: 'MAG HULOG NG LIMA SA ALANSIYA',
       subject: 'Mathematics',
     ),
-    StudyTask(
-      id: 'essay-outline',
-      title: 'PITCH PRACTICE',
-      subject: 'English',
-    ),
+    StudyTask(id: 'essay-outline', title: 'PITCH PRACTICE', subject: 'English'),
     StudyTask(
       id: 'history-notes',
       title: 'KUNG IBON AKO, BAT AKO',

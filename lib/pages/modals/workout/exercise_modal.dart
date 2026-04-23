@@ -4,7 +4,10 @@ import 'dart:ui';
 import 'rest_timer_dialog.dart';
 import 'exercise_complete_dialog.dart';
 
-void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Press'}) {
+void showExerciseModal(
+  BuildContext context, {
+  String exerciseName = 'Shoulder Press',
+}) {
   bool isCompletePressed = false;
   bool isEndPressed = false;
   int currentSet = 0;
@@ -156,8 +159,7 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                   borderRadius: BorderRadius.circular(6),
                                   child: LinearProgressIndicator(
                                     value:
-                                        (currentSet + 1) /
-                                        setCompleted.length,
+                                        (currentSet + 1) / setCompleted.length,
                                     minHeight: 8,
                                     backgroundColor: Colors.grey.withValues(
                                       alpha: 0.2,
@@ -224,8 +226,9 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                                 : Colors.grey.withValues(
                                                     alpha: 0.2,
                                                   ),
-                                            borderRadius:
-                                                BorderRadius.circular(18),
+                                            borderRadius: BorderRadius.circular(
+                                              18,
+                                            ),
                                           ),
                                           child: Center(
                                             child: isDone
@@ -298,9 +301,7 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                             decoration: BoxDecoration(
                               color: Colors.lightBlue.withValues(alpha: 0.05),
                               border: Border.all(
-                                color: Colors.lightBlue.withValues(
-                                  alpha: 0.2,
-                                ),
+                                color: Colors.lightBlue.withValues(alpha: 0.2),
                               ),
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -343,9 +344,7 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                   'Control the weight on the way down',
                                 ].map((tip) {
                                   return Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: 10,
-                                    ),
+                                    padding: const EdgeInsets.only(bottom: 10),
                                     child: Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -413,25 +412,36 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                             Navigator.pop(dialogContext);
 
                                             // Check if all sets are completed
-                                            if (setCompleted.every((completed) => completed)) {
+                                            if (setCompleted.every(
+                                              (completed) => completed,
+                                            )) {
                                               showDialog(
                                                 context: context,
                                                 barrierDismissible: false,
-                                                barrierColor: Colors.black.withValues(alpha: 0.3),
-                                                builder: (completionContext) => ExerciseCompleteDialog(
-                                                  setCompleted: setCompleted,
-                                                  onContinue: () {
-                                                    Navigator.pop(completionContext);
-                                                    Navigator.pop(context);
-                                                  },
-                                                ),
+                                                barrierColor: Colors.black
+                                                    .withValues(alpha: 0.3),
+                                                builder: (completionContext) =>
+                                                    ExerciseCompleteDialog(
+                                                      setCompleted:
+                                                          setCompleted,
+                                                      onContinue: () {
+                                                        Navigator.pop(
+                                                          completionContext,
+                                                        );
+                                                        Navigator.pop(context);
+                                                      },
+                                                    ),
                                               );
                                             }
                                           },
                                           onEndWorkout: () {
                                             Navigator.pop(dialogContext);
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Workout ended.')),
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Workout ended.'),
+                                              ),
                                             );
                                             Navigator.pop(context);
                                           },
@@ -446,16 +456,16 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                             vertical: 14,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(14),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                           ),
                                         ).copyWith(
-                                          splashFactory:
-                                              NoSplash.splashFactory,
+                                          splashFactory: NoSplash.splashFactory,
                                           overlayColor:
                                               MaterialStateProperty.all(
-                                            Colors.transparent,
-                                          ),
+                                                Colors.transparent,
+                                              ),
                                         ),
                                     child: Row(
                                       mainAxisAlignment:
@@ -463,9 +473,7 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Padding(
-                                          padding: EdgeInsets.only(
-                                            right: 10.0,
-                                          ),
+                                          padding: EdgeInsets.only(right: 10.0),
                                           child: Icon(
                                             Icons.check,
                                             size: 20,
@@ -515,15 +523,14 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.grey.shade200,
-                                      foregroundColor: Colors.black
-                                          .withValues(alpha: 0.6),
+                                      foregroundColor: Colors.black.withValues(
+                                        alpha: 0.6,
+                                      ),
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 14,
                                       ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          12,
-                                        ),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
                                     child: const Text(

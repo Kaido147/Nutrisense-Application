@@ -1,24 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
+import 'package:nutrisense/services/auth_service.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
-  void _logout(BuildContext context) {
+  void _logout(BuildContext pageContext, WidgetRef ref) {
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+      context: pageContext,
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Confirm Logout"),
         content: const Text("Are you sure you want to logout?"),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Cancel"),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, "/login");
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+
+              try {
+                await ref.read(authServiceProvider).logout();
+
+                if (!pageContext.mounted) {
+                  return;
+                }
+
+                Navigator.pushReplacementNamed(pageContext, "/login");
+              } on AuthFlowException catch (error) {
+                if (!pageContext.mounted) {
+                  return;
+                }
+
+                ScaffoldMessenger.of(
+                  pageContext,
+                ).showSnackBar(SnackBar(content: Text(error.message)));
+              }
             },
             child: const Text("Logout", style: TextStyle(color: Colors.red)),
           ),
@@ -28,7 +48,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -48,14 +68,26 @@ class ProfilePage extends StatelessWidget {
                   const CircleAvatar(
                     radius: 45,
                     backgroundColor: Colors.white24,
-                    child: Icon(LucideIcons.user, size: 50, color: Colors.white70),
+                    child: Icon(
+                      LucideIcons.user,
+                      size: 50,
+                      color: Colors.white70,
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  const Text("Alex Johnson",
-                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Alex Johnson",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-                  const Text("alex.johnson@student.edu",
-                      style: TextStyle(fontSize: 10, color: Color(0xFFE0C58F))),
+                  const Text(
+                    "alex.johnson@student.edu",
+                    style: TextStyle(fontSize: 10, color: Color(0xFFE0C58F)),
+                  ),
                 ],
               ),
             ),
@@ -67,13 +99,25 @@ class ProfilePage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: const [BoxShadow(blurRadius: 15, color: Colors.black12)],
+                  boxShadow: const [
+                    BoxShadow(blurRadius: 15, color: Colors.black12),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    _progressRow(icon: LucideIcons.target, title: "Weekly Study Goal", value: "28 / 30h", progress: 0.95),
+                    _progressRow(
+                      icon: LucideIcons.target,
+                      title: "Weekly Study Goal",
+                      value: "28 / 30h",
+                      progress: 0.95,
+                    ),
                     const SizedBox(height: 25),
-                    _progressRow(icon: LucideIcons.zap, title: "Workout Streak", value: "5 / 7 days", progress: 0.7),
+                    _progressRow(
+                      icon: LucideIcons.zap,
+                      title: "Workout Streak",
+                      value: "5 / 7 days",
+                      progress: 0.7,
+                    ),
                   ],
                 ),
               ),
@@ -82,18 +126,39 @@ class ProfilePage extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 30),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text("Settings", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                child: Text(
+                  "Settings",
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            _settingsItem(icon: LucideIcons.user, title: "Edit Profile", subtitle: "Update your information", iconColor: Color(0xFF243A6E), borderColor: Color(0xFF243A6E)),
-            _settingsItem(icon: LucideIcons.target, title: "Goals & Preferences", subtitle: "Manage your targets", iconColor: Color(0xFFE0C58F), borderColor: Color(0xFFE0C58F)),
-            _settingsItem(icon: LucideIcons.moon, title: "Theme", subtitle: "Light mode", iconColor: Colors.purple, borderColor: Colors.purpleAccent),
+            _settingsItem(
+              icon: LucideIcons.user,
+              title: "Edit Profile",
+              subtitle: "Update your information",
+              iconColor: Color(0xFF243A6E),
+              borderColor: Color(0xFF243A6E),
+            ),
+            _settingsItem(
+              icon: LucideIcons.target,
+              title: "Goals & Preferences",
+              subtitle: "Manage your targets",
+              iconColor: Color(0xFFE0C58F),
+              borderColor: Color(0xFFE0C58F),
+            ),
+            _settingsItem(
+              icon: LucideIcons.moon,
+              title: "Theme",
+              subtitle: "Light mode",
+              iconColor: Colors.purple,
+              borderColor: Colors.purpleAccent,
+            ),
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: GestureDetector(
-                onTap: () => _logout(context),
+                onTap: () => _logout(context, ref),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -102,7 +167,13 @@ class ProfilePage extends StatelessWidget {
                     border: Border.all(color: Colors.redAccent),
                   ),
                   child: const Center(
-                    child: Text("Log Out", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      "Log Out",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -114,7 +185,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _progressRow({required IconData icon, required String title, required String value, required double progress}) {
+  Widget _progressRow({
+    required IconData icon,
+    required String title,
+    required String value,
+    required double progress,
+  }) {
     return Column(
       children: [
         Row(
@@ -136,7 +212,13 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _settingsItem({required IconData icon, required String title, required String subtitle, Color iconColor = Colors.blue, Color borderColor = Colors.blueAccent}) {
+  Widget _settingsItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Color iconColor = Colors.blue,
+    Color borderColor = Colors.blueAccent,
+  }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.all(18),
@@ -161,8 +243,14 @@ class ProfilePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
           ),

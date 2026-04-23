@@ -39,7 +39,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
         _progress = (_progress - (1 / 1200)).clamp(0.0, 1.0);
         _seconds = (_progress * 60).ceil();
       });
-      
+
       // When timer reaches 0, automatically complete
       if (_seconds <= 0) {
         timer.cancel();
@@ -75,11 +75,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                   color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(100),
                 ),
-                child: const Icon(
-                  Icons.pause,
-                  color: Colors.blue,
-                  size: 32,
-                ),
+                child: const Icon(Icons.pause, color: Colors.blue, size: 32),
               ),
               const SizedBox(height: 20),
               // Title
