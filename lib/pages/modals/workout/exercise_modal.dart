@@ -11,7 +11,6 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
   final List<bool> setCompleted = [false, false, false];
 
   const Color _navyBlue = Color(0xFF273967);
-  const Color _goldTan = Color(0xFFE0C58F);
 
   showModalBottomSheet(
     context: context,
@@ -142,7 +141,7 @@ void showExerciseModal(BuildContext context, {String exerciseName = 'Shoulder Pr
                                         Text(
                                           '12 reps',
                                           style: TextStyle(
-                                            color: _goldTan,
+                                            color: Theme.of(context).colorScheme.primary,
                                             fontSize: 24,
                                             fontWeight: FontWeight.w800,
                                           ),

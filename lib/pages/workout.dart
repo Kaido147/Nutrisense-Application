@@ -16,7 +16,6 @@ class _WorkoutPageState extends State<WorkoutPage> {
   //
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _lightBg = Color(0xFFF5F0EA);
-  static const Color _goldTan = Color(0xFFE0C58F);
   static const Color _cream = Color(0xFFF5F0E9);
 
   // Placeholdee for exercises list
@@ -239,7 +238,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 child: Text(
                   'View All',
                   style: TextStyle(
-                    color: _goldTan,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -347,7 +346,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           margin: const EdgeInsets.symmetric(horizontal: 21),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: _goldTan,
+            color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -532,9 +531,10 @@ class _WorkoutPageState extends State<WorkoutPage> {
 
   /// Muted gold subtitle beneath the title.
   Widget _buildHeaderSubtitle() {
-    return const Text(
+    return Text(
       'Your fitness & nutrition tracker',
-      style: TextStyle(color: _goldTan, fontSize: 13),
+      style: TextStyle(
+          color: Theme.of(context).colorScheme.primary, fontSize: 13),
     );
   }
 

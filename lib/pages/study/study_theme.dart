@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 abstract final class StudyTheme {
   static const Color navyBlue = Color(0xFF273967);
-  static const Color goldTan = Color(0xFFE0C58F);
   static const Color pageBackground = Color(0xFFF5F0E9);
   static const Color textPrimary = Color(0xFF273967);
   static const Color textSecondary = Color(0xFF8D95A6);

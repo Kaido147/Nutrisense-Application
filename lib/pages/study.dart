@@ -105,10 +105,10 @@ class _StudyHeader extends StatelessWidget {
             right: StudyTheme.horizontalPadding,
             bottom: 52,
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Study Focus',
                 style: TextStyle(
                   color: Colors.white,
@@ -116,11 +116,11 @@ class _StudyHeader extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Text(
                 'Deep work mode activated',
                 style: TextStyle(
-                  color: StudyTheme.goldTan,
+                  color: Theme.of(context).colorScheme.primary,
                   fontSize: 13,
                   letterSpacing: 0.2,
                 ),

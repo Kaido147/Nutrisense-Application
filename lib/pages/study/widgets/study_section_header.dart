@@ -33,8 +33,8 @@ class StudySectionHeader extends StatelessWidget {
               if (actionLabel != null)
                 Text(
                   actionLabel!,
-                  style: const TextStyle(
-                    color: StudyTheme.goldTan,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),

@@ -14,7 +14,6 @@ class ExerciseCompleteDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color _navyBlue = Color(0xFF273967);
-    const Color _goldTan = Color(0xFFE0C58F);
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -119,7 +118,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
                           Text(
                             setCompleted.where((c) => c).length.toString(),
                             style: TextStyle(
-                              color: _goldTan,
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 24,
                               fontWeight: FontWeight.w700,
                             ),

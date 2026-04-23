@@ -41,8 +41,8 @@ class JournalEntryCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       entry.moodLabel,
-                      style: const TextStyle(
-                        color: StudyTheme.goldTan,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),

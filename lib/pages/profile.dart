@@ -1,55 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-
-// ─────────────────────────────────────────────
-//  THEME STATE  (replace with your own provider)
-// ─────────────────────────────────────────────
-enum AppThemeMode { light, dark, auto }
-
-enum AccentColor {
-  softGold,
-  oceanBlue,
-  forestGreen,
-  sunsetOrange,
-  lavenderPurple,
-  rosePink,
-}
-
-extension AccentColorExt on AccentColor {
-  Color get color {
-    switch (this) {
-      case AccentColor.softGold:
-        return const Color(0xFFE0C58F);
-      case AccentColor.oceanBlue:
-        return const Color(0xFF4A90D9);
-      case AccentColor.forestGreen:
-        return const Color(0xFF3DB87A);
-      case AccentColor.sunsetOrange:
-        return const Color(0xFFFF7043);
-      case AccentColor.lavenderPurple:
-        return const Color(0xFF9B72CF);
-      case AccentColor.rosePink:
-        return const Color(0xFFE91E8C);
-    }
-  }
-
-  String get label {
-    switch (this) {
-      case AccentColor.softGold:
-        return 'Soft Gold';
-      case AccentColor.oceanBlue:
-        return 'Ocean Blue';
-      case AccentColor.forestGreen:
-        return 'Forest Green';
-      case AccentColor.sunsetOrange:
-        return 'Sunset Orange';
-      case AccentColor.lavenderPurple:
-        return 'Lavender Purple';
-      case AccentColor.rosePink:
-        return 'Rose Pink';
-    }
-  }
-}
+import 'package:provider/provider.dart';
+import 'package:nutrisense/theme_provider.dart';
 
 // ─────────────────────────────────────────────
 //  PROFILE PAGE
@@ -62,9 +14,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  AppThemeMode _themeMode = AppThemeMode.light;
-  AccentColor _accentColor = AccentColor.softGold;
-
   void _logout(BuildContext context) {
     showDialog(
       context: context,
@@ -111,17 +60,15 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ThemeSettingsSheet(
-        currentTheme: _themeMode,
-        currentAccent: _accentColor,
-        onThemeChanged: (t) => setState(() => _themeMode = t),
-        onAccentChanged: (a) => setState(() => _accentColor = a),
-      ),
+      builder: (_) => const _ThemeSettingsSheet(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final accentColor = themeProvider.accentColor.color;
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -152,9 +99,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-                  const Text("alex.johnson@student.edu",
+                  Text("alex.johnson@student.edu",
                       style: TextStyle(
-                          fontSize: 10, color: Color(0xFFE0C58F))),
+                          fontSize: 10, color: accentColor)),
                 ],
               ),
             ),
@@ -178,13 +125,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: LucideIcons.target,
                         title: "Weekly Study Goal",
                         value: "28 / 30h",
-                        progress: 0.95),
+                        progress: 0.95,
+                        accentColor: accentColor),
                     const SizedBox(height: 25),
                     _progressRow(
                         icon: LucideIcons.zap,
                         title: "Workout Streak",
                         value: "5 / 7 days",
-                        progress: 0.7),
+                        progress: 0.7,
+                        accentColor: accentColor),
                   ],
                 ),
               ),
@@ -215,15 +164,15 @@ class _ProfilePageState extends State<ProfilePage> {
               icon: LucideIcons.target,
               title: "Goals & Preferences",
               subtitle: "Manage your targets",
-              iconColor: const Color(0xFFE0C58F),
-              borderColor: const Color(0xFFE0C58F),
+              iconColor: accentColor,
+              borderColor: accentColor,
               onTap: _openGoalsPreferences,
             ),
             _settingsItem(
               icon: LucideIcons.moon,
               title: "Theme",
-              subtitle: _themeMode.name[0].toUpperCase() +
-                  _themeMode.name.substring(1) +
+              subtitle: themeProvider.themeMode.name[0].toUpperCase() +
+                  themeProvider.themeMode.name.substring(1) +
                   " mode",
               iconColor: Colors.purple,
               borderColor: Colors.purpleAccent,
@@ -266,12 +215,13 @@ class _ProfilePageState extends State<ProfilePage> {
     required String title,
     required String value,
     required double progress,
+    required Color accentColor,
   }) {
     return Column(
       children: [
         Row(
           children: [
-            Icon(icon, size: 18, color: const Color(0xFFE0C58F)),
+            Icon(icon, size: 18, color: accentColor),
             const SizedBox(width: 10),
             Expanded(
                 child: Text(title,
@@ -284,7 +234,7 @@ class _ProfilePageState extends State<ProfilePage> {
         LinearProgressIndicator(
           value: progress,
           minHeight: 8,
-          color: const Color(0xFFE0C58F),
+          color: accentColor,
           backgroundColor: const Color(0xFFEEEEEE),
         ),
       ],
@@ -1037,17 +987,7 @@ class _GoalsPreferencesSheetState
 //  3.  THEME SETTINGS SHEET
 // ═════════════════════════════════════════════
 class _ThemeSettingsSheet extends StatefulWidget {
-  final AppThemeMode currentTheme;
-  final AccentColor currentAccent;
-  final ValueChanged<AppThemeMode> onThemeChanged;
-  final ValueChanged<AccentColor> onAccentChanged;
-
-  const _ThemeSettingsSheet({
-    required this.currentTheme,
-    required this.currentAccent,
-    required this.onThemeChanged,
-    required this.onAccentChanged,
-  });
+  const _ThemeSettingsSheet();
 
   @override
   State<_ThemeSettingsSheet> createState() =>
@@ -1062,8 +1002,9 @@ class _ThemeSettingsSheetState
   @override
   void initState() {
     super.initState();
-    _theme = widget.currentTheme;
-    _accent = widget.currentAccent;
+    final provider = context.read<ThemeProvider>();
+    _theme = provider.themeMode;
+    _accent = provider.accentColor;
   }
 
   static const _navy = Color(0xFF243A6E);
@@ -1078,7 +1019,6 @@ class _ThemeSettingsSheetState
     return GestureDetector(
       onTap: () {
         setState(() => _theme = mode);
-        widget.onThemeChanged(mode);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1156,7 +1096,6 @@ class _ThemeSettingsSheetState
         return GestureDetector(
           onTap: () {
             setState(() => _accent = ac);
-            widget.onAccentChanged(ac);
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
@@ -1315,7 +1254,14 @@ class _ThemeSettingsSheetState
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () async {
+                final provider = context.read<ThemeProvider>();
+                await provider.setThemeMode(_theme);
+                await provider.setAccentColor(_accent);
+                if (mounted) {
+                  Navigator.pop(context);
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _navy,
                 foregroundColor: Colors.white,
