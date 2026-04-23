@@ -19,11 +19,17 @@ class _MainNavigationState extends State<MainNavigation> {
   static const Color _goldTan = Color(0xFFD4B896);
 
   // Only 4 real pages — no FAB page
-  final List<Widget> _pages = const [
-    HomePage(),
-    WorkoutPage(),
-    StudyPage(),
-    ProfilePage(),
+  late final List<Widget> _pages = [
+    HomePage(
+      onNavigateTab: (index) {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+    ),
+    const WorkoutPage(),
+    const StudyPage(),
+    const ProfilePage(),
   ];
 
   // Maps nav button index (0,1,3,4) → page index (0,1,2,3) Galing Ecantadia
