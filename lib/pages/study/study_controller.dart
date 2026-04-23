@@ -41,8 +41,12 @@ class StudyController extends ChangeNotifier {
   StudyState _state;
   Timer? _ticker;
   bool _isDisposed = false;
+  bool _isLoadingTasks = false;
+  String? _taskErrorMessage;
 
   StudyState get state => _state;
+  bool get isLoadingTasks => _isLoadingTasks;
+  String? get taskErrorMessage => _taskErrorMessage;
 
   List<ScheduleItem> get scheduleItems => _scheduleItems;
 
@@ -143,78 +147,101 @@ class StudyController extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
+    _isLoadingTasks = true;
     final StudyPersistenceData? persistence = await _repository
         .loadPersistence();
     if (_isDisposed) {
       return;
     }
 
-    if (persistence == null) {
-      notifyListeners();
-      return;
-    }
-
-    final FocusPresetId selectedPresetId = persistence.selectedPresetId;
-    final FocusPreset selectedPreset = _state.focusTimer.presets.firstWhere(
-      (preset) => preset.id == selectedPresetId,
-    );
-    final int boundedSeconds = persistence.remainingSeconds
-        .clamp(0, selectedPreset.duration.inSeconds)
-        .toInt();
-    final List<StudyTask> restoredTasks = _seedData.tasks
-        .map(
-          (task) => task.copyWith(
-            isCompleted: persistence.completedTaskIds.contains(task.id),
-          ),
-        )
-        .toList(growable: false);
-    List<StudySessionRecord> restoredHistory =
-        persistence.sessionHistory.isEmpty
-        ? _seedData.sessionHistory
-        : persistence.sessionHistory;
-    Duration restoredRemaining = Duration(seconds: boundedSeconds);
-    bool shouldRun = persistence.isRunning && restoredRemaining > Duration.zero;
-
-    if (shouldRun) {
-      final Duration elapsed = DateTime.now().difference(persistence.savedAt);
-      final int nextSeconds = restoredRemaining.inSeconds - elapsed.inSeconds;
-
-      if (nextSeconds <= 0) {
-        restoredRemaining = Duration.zero;
-        shouldRun = false;
-
-        if (!selectedPreset.isBreak) {
-          restoredHistory = [
-            ...restoredHistory,
-            StudySessionRecord(
-              date: persistence.savedAt.add(
-                Duration(seconds: persistence.remainingSeconds),
-              ),
-              duration: selectedPreset.duration,
-            ),
-          ];
-        }
-      } else {
-        restoredRemaining = Duration(seconds: nextSeconds);
+    try {
+      final List<StudyTask> firestoreTasks = await _repository.loadTasks();
+      if (_isDisposed) {
+        return;
       }
+
+      FocusTimerState nextTimerState = _state.focusTimer;
+      List<StudySessionRecord> restoredHistory = _seedData.sessionHistory;
+      bool shouldRun = false;
+
+      if (persistence != null) {
+        final FocusPresetId selectedPresetId = persistence.selectedPresetId;
+        final FocusPreset selectedPreset = _state.focusTimer.presets.firstWhere(
+          (preset) => preset.id == selectedPresetId,
+        );
+        final int boundedSeconds = persistence.remainingSeconds
+            .clamp(0, selectedPreset.duration.inSeconds)
+            .toInt();
+        restoredHistory = persistence.sessionHistory.isEmpty
+            ? _seedData.sessionHistory
+            : persistence.sessionHistory;
+        Duration restoredRemaining = Duration(seconds: boundedSeconds);
+        shouldRun = persistence.isRunning && restoredRemaining > Duration.zero;
+
+        if (shouldRun) {
+          final Duration elapsed = DateTime.now().difference(persistence.savedAt);
+          final int nextSeconds = restoredRemaining.inSeconds - elapsed.inSeconds;
+
+          if (nextSeconds <= 0) {
+            restoredRemaining = Duration.zero;
+            shouldRun = false;
+
+            if (!selectedPreset.isBreak) {
+              restoredHistory = [
+                ...restoredHistory,
+                StudySessionRecord(
+                  date: persistence.savedAt.add(
+                    Duration(seconds: persistence.remainingSeconds),
+                  ),
+                  duration: selectedPreset.duration,
+                ),
+              ];
+            }
+          } else {
+            restoredRemaining = Duration(seconds: nextSeconds);
+          }
+        }
+
+        nextTimerState = _state.focusTimer.copyWith(
+          selectedPresetId: selectedPresetId,
+          remaining: restoredRemaining,
+          isRunning: shouldRun,
+        );
+      }
+
+      _state = StudyState(
+        focusTimer: nextTimerState,
+        tasks: firestoreTasks,
+        sessionHistory: restoredHistory,
+      );
+      _taskErrorMessage = null;
+      _isLoadingTasks = false;
+
+      if (shouldRun) {
+        _startTicker();
+      }
+
+      notifyListeners();
+      unawaited(_persistState());
+    } on StudyTaskException catch (error) {
+      if (_isDisposed) {
+        return;
+      }
+
+      _state = _state.copyWith(tasks: const <StudyTask>[]);
+      _taskErrorMessage = error.message;
+      _isLoadingTasks = false;
+      notifyListeners();
+    } catch (_) {
+      if (_isDisposed) {
+        return;
+      }
+
+      _state = _state.copyWith(tasks: const <StudyTask>[]);
+      _taskErrorMessage = 'We could not load your study tasks right now.';
+      _isLoadingTasks = false;
+      notifyListeners();
     }
-
-    _state = StudyState(
-      focusTimer: _state.focusTimer.copyWith(
-        selectedPresetId: selectedPresetId,
-        remaining: restoredRemaining,
-        isRunning: shouldRun,
-      ),
-      tasks: restoredTasks,
-      sessionHistory: restoredHistory,
-    );
-
-    if (shouldRun) {
-      _startTicker();
-    }
-
-    notifyListeners();
-    unawaited(_persistState());
   }
 
   void selectPreset(FocusPresetId presetId) {
@@ -271,18 +298,94 @@ class StudyController extends ChangeNotifier {
     unawaited(_persistState());
   }
 
-  void toggleTask(String taskId) {
-    final List<StudyTask> updatedTasks = _state.tasks
+  Future<void> toggleTask(String taskId) async {
+    final StudyTask? currentTask = _state.tasks.cast<StudyTask?>().firstWhere(
+      (task) => task?.id == taskId,
+      orElse: () => null,
+    );
+    if (currentTask == null) {
+      return;
+    }
+
+    final bool nextCompleted = !currentTask.isCompleted;
+    final List<StudyTask> previousTasks = _state.tasks;
+    final List<StudyTask> updatedTasks = previousTasks
         .map(
           (task) => task.id == taskId
-              ? task.copyWith(isCompleted: !task.isCompleted)
+              ? task.copyWith(isCompleted: nextCompleted)
               : task,
         )
         .toList(growable: false);
 
     _state = _state.copyWith(tasks: updatedTasks);
+    _taskErrorMessage = null;
     notifyListeners();
-    unawaited(_persistState());
+
+    try {
+      await _repository.updateTaskCompletion(taskId, nextCompleted);
+    } on StudyTaskException catch (error) {
+      if (_isDisposed) {
+        return;
+      }
+
+      _state = _state.copyWith(tasks: previousTasks);
+      _taskErrorMessage = error.message;
+      notifyListeners();
+    } catch (_) {
+      if (_isDisposed) {
+        return;
+      }
+
+      _state = _state.copyWith(tasks: previousTasks);
+      _taskErrorMessage = 'We could not update this task right now.';
+      notifyListeners();
+    }
+  }
+
+  Future<void> addTask({
+    required String title,
+    String? description,
+    DateTime? dueAt,
+  }) async {
+    await _repository.addTask(
+      title: title,
+      description: description,
+      dueAt: dueAt,
+    );
+    await reloadTasks();
+  }
+
+  Future<void> reloadTasks() async {
+    _isLoadingTasks = true;
+    _taskErrorMessage = null;
+    notifyListeners();
+
+    try {
+      final List<StudyTask> tasks = await _repository.loadTasks();
+      if (_isDisposed) {
+        return;
+      }
+
+      _state = _state.copyWith(tasks: tasks);
+      _isLoadingTasks = false;
+      notifyListeners();
+    } on StudyTaskException catch (error) {
+      if (_isDisposed) {
+        return;
+      }
+
+      _taskErrorMessage = error.message;
+      _isLoadingTasks = false;
+      notifyListeners();
+    } catch (_) {
+      if (_isDisposed) {
+        return;
+      }
+
+      _taskErrorMessage = 'We could not refresh your study tasks right now.';
+      _isLoadingTasks = false;
+      notifyListeners();
+    }
   }
 
   void _startTicker() {
