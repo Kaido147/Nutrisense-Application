@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'study_task_document.dart';
 import 'study_mock_data.dart';
 import 'study_models.dart';
 
@@ -40,7 +43,14 @@ class StudyPersistenceData {
 }
 
 class StudyRepository {
-  const StudyRepository();
+  StudyRepository({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
   static const String _selectedPresetKey = 'study_selected_preset';
   static const String _remainingSecondsKey = 'study_remaining_seconds';
@@ -52,7 +62,7 @@ class StudyRepository {
   StudySeedData loadSeedData() {
     return StudySeedData(
       focusPresets: buildFocusPresets(),
-      tasks: buildStudyTasks(),
+      tasks: const <StudyTask>[],
       scheduleItems: buildScheduleItems(),
       journalEntries: buildJournalEntries(),
       sessionHistory: buildStudySessionHistory(),
@@ -113,4 +123,82 @@ class StudyRepository {
       sessionHistory.map((record) => record.encode()).toList(growable: false),
     );
   }
+
+  Future<List<StudyTask>> loadTasks() async {
+    final User user = _requireUser();
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('studyTasks')
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    return snapshot.docs
+        .map(StudyTaskDocument.fromFirestore)
+        .map((task) => task.toStudyTask())
+        .toList(growable: false);
+  }
+
+  Future<void> addTask({
+    required String title,
+    String? description,
+    DateTime? dueAt,
+  }) async {
+    final User user = _requireUser();
+    final String trimmedTitle = title.trim();
+    if (trimmedTitle.isEmpty) {
+      throw const StudyTaskException('Please enter a task title.');
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('studyTasks')
+        .add({
+          'title': trimmedTitle,
+          'description': _nullableString(description),
+          'isCompleted': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'dueAt': dueAt == null ? null : Timestamp.fromDate(dueAt),
+        });
+  }
+
+  Future<void> updateTaskCompletion(String taskId, bool isCompleted) async {
+    final User user = _requireUser();
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('studyTasks')
+        .doc(taskId)
+        .set({
+          'isCompleted': isCompleted,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+  }
+
+  User _requireUser() {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      throw const StudyTaskException(
+        'Please log in again before managing study tasks.',
+      );
+    }
+
+    return user;
+  }
+
+  String? _nullableString(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
+  }
+}
+
+class StudyTaskException implements Exception {
+  const StudyTaskException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

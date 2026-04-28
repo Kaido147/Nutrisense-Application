@@ -18,7 +18,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
-  static const Color _orange = Color(0xFFFFB84D);
+  // static const Color _orange = Color(0xFFFFB84D);
 
   @override
   Widget build(BuildContext context) {

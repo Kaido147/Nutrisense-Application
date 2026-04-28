@@ -57,10 +57,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    '🎉',
-                    style: TextStyle(fontSize: 24),
-                  ),
+                  const Text('🎉', style: TextStyle(fontSize: 24)),
                 ],
               ),
               const SizedBox(height: 16),

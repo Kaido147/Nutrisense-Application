@@ -8,11 +8,13 @@ class StudySectionHeader extends StatelessWidget {
     required this.title,
     this.actionLabel,
     this.actionIcon,
+    this.onActionTap,
   });
 
   final String title;
   final String? actionLabel;
   final IconData? actionIcon;
+  final VoidCallback? onActionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,22 +30,25 @@ class StudySectionHeader extends StatelessWidget {
           ),
         ),
         if (actionLabel != null || actionIcon != null)
-          Row(
-            children: [
-              if (actionLabel != null)
-                Text(
-                  actionLabel!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+          GestureDetector(
+            onTap: onActionTap,
+            child: Row(
+              children: [
+                if (actionLabel != null)
+                  Text(
+                    actionLabel!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              if (actionIcon != null) ...[
-                if (actionLabel != null) const SizedBox(width: 8),
-                Icon(actionIcon, size: 18, color: StudyTheme.textSecondary),
+                if (actionIcon != null) ...[
+                  if (actionLabel != null) const SizedBox(width: 8),
+                  Icon(actionIcon, size: 18, color: StudyTheme.textSecondary),
+                ],
               ],
-            ],
+            ),
           ),
       ],
     );

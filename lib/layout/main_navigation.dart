@@ -3,6 +3,7 @@ import '../pages/home.dart';
 import '../pages/workout.dart';
 import '../pages/study.dart';
 import '../pages/profile.dart';
+import '../pages/modals/quick_actions_modal.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -33,26 +34,21 @@ class _MainNavigationState extends State<MainNavigation> {
 
   // Maps nav button index (0,1,3,4) → page index (0,1,2,3) Galing Ecantadia
   int _navToPage(int navIndex) {
-  if (navIndex > 2) return navIndex - 1;
-  return navIndex;
+    if (navIndex > 2) return navIndex - 1;
+    return navIndex;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: SizedBox(
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             // Nav bar background
             Container(
-              decoration: const BoxDecoration(
-                color: _navyBlue,
-              ),
+              decoration: const BoxDecoration(color: _navyBlue),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -72,7 +68,7 @@ class _MainNavigationState extends State<MainNavigation> {
               right: 0,
               child: Center(
                 child: GestureDetector(
-                  onTap: () {},
+                  onTap: () => QuickActionsModal.show(context),
                   child: Container(
                     width: 56,
                     height: 56,
@@ -116,7 +112,9 @@ class _MainNavigationState extends State<MainNavigation> {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: isSelected ? _goldTan : Colors.white.withValues(alpha: 0.6),
+              color: isSelected
+                  ? _goldTan
+                  : Colors.white.withValues(alpha: 0.6),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),

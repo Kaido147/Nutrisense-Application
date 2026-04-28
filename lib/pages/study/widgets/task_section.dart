@@ -9,35 +9,93 @@ class TaskSection extends StatelessWidget {
     super.key,
     required this.tasks,
     required this.onTaskToggle,
+    required this.onAddTask,
+    required this.isLoading,
+    required this.errorMessage,
   });
 
   final List<StudyTask> tasks;
   final ValueChanged<String> onTaskToggle;
+  final VoidCallback onAddTask;
+  final bool isLoading;
+  final String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const StudySectionHeader(
+        StudySectionHeader(
           title: "Today's Tasks",
           actionLabel: 'Add Task',
+          onActionTap: onAddTask,
         ),
         const SizedBox(height: 12),
-        Column(
-          children: tasks
-              .map(
-                (task) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _TaskCard(
-                    task: task,
-                    onTap: () => onTaskToggle(task.id),
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (errorMessage != null)
+          _TaskMessageCard(
+            message: errorMessage!,
+            icon: Icons.error_outline,
+          )
+        else if (tasks.isEmpty)
+          const _TaskMessageCard(
+            message: 'No study tasks yet. Tap Add Task to create one.',
+            icon: Icons.check_circle_outline,
+          )
+        else
+          Column(
+            children: tasks
+                .map(
+                  (task) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _TaskCard(
+                      task: task,
+                      onTap: () => onTaskToggle(task.id),
+                    ),
                   ),
-                ),
-              )
-              .toList(),
-        ),
+                )
+                .toList(),
+          ),
       ],
+    );
+  }
+}
+
+class _TaskMessageCard extends StatelessWidget {
+  const _TaskMessageCard({required this.message, required this.icon});
+
+  final String message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: StudyTheme.softShadow,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: StudyTheme.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: StudyTheme.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

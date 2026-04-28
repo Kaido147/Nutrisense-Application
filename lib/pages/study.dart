@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'modals/add_task_modal.dart';
 import 'study/study_controller.dart';
 import 'study/study_models.dart';
 import 'study/study_repository.dart';
@@ -28,7 +29,7 @@ class _StudyPageState extends State<StudyPage> {
   @override
   void initState() {
     super.initState();
-    _controller = StudyController(repository: const StudyRepository());
+    _controller = StudyController(repository: StudyRepository());
     _controller.initialize();
   }
 
@@ -161,7 +162,25 @@ class _FocusModeView extends StatelessWidget {
         const SizedBox(height: 24),
         TaskSection(
           tasks: controller.state.tasks,
-          onTaskToggle: controller.toggleTask,
+          onTaskToggle: (taskId) {
+            controller.toggleTask(taskId);
+          },
+          onAddTask: () => AddTaskModal.show(
+            context,
+            onSave: ({
+              required String title,
+              String? description,
+              DateTime? dueAt,
+            }) {
+              return controller.addTask(
+                title: title,
+                description: description,
+                dueAt: dueAt,
+              );
+            },
+          ),
+          isLoading: controller.isLoadingTasks,
+          errorMessage: controller.taskErrorMessage,
         ),
         const SizedBox(height: 24),
         ScheduleSection(scheduleItems: controller.scheduleItems),

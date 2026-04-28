@@ -69,10 +69,7 @@ class HomePage extends StatelessWidget {
                       ),
                       child: const CircleAvatar(
                         backgroundColor: Colors.transparent,
-                        child: Icon(
-                          Icons.person,
-                          color: Color(0xFF7C5AA6),
-                        ),
+                        child: Icon(Icons.person, color: Color(0xFF7C5AA6)),
                       ),
                     ),
                   ],
@@ -206,166 +203,162 @@ class HomePage extends StatelessWidget {
                       GestureDetector(
                         onTap: () {
                           onNavigateTab?.call(2);
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 18,
-                            ),
-                            decoration: BoxDecoration(
-                              color: navy,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: Color(0xFF3C4E82),
-                                  child: Icon(
-                                    Icons.access_time,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Start Study Session',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'Focus mode with timer',
-                                        style: TextStyle(
-                                          color: Color(0xFFD8E0F2),
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.arrow_forward,
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                          decoration: BoxDecoration(
+                            color: navy,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Color(0xFF3C4E82),
+                                child: Icon(
+                                  Icons.access_time,
                                   color: Colors.white,
                                 ),
-                              ],
-                            ),
+                              ),
+                              SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Start Study Session',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Focus mode with timer',
+                                      style: TextStyle(
+                                        color: Color(0xFFD8E0F2),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward, color: Colors.white),
+                            ],
                           ),
                         ),
+                      ),
 
-
-                        const SizedBox(height: 18),
-                        GestureDetector(
+                      const SizedBox(height: 18),
+                      GestureDetector(
                         onTap: () {
                           onNavigateTab?.call(1);
                         },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 18,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Color(0xFFD6B66E),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                const CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: Color(0xFFE7D4A5),
-                                  child: Icon(
-                                    Icons.gps_fixed,
-                                    color: Color(0xFF24376B),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Start Workout',
-                                        style: TextStyle(
-                                          color: Color(0xFF24376B),
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        "Today's routine ready",
-                                        style: TextStyle(
-                                          color: Color(0xFF3F4A5A),
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.arrow_forward,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFD6B66E),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Color(0xFFE7D4A5),
+                                child: Icon(
+                                  Icons.gps_fixed,
                                   color: Color(0xFF24376B),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Start Workout',
+                                      style: TextStyle(
+                                        color: Color(0xFF24376B),
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      "Today's routine ready",
+                                      style: TextStyle(
+                                        color: Color(0xFF3F4A5A),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.arrow_forward,
+                                color: Color(0xFF24376B),
+                              ),
+                            ],
                           ),
                         ),
-                        
-                        const SizedBox(height: 20),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1ECE6), // light beige
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFFE2D8C9),
-                              width: 1,
-                              ),
-                              ),
-                              child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(
-                                  Icons.auto_awesome, // sparkle icon
-                                  color: Color(0xFFD6B66E),
-                                ),
-                                const SizedBox(width: 10),
+                      ),
 
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [
-                                      Text(
-                                        '"Success is the sum of small efforts\nrepeated day in and day out."',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Color(0xFF24376B),
-                                          height: 1.5,
-                                        ),
-                                      ),
-                                      SizedBox(height: 10),
-                                      Text(
-                                        '— Robert Collier',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF7A7F8C),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+                      const SizedBox(height: 20),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1ECE6), // light beige
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFE2D8C9),
+                            width: 1,
                           ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome, // sparkle icon
+                              color: Color(0xFFD6B66E),
+                            ),
+                            const SizedBox(width: 10),
+
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    '"Success is the sum of small efforts\nrepeated day in and day out."',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF24376B),
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    '— Robert Collier',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF7A7F8C),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
                       const SizedBox(height: 30),
                     ],
@@ -440,10 +433,7 @@ class ProgressCircle extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF586173),
-          ),
+          style: const TextStyle(fontSize: 14, color: Color(0xFF586173)),
         ),
       ],
     );
@@ -505,10 +495,7 @@ class OverviewCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF667085),
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF667085)),
           ),
           const SizedBox(height: 10),
           Row(
@@ -526,7 +513,7 @@ class OverviewCard extends StatelessWidget {
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );

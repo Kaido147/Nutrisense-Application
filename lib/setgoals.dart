@@ -1,14 +1,110 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
+import 'package:nutrisense/services/goals_service.dart';
 
-class SetGoalsPage extends StatefulWidget {
+class SetGoalsPage extends ConsumerStatefulWidget {
   const SetGoalsPage({super.key});
 
   @override
-  State<SetGoalsPage> createState() => _SetGoalsPageState();
+  ConsumerState<SetGoalsPage> createState() => _SetGoalsPageState();
 }
 
-class _SetGoalsPageState extends State<SetGoalsPage> {
-  final Set<String> selectedGoals = {};
+class _SetGoalsPageState extends ConsumerState<SetGoalsPage> {
+  static const List<String> _studyOptions = [
+    '4+ hours/day',
+    '2-3 hours/day',
+    '1-2 hours/day',
+    'Flexible',
+  ];
+  static const List<String> _workoutOptions = [
+    'Daily workout',
+    '3-4x per week',
+    '1-2x per week',
+    'Casual',
+  ];
+  static const List<String> _wellnessOptions = [
+    'Better sleep',
+    'Reduce stress',
+    'Healthy eating',
+    'Mindfulness',
+  ];
+
+  final Set<String> _studyGoals = <String>{};
+  final Set<String> _workoutGoals = <String>{};
+  final Set<String> _wellnessGoals = <String>{};
+  bool _isSaving = false;
+
+  Future<void> _continue() async {
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await ref
+          .read(goalsServiceProvider)
+          .saveGoals(
+            studyGoals: _selectedGoalsInOptionOrder(_studyOptions, _studyGoals),
+            workoutGoals: _selectedGoalsInOptionOrder(
+              _workoutOptions,
+              _workoutGoals,
+            ),
+            wellnessGoals: _selectedGoalsInOptionOrder(
+              _wellnessOptions,
+              _wellnessGoals,
+            ),
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+    } on GoalsFlowException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  void _skip() {
+    if (_isSaving) {
+      return;
+    }
+
+    Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+  }
+
+  void _toggleGoal(Set<String> selectedGoals, String option) {
+    setState(() {
+      if (selectedGoals.contains(option)) {
+        selectedGoals.remove(option);
+      } else {
+        selectedGoals.add(option);
+      }
+    });
+  }
+
+  List<String> _selectedGoalsInOptionOrder(
+    List<String> options,
+    Set<String> selectedGoals,
+  ) {
+    return options.where(selectedGoals.contains).toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,34 +152,19 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
 
                   // STUDY GOALS
                   _buildSectionHeader(Icons.menu_book_outlined, 'Study Goals'),
-                  _buildGoalChips([
-                    '4+ hours/day',
-                    '2-3 hours/day',
-                    '1-2 hours/day',
-                    'Flexible'
-                  ]),
+                  _buildGoalChips(_studyOptions, _studyGoals),
 
                   const SizedBox(height: 20),
 
                   // WORKOUT GOALS
                   _buildSectionHeader(Icons.fitness_center, 'Workout Goals'),
-                  _buildGoalChips([
-                    'Daily workout',
-                    '3-4x per week',
-                    '1-2x per week',
-                    'Casual'
-                  ]),
+                  _buildGoalChips(_workoutOptions, _workoutGoals),
 
                   const SizedBox(height: 20),
 
                   // WELLNESS
                   _buildSectionHeader(Icons.favorite_border, 'Wellness Focus'),
-                  _buildGoalChips([
-                    'Better sleep',
-                    'Reduce stress',
-                    'Healthy eating',
-                    'Mindfulness'
-                  ]),
+                  _buildGoalChips(_wellnessOptions, _wellnessGoals),
 
                   const SizedBox(height: 32),
 
@@ -92,13 +173,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/main',
-                              (route) => false,
-                            );
-                          },
+                          onPressed: _isSaving ? null : _skip,
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             side: const BorderSide(color: Color(0xFF1D3557)),
@@ -120,16 +195,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
 
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            // You can print selected goals for now
-                            print(selectedGoals);
-
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/main',
-                              (route) => false,
-                            );
-                          },
+                          onPressed: _isSaving ? null : _continue,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF283B6B),
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -137,13 +203,24 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
                               borderRadius: BorderRadius.circular(30),
                             ),
                           ),
-                          child: const Text(
-                            'Continue',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Continue',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
@@ -177,7 +254,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
     );
   }
 
-  Widget _buildGoalChips(List<String> options) {
+  Widget _buildGoalChips(List<String> options, Set<String> selectedGoals) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -185,15 +262,7 @@ class _SetGoalsPageState extends State<SetGoalsPage> {
         final isSelected = selectedGoals.contains(option);
 
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              if (isSelected) {
-                selectedGoals.remove(option);
-              } else {
-                selectedGoals.add(option);
-              }
-            });
-          },
+          onTap: _isSaving ? null : () => _toggleGoal(selectedGoals, option),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(

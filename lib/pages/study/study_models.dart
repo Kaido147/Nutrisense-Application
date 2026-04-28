@@ -93,24 +93,40 @@ class StudyTask {
     required this.title,
     required this.subject,
     this.isCompleted = false,
+    this.description,
+    this.createdAt,
+    this.updatedAt,
+    this.dueAt,
   });
 
   final String id;
   final String title;
   final String subject;
   final bool isCompleted;
+  final String? description;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? dueAt;
 
   StudyTask copyWith({
     String? id,
     String? title,
     String? subject,
     bool? isCompleted,
+    String? description,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? dueAt,
   }) {
     return StudyTask(
       id: id ?? this.id,
       title: title ?? this.title,
       subject: subject ?? this.subject,
       isCompleted: isCompleted ?? this.isCompleted,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      dueAt: dueAt ?? this.dueAt,
     );
   }
 }
@@ -227,6 +243,8 @@ class StudyState {
   final FocusTimerState focusTimer;
   final List<StudyTask> tasks;
   final List<StudySessionRecord> sessionHistory;
+
+  bool get hasTasks => tasks.isNotEmpty;
 
   StudyState copyWith({
     FocusTimerState? focusTimer,
