@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'modals/nutrition/generate_meal_ideas_modal.dart';
+import 'modals/nutrition/nutrition_modal.dart';
 
 class NutritionTab extends StatefulWidget {
   const NutritionTab({super.key});
@@ -18,6 +19,21 @@ class _NutritionTabState extends State<NutritionTab> {
     {'type': 'Lunch', 'name': 'Grilled Chicken Salad', 'calories': 485},
     {'type': 'Snack', 'name': 'Greek Yogurt & Almonds', 'calories': 210},
   ];
+
+  void _deleteMeal(int index) {
+    setState(() => _recentMeals.removeAt(index));
+  }
+
+  void _viewNutrition(Map<String, dynamic> meal) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      builder: (context) =>
+          NutritionModal(meal: meal, onBack: () {}, onSelectMeal: () {}),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -250,76 +266,165 @@ class _NutritionTabState extends State<NutritionTab> {
           ),
         ),
         const SizedBox(height: 12),
-        ..._recentMeals.map(
-          (meal) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+        if (_recentMeals.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            decoration: BoxDecoration(
+              color: _lightGray,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.no_meals, color: Color(0xFFCCCCCC), size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  'No recent meals',
+                  style: TextStyle(
+                    color: Color(0xFF999999),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ),
+              ],
+            ),
+          )
+        else
+          ..._recentMeals.asMap().entries.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildMealCard(entry.value, entry.key),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMealCard(Map<String, dynamic> meal, int index) {
+    return Dismissible(
+      key: ValueKey('${meal['name']}_$index'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFEDED),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(
+          Icons.delete_outline_rounded,
+          color: Color(0xFFE53935),
+          size: 24,
+        ),
+      ),
+      onDismissed: (_) => _deleteMeal(index),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Meal info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          meal['type'],
-                          style: TextStyle(
-                            color: Color(0xFFFFB84D),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          meal['name'],
-                          style: TextStyle(
-                            color: _navyBlue,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    meal['type'],
+                    style: const TextStyle(
+                      color: Color(0xFFFFB84D),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${meal['calories']}',
-                        style: TextStyle(
-                          color: _navyBlue,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        'cal',
-                        style: TextStyle(
-                          color: Color(0xFF999999),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 4),
+                  Text(
+                    meal['name'],
+                    style: TextStyle(
+                      color: _navyBlue,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+            // Calories
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${meal['calories']}',
+                  style: TextStyle(
+                    color: _navyBlue,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'cal',
+                  style: const TextStyle(
+                    color: Color(0xFF999999),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            // Action buttons
+            Row(
+              children: [
+                // View nutrition button
+                GestureDetector(
+                  onTap: () => _viewNutrition(meal),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.bar_chart_rounded,
+                      color: Color(0xFF1976D2),
+                      size: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Delete button
+                GestureDetector(
+                  onTap: () => _deleteMeal(index),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEDED),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFE53935),
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
