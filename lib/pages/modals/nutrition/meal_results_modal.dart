@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'nutrition_modal.dart';
+import 'cooking_steps_modal.dart';
+
 class MealResultsModal extends StatefulWidget {
   final List<Map<String, dynamic>> meals;
   final VoidCallback onBackPressed;
@@ -18,7 +21,28 @@ class _MealResultsModalState extends State<MealResultsModal> {
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
-  // static const Color _orange = Color(0xFFFFB84D);
+
+  void _openNutritionModal(BuildContext context, Map<String, dynamic> meal) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => NutritionModal(
+        meal: meal,
+        onBack: () {},
+        onSelectMeal: () => _openCookingStepsModal(context, meal),
+      ),
+    );
+  }
+
+  void _openCookingStepsModal(BuildContext context, Map<String, dynamic> meal) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CookingStepsModal(meal: meal, onBack: () {}),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +65,9 @@ class _MealResultsModalState extends State<MealResultsModal> {
           right: 0,
           height: modalHeight,
           child: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: const BorderRadius.only(
+              borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(24),
                 topRight: Radius.circular(24),
               ),
@@ -112,7 +136,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
+                                const Text(
                                   'Here are some delicious options you can make',
                                   style: TextStyle(
                                     color: Color(0xFF999999),
@@ -136,7 +160,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                   border: Border.all(
                                     color: isLastItem
                                         ? _navyBlue
-                                        : Color(0xFFEEEEEE),
+                                        : const Color(0xFFEEEEEE),
                                     width: isLastItem ? 2 : 1,
                                   ),
                                   borderRadius: BorderRadius.circular(16),
@@ -158,7 +182,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       const SizedBox(height: 6),
                                       Text(
                                         meal['description'],
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Color(0xFF666666),
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
@@ -210,7 +234,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       ),
                                       const SizedBox(height: 12),
                                       // Using your ingredients
-                                      Text(
+                                      const Text(
                                         'USING YOUR INGREDIENTS:',
                                         style: TextStyle(
                                           color: Color(0xFF999999),
@@ -248,21 +272,52 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                                 .toList(),
                                       ),
                                       const SizedBox(height: 16),
+                                      // View Nutritions button
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          onPressed: () => _openNutritionModal(
+                                            context,
+                                            meal,
+                                          ),
+                                          icon: Icon(
+                                            Icons.bar_chart_rounded,
+                                            size: 18,
+                                            color: _navyBlue,
+                                          ),
+                                          label: Text(
+                                            'View Nutritions',
+                                            style: TextStyle(
+                                              color: _navyBlue,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            side: BorderSide(
+                                              color: _navyBlue,
+                                              width: 1.5,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      // Select This Meal button
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
-                                          onPressed: () {
-                                            // TODO: Handle meal selection
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Selected: ${meal['name']}',
-                                                ),
+                                          onPressed: () =>
+                                              _openCookingStepsModal(
+                                                context,
+                                                meal,
                                               ),
-                                            );
-                                          },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: _navyBlue,
                                             shape: RoundedRectangleBorder(
@@ -273,7 +328,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                               vertical: 12,
                                             ),
                                           ),
-                                          child: Text(
+                                          child: const Text(
                                             'Select This Meal',
                                             style: TextStyle(
                                               color: Colors.white,
