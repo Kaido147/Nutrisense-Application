@@ -30,9 +30,94 @@ class _NutritionTabState extends State<NutritionTab> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.transparent,
-      builder: (context) =>
-          NutritionModal(meal: meal, onBack: () {}, onSelectMeal: () {}),
+      builder: (context) => NutritionModal(meal: meal, onBack: () {}),
     );
+  }
+
+  void _showMealAddedNotification(String mealName) {
+    OverlayEntry? overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 16,
+        right: 16,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 400),
+          builder: (context, value, child) => Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, -15 * (1 - value)),
+              child: child,
+            ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F8F5),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _green.withValues(alpha: 0.15),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: _green.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.check_circle, color: _green, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Added to Recent',
+                        style: TextStyle(
+                          color: _navyBlue,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        mealName,
+                        style: TextStyle(
+                          color: _navyBlue.withValues(alpha: 0.7),
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry?.remove();
+    });
   }
 
   @override
@@ -219,8 +304,45 @@ class _NutritionTabState extends State<NutritionTab> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    GenerateMealIdeasModal.show(context);
+                  onPressed: () async {
+                    final completedMeal = await GenerateMealIdeasModal.show(
+                      context,
+                    );
+                    if (completedMeal != null) {
+                      // Add the meal to recent meals
+                      setState(() {
+                        // Parse calories to ensure it's a number
+                        dynamic caloriesValue =
+                            completedMeal['nutrition']?['calories'] ??
+                            completedMeal['calories'] ??
+                            0;
+                        int calories = 0;
+                        if (caloriesValue is int) {
+                          calories = caloriesValue;
+                        } else if (caloriesValue is String) {
+                          // Extract numeric value from strings like "2865 kcal"
+                          calories =
+                              int.tryParse(
+                                caloriesValue.replaceAll(RegExp(r'[^0-9]'), ''),
+                              ) ??
+                              0;
+                        } else if (caloriesValue is double) {
+                          calories = caloriesValue.toInt();
+                        }
+
+                        _recentMeals.insert(0, {
+                          ...completedMeal, // Keep all original meal data
+                          'type': completedMeal['category'] ?? 'Meal',
+                          'calories': calories,
+                        });
+                      });
+                      // Show custom success notification
+                      if (mounted) {
+                        _showMealAddedNotification(
+                          completedMeal['name'] ?? 'Your meal',
+                        );
+                      }
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _green,

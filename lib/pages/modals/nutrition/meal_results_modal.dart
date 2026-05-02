@@ -83,12 +83,17 @@ class _MealResultsModalState extends State<MealResultsModal> {
   }
 
   void _openCookingStepsModal(BuildContext context, Map<String, dynamic> meal) {
-    showModalBottomSheet(
+    showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => CookingStepsModal(meal: meal, onBack: () {}),
-    );
+    ).then((completedMeal) {
+      if (completedMeal != null && mounted) {
+        // Meal was completed, pass it back to GenerateMealIdeasModal
+        Navigator.pop(context, completedMeal);
+      }
+    });
   }
 
   @override

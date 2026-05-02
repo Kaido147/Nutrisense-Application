@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class NutritionModal extends StatelessWidget {
   final Map<String, dynamic> meal;
   final VoidCallback onBack;
-  final VoidCallback onSelectMeal;
+  final VoidCallback? onSelectMeal;
 
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
@@ -12,7 +12,7 @@ class NutritionModal extends StatelessWidget {
     super.key,
     required this.meal,
     required this.onBack,
-    required this.onSelectMeal,
+    this.onSelectMeal,
   });
 
   @override
@@ -238,31 +238,32 @@ class NutritionModal extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   child: Column(
                     children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            onSelectMeal();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _navyBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      if (onSelectMeal != null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              onSelectMeal!();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _navyBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text(
-                            'Select This Meal',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
+                            child: const Text(
+                              'Select This Meal',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
+                      if (onSelectMeal != null) const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         child: TextButton(

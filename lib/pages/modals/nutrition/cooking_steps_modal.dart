@@ -436,16 +436,8 @@ class _CookingStepsModalState extends State<CookingStepsModal> {
                             child: ElevatedButton(
                               onPressed: isLast
                                   ? () {
-                                      Navigator.pop(context);
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Enjoy your ${widget.meal['name']}! 🍽️',
-                                          ),
-                                        ),
-                                      );
+                                      // Return meal data to MealResultsModal
+                                      Navigator.pop(context, widget.meal);
                                     }
                                   : () => setState(() => _currentStep++),
                               style: ElevatedButton.styleFrom(

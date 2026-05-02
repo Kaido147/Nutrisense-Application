@@ -10,8 +10,8 @@ class GenerateMealIdeasModal extends StatefulWidget {
   @override
   State<GenerateMealIdeasModal> createState() => _GenerateMealIdeasModalState();
 
-  static Future<void> show(BuildContext context) {
-    return showModalBottomSheet(
+  static Future<Map<String, dynamic>?> show(BuildContext context) {
+    return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -181,15 +181,43 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
 
       if (meals.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No meals found. Try different ingredients!'),
+          SnackBar(
+            backgroundColor: const Color(0xFFE53935),
+            duration: const Duration(seconds: 3),
+            content: Row(
+              children: [
+                const Icon(Icons.search_off, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        'No Meals Found',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Try different ingredients',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
         return;
       }
 
       if (mounted) {
-        showModalBottomSheet(
+        final result = await showModalBottomSheet<Map<String, dynamic>>(
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
@@ -200,6 +228,11 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
             userIngredients: _fridgeItems,
           ),
         );
+
+        if (result != null && mounted) {
+          // A meal was completed, close this modal and return the meal
+          Navigator.pop(context, result);
+        }
       }
     } catch (e) {
       if (!mounted) return;
