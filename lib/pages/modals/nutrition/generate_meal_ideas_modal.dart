@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'meal_results_modal.dart';
+import '../../../services/meal_services.dart';
 
 class GenerateMealIdeasModal extends StatefulWidget {
   const GenerateMealIdeasModal({super.key});
@@ -42,41 +43,17 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
 
   // Common quantity units
   static const List<String> _quickUnits = [
+    'pcs',
+    'whole',
     'cup',
     'tbsp',
     'tsp',
     'g',
     'kg',
-    'pcs',
+    'ml',
+    'l',
     'slice',
-  ];
-
-  // Mock meal data
-  final List<Map<String, dynamic>> _mockMeals = [
-    {
-      'name': 'Veggie Stir-Fry Bowl',
-      'description': 'A colorful mix of fresh vegetables with a savory sauce',
-      'time': '15 min',
-      'difficulty': 'Easy',
-      'calories': '320 cal',
-      'ingredients': ['Chicken'],
-    },
-    {
-      'name': 'Healthy Buddha Bowl',
-      'description': 'Nutritious bowl with balanced proteins and greens',
-      'time': '20 min',
-      'difficulty': 'Easy',
-      'calories': '450 cal',
-      'ingredients': ['Chicken'],
-    },
-    {
-      'name': 'Quick Garden Salad',
-      'description': 'Fresh and crisp salad with homemade dressing',
-      'time': '10 min',
-      'difficulty': 'Very Easy',
-      'calories': '180 cal',
-      'ingredients': ['Chicken'],
-    },
+    'pinch',
   ];
 
   final List<String> _mealTypes = [
@@ -187,21 +164,45 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
     }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() => _isLoading = false);
 
-    if (mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        barrierColor: Colors.transparent,
-        builder: (context) => MealResultsModal(
-          meals: _mockMeals,
-          onBackPressed: () => Navigator.pop(context),
-        ),
-      );
+    try {
+      final ingredients = _fridgeItems
+          .map((item) => item['ingredient']!)
+          .toList();
+
+      final meals = await MealService.fetchMealsByIngredients(ingredients);
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (meals.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No meals found. Try different ingredients!'),
+          ),
+        );
+        return;
+      }
+
+      if (mounted) {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.transparent,
+          builder: (context) => MealResultsModal(
+            meals: meals,
+            onBackPressed: () => Navigator.pop(context),
+            userIngredients: _fridgeItems,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Something went wrong: $e')));
     }
   }
 
