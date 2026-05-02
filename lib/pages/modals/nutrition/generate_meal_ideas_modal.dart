@@ -170,7 +170,11 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
           .map((item) => item['ingredient']!)
           .toList();
 
-      final meals = await MealService.fetchMealsByIngredients(ingredients);
+      final meals = await MealService.fetchMealsByIngredients(
+        ingredients,
+        mealType: _selectedMealType,
+        dietaryPrefs: _selectedDietaryPrefs.toList(),
+      );
 
       if (!mounted) return;
       setState(() => _isLoading = false);

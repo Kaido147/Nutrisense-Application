@@ -20,8 +20,10 @@ class MealService {
   // ─────────────────────────────────────────────────────────────────────────
 
   static Future<List<Map<String, dynamic>>> fetchMealsByIngredients(
-    List<String> ingredients,
-  ) async {
+    List<String> ingredients, {
+    String mealType = 'Any',
+    List<String> dietaryPrefs = const [],
+  }) async {
     // ── STEP 1: Query TheMealDB once per ingredient ──────────────────────────
     // TheMealDB filter only supports ONE ingredient per request.
     // We fetch each separately and track how many user ingredients each meal matches.
@@ -63,13 +65,123 @@ class MealService {
     // ── STEP 3: Fetch full detail + nutrition for each ───────────────────────
     final results = await Future.wait(topIds.map(_lookupMealWithNutrition));
 
-    // ── STEP 4: Remove nulls — NO secondary name filter ─────────────────────
-    // The TheMealDB filter already guarantees these meals contain at least one
-    // of the user's ingredients. A secondary string-match filter causes false
-    // negatives (e.g. "eggplant" meals get dropped because _simplifyIngredient
-    // changes the name and the substring check fails).
-    // The ingredient_matcher.dart handles all display-level matching.
-    return results.whereType<Map<String, dynamic>>().toList();
+    // ── STEP 4: Remove nulls ─────────────────────────────────────────────────
+    var filtered = results.whereType<Map<String, dynamic>>().toList();
+
+    // ── STEP 5: Filter by meal type ──────────────────────────────────────────
+    if (mealType != 'Any') {
+      filtered = filtered.where((meal) {
+        final category = (meal['category'] as String).toLowerCase();
+        switch (mealType) {
+          case 'Breakfast':
+            return category == 'breakfast';
+          case 'Lunch':
+            return [
+              'beef',
+              'chicken',
+              'lamb',
+              'pork',
+              'seafood',
+              'pasta',
+              'vegetarian',
+              'vegan',
+              'goat',
+              'miscellaneous',
+              'side',
+            ].contains(category);
+          case 'Dinner':
+            return [
+              'beef',
+              'chicken',
+              'lamb',
+              'pork',
+              'seafood',
+              'pasta',
+              'vegetarian',
+              'vegan',
+              'goat',
+            ].contains(category);
+          case 'Snack':
+            return [
+              'starter',
+              'miscellaneous',
+              'side',
+              'dessert',
+            ].contains(category);
+          default:
+            return true;
+        }
+      }).toList();
+    }
+
+    // ── STEP 6: Filter by dietary preferences ────────────────────────────────
+    if (dietaryPrefs.isNotEmpty) {
+      filtered = filtered.where((meal) {
+        final category = (meal['category'] as String).toLowerCase();
+        final ingredientNames =
+            (meal['ingredients'] as List<Map<String, String>>)
+                .map((i) => (i['name'] ?? '').toLowerCase())
+                .toList();
+
+        for (final pref in dietaryPrefs) {
+          if (!_matchesDietaryPref(pref, category, ingredientNames)) {
+            return false;
+          }
+        }
+        return true;
+      }).toList();
+    }
+
+    return filtered;
+  }
+
+  static bool _matchesDietaryPref(
+    String pref,
+    String category,
+    List<String> ingredients,
+  ) {
+    bool hasAny(List<String> keywords) =>
+        ingredients.any((i) => keywords.any((k) => i.contains(k)));
+
+    switch (pref) {
+      case 'Vegetarian':
+        return category == 'vegetarian' || category == 'vegan';
+      case 'Vegan':
+        return category == 'vegan';
+      case 'Gluten-free':
+        return !hasAny([
+          'flour',
+          'wheat',
+          'barley',
+          'rye',
+          'bread',
+          'pasta',
+          'noodle',
+        ]);
+      case 'Dairy-free':
+        return !hasAny(['milk', 'cheese', 'butter', 'cream', 'yogurt', 'whey']);
+      case 'Low-Carb':
+        return !hasAny([
+          'rice',
+          'pasta',
+          'bread',
+          'potato',
+          'flour',
+          'sugar',
+          'noodle',
+        ]);
+      case 'High-Protein':
+        return [
+          'beef',
+          'chicken',
+          'lamb',
+          'pork',
+          'seafood',
+          'goat',
+        ].contains(category);
+      default:
+        return true;
+    }
   }
 
   /// Strips adjectives/descriptors so "boneless chicken breast" → "chicken".
