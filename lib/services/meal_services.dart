@@ -6,7 +6,6 @@ class MealService {
   static const _mealBase = 'https://www.themealdb.com/api/json/v1/1';
   static const _usdaBase = 'https://api.nal.usda.gov/fdc/v1';
 
-  // USDA nutrient IDs we care about
   static const _nidCalories = 1008;
   static const _nidProtein = 1003;
   static const _nidCarbs = 1005;
@@ -23,25 +22,37 @@ class MealService {
   static Future<List<Map<String, dynamic>>> fetchMealsByIngredients(
     List<String> ingredients,
   ) async {
+    // ── STEP 1: Query TheMealDB once per ingredient ──────────────────────────
+    // TheMealDB filter only supports ONE ingredient per request.
+    // We fetch each separately and track how many user ingredients each meal matches.
     final Map<String, int> idMatchCount = {};
-    for (final ingredient in ingredients) {
+
+    for (int i = 0; i < ingredients.length; i++) {
+      final ingredient = ingredients[i];
       final searchTerm = _simplifyIngredient(ingredient);
+      if (searchTerm.isEmpty) continue;
+
+      // ── Avoid rate-limiting on rapid sequential requests ──────────────────
+      if (i > 0) await Future.delayed(const Duration(milliseconds: 300));
+
       final encoded = Uri.encodeComponent(searchTerm);
       final res = await http.get(Uri.parse('$_mealBase/filter.php?i=$encoded'));
       if (res.statusCode != 200) continue;
+
       final meals = jsonDecode(res.body)['meals'];
       if (meals == null) continue;
+
       for (final meal in meals as List) {
         final id = meal['idMeal'] as String;
+        // Each ingredient search that returns this meal adds 1 to its count.
         idMatchCount[id] = (idMatchCount[id] ?? 0) + 1;
       }
     }
 
     if (idMatchCount.isEmpty) return [];
 
-    // Only keep meals that matched AT LEAST ONE of the user's ingredients
-    // (idMatchCount only contains meals that appeared in at least one filter result,
-    // so all entries already have count >= 1 — but we sort best matches first)
+    // ── STEP 2: Take top 10 meals by match count ─────────────────────────────
+    // Meals matched by more of the user's ingredients rank higher.
     final topIds =
         (idMatchCount.entries.toList()
               ..sort((a, b) => b.value.compareTo(a.value)))
@@ -49,35 +60,22 @@ class MealService {
             .map((e) => e.key)
             .toList();
 
+    // ── STEP 3: Fetch full detail + nutrition for each ───────────────────────
     final results = await Future.wait(topIds.map(_lookupMealWithNutrition));
-    final meals = results.whereType<Map<String, dynamic>>().toList();
 
-    // Secondary filter — after full lookup, verify at least one recipe ingredient
-    // actually matches back to the user's simplified ingredient list
-    final simplifiedUserIngredients = ingredients
-        .map((i) => _simplifyIngredient(i).toLowerCase())
-        .toList();
-
-    return meals.where((meal) {
-      final recipeIngredients = (meal['ingredients'] as List<dynamic>? ?? [])
-          .whereType<Map>()
-          .map(
-            (e) =>
-                _simplifyIngredient((e['name'] ?? '').toString().toLowerCase()),
-          )
-          .toList();
-
-      return recipeIngredients.any(
-        (ri) => simplifiedUserIngredients.any(
-          (ui) => ri.contains(ui) || ui.contains(ri),
-        ),
-      );
-    }).toList();
+    // ── STEP 4: Remove nulls — NO secondary name filter ─────────────────────
+    // The TheMealDB filter already guarantees these meals contain at least one
+    // of the user's ingredients. A secondary string-match filter causes false
+    // negatives (e.g. "eggplant" meals get dropped because _simplifyIngredient
+    // changes the name and the substring check fails).
+    // The ingredient_matcher.dart handles all display-level matching.
+    return results.whereType<Map<String, dynamic>>().toList();
   }
 
-  /// Strips adjectives and descriptors so "boneless chicken breast" → "chicken"
+  /// Strips adjectives/descriptors so "boneless chicken breast" → "chicken".
+  /// Kept minimal — only strips words that TheMealDB won't understand anyway.
   static String _simplifyIngredient(String ingredient) {
-    const descriptors = [
+    const descriptors = {
       'boneless',
       'skinless',
       'fresh',
@@ -107,13 +105,13 @@ class MealService {
       'fillet',
       'wing',
       'leg',
-    ];
+    };
 
     final words = ingredient.toLowerCase().trim().split(RegExp(r'\s+'));
     final filtered = words.where((w) => !descriptors.contains(w)).toList();
-
-    // Return the filtered result, fallback to original if nothing left
-    return filtered.isEmpty ? ingredient : filtered.join(' ');
+    return filtered.isEmpty
+        ? ingredient.toLowerCase().trim()
+        : filtered.join(' ');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -132,7 +130,6 @@ class MealService {
     final raw = meals[0] as Map<String, dynamic>;
     final meal = _parseMeal(raw);
 
-    // Fetch USDA nutrition for every ingredient in this meal
     final ingredients = meal['ingredients'] as List<Map<String, String>>;
     final nutrition = await _fetchNutritionForMeal(ingredients);
     meal['nutrition'] = nutrition;
@@ -161,7 +158,7 @@ class MealService {
       'description': '${raw['strCategory'] ?? ''} · ${raw['strArea'] ?? ''}',
       'time': _estimateTime(ingredients.length),
       'difficulty': _estimateDifficulty(ingredients.length),
-      'calories': 'Loading…', // replaced after USDA fetch
+      'calories': 'Loading…',
     };
   }
 
@@ -169,16 +166,13 @@ class MealService {
   // PRIVATE — USDA FoodData Central
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Queries USDA for each ingredient and sums nutrients across all of them.
   static Future<Map<String, dynamic>> _fetchNutritionForMeal(
     List<Map<String, String>> ingredients,
   ) async {
-    // Run all ingredient lookups in parallel
     final results = await Future.wait(
       ingredients.map((ing) => _fetchNutrientsForIngredient(ing['name']!)),
     );
 
-    // Sum all nutrients
     double calories = 0, protein = 0, carbs = 0, fat = 0;
     double fiber = 0, sugar = 0, sodium = 0, cholesterol = 0;
 
@@ -206,8 +200,6 @@ class MealService {
     };
   }
 
-  /// Searches USDA for one ingredient name and returns its nutrient values
-  /// per 100g (the default serving USDA returns).
   static Future<Map<String, double>?> _fetchNutrientsForIngredient(
     String ingredientName,
   ) async {
@@ -215,7 +207,7 @@ class MealService {
       final uri = Uri.parse(
         '$_usdaBase/foods/search'
         '?query=${Uri.encodeComponent(ingredientName)}'
-        '&dataType=Foundation,SR%20Legacy' // raw/whole foods only
+        '&dataType=Foundation,SR%20Legacy'
         '&pageSize=1'
         '&api_key=${AppConstants.usdaApiKey}',
       );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart';
 import 'nutrition_modal.dart';
 import 'cooking_steps_modal.dart';
+import 'ingredient_matcher.dart';
 
 class MealResultsModal extends StatefulWidget {
   final List<Map<String, dynamic>> meals;
@@ -24,83 +24,49 @@ class _MealResultsModalState extends State<MealResultsModal> {
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
 
-  bool _ingredientMatches(String recipeName, String userInput) {
-    final recipe = recipeName.toLowerCase().trim();
-    final user = userInput.toLowerCase().trim();
-
-    final recipeWords = recipe.split(RegExp(r'\s+'));
-    final userWords = user.split(RegExp(r'\s+'));
-
-    // Check if all user words appear in recipe words
-    final allMatch = userWords.every((uw) => recipeWords.any((rw) => rw == uw));
-    if (allMatch && recipeWords.length <= userWords.length + 1) return true;
-
-    // Also check simplified — strip descriptors from both sides and compare
-    final simplifiedRecipe = _simplifyForMatching(recipe);
-    final simplifiedUser = _simplifyForMatching(user);
-
-    if (simplifiedRecipe == simplifiedUser) return true;
-
-    // Check if simplified user words all appear in simplified recipe words
-    final sRecipeWords = simplifiedRecipe.split(RegExp(r'\s+'));
-    final sUserWords = simplifiedUser.split(RegExp(r'\s+'));
-    return sUserWords.every((uw) => sRecipeWords.any((rw) => rw == uw)) &&
-        sRecipeWords.length <= sUserWords.length + 1;
+  static _StatusStyle _styleFor(MatchStatus status) {
+    switch (status) {
+      case MatchStatus.green:
+        return const _StatusStyle(
+          bg: Color(0xFFE8F8F3),
+          border: Color(0xFF00D084),
+          text: Color(0xFF00A86B),
+          icon: Icons.check_circle,
+          label: 'exact',
+        );
+      case MatchStatus.orange:
+        return const _StatusStyle(
+          bg: Color(0xFFFFF3E0),
+          border: Color(0xFFFFB74D),
+          text: Color(0xFFE65100),
+          icon: Icons.swap_horiz_rounded,
+          label: 'similar',
+        );
+      case MatchStatus.red:
+        return const _StatusStyle(
+          bg: Color(0xFFFFEDED),
+          border: Color(0xFFFFCDD2),
+          text: Color(0xFFE53935),
+          icon: Icons.cancel,
+          label: 'not used',
+        );
+      case MatchStatus.missing:
+        return const _StatusStyle(
+          bg: Color(0xFFF5F5F5),
+          border: Color(0xFFDDDDDD),
+          text: Color(0xFF666666),
+          icon: Icons.help_outline,
+          label: 'missing',
+        );
+    }
   }
 
-  // Same descriptor list as _simplifyIngredient in meal_services.dart
-  String _simplifyForMatching(String text) {
-    const descriptors = [
-      'boneless',
-      'skinless',
-      'fresh',
-      'frozen',
-      'dried',
-      'ground',
-      'chopped',
-      'sliced',
-      'diced',
-      'minced',
-      'cooked',
-      'raw',
-      'whole',
-      'half',
-      'large',
-      'small',
-      'medium',
-      'big',
-      'lean',
-      'thick',
-      'thin',
-      'baby',
-      'organic',
-      'ripe',
-      'breast',
-      'thigh',
-      'fillet',
-      'wing',
-      'leg',
-    ];
-    final words = text
-        .split(RegExp(r'\s+'))
-        .where((w) => !descriptors.contains(w))
+  List<Map<String, String>> _toRecipeIngredients(dynamic raw) {
+    if (raw == null) return [];
+    return (raw as List<dynamic>)
+        .whereType<Map>()
+        .map((e) => Map<String, String>.from(e))
         .toList();
-    return words.isEmpty ? text : words.join(' ');
-  }
-
-  // Extracts the first number from a string (e.g. "12" from "12 Bacon")
-  double? _extractNumber(String text) {
-    final match = RegExp(r'(\d+(\.\d+)?)').firstMatch(text);
-    return match != null ? double.tryParse(match.group(1)!) : null;
-  }
-
-  // Returns true only if the measure contains a unit word (not just a plain count)
-  bool _hasSpecificMeasure(String measure) {
-    if (measure.trim().isEmpty) return false;
-    return RegExp(
-      r'\b(g|kg|ml|l|cup|cups|tbsp|tsp|tablespoon|teaspoon|oz|lb|pound|pinch|clove|cloves|slice|slices)\b',
-      caseSensitive: false,
-    ).hasMatch(measure);
   }
 
   void _openNutritionModal(BuildContext context, Map<String, dynamic> meal) {
@@ -132,14 +98,12 @@ class _MealResultsModalState extends State<MealResultsModal> {
 
     return Stack(
       children: [
-        // Blurred background
         Positioned.fill(
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(color: Colors.black.withValues(alpha: 0.3)),
           ),
         ),
-        // Bottom sheet content
         Positioned(
           bottom: 0,
           left: 0,
@@ -155,7 +119,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
             ),
             child: Column(
               children: [
-                // ── Header ──────────────────────────────────────────────────
+                // ── Header ────────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Row(
@@ -183,7 +147,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                   ),
                 ),
 
-                // ── Meal list ────────────────────────────────────────────────
+                // ── Meal list ─────────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
                     child: Padding(
@@ -191,7 +155,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Success header
                           Center(
                             child: Column(
                               children: [
@@ -230,7 +193,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                             ),
                           ),
 
-                          // ── Meal cards ───────────────────────────────────
+                          // ── Meal cards ──────────────────────────────────
                           ...widget.meals.map((meal) {
                             final isLastItem = meal == widget.meals.last;
 
@@ -241,13 +204,14 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                 meal['calories'] ??
                                 '—';
 
-                            final rawIngredients = meal['ingredients'];
-                            final ingredients = rawIngredients == null
-                                ? <Map<String, String>>[]
-                                : (rawIngredients as List<dynamic>)
-                                      .whereType<Map>()
-                                      .map((e) => Map<String, String>.from(e))
-                                      .toList();
+                            final recipeIngredients = _toRecipeIngredients(
+                              meal['ingredients'],
+                            );
+
+                            final result = matchIngredients(
+                              userIngredients: widget.userIngredients,
+                              recipeIngredients: recipeIngredients,
+                            );
 
                             return Padding(
                               padding: EdgeInsets.only(
@@ -292,7 +256,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                           true)
                                         const SizedBox(height: 12),
 
-                                      // Meal name
+                                      // Name
                                       Text(
                                         meal['name'] ?? '',
                                         style: TextStyle(
@@ -363,7 +327,16 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       ),
                                       const SizedBox(height: 12),
 
-                                      // ── REQUIRED INGREDIENTS ─────────────
+                                      // Match score badge
+                                      _MatchScoreBadge(
+                                        score: result.scorePercent,
+                                        matchedCount:
+                                            result.matchedIngredients.length,
+                                        totalCount: recipeIngredients.length,
+                                      ),
+                                      const SizedBox(height: 14),
+
+                                      // ── REQUIRED INGREDIENTS ────────────
                                       const Text(
                                         'REQUIRED INGREDIENTS:',
                                         style: TextStyle(
@@ -377,62 +350,51 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       Wrap(
                                         spacing: 6,
                                         runSpacing: 6,
-                                        children: ingredients.map((ing) {
-                                          final label =
-                                              (ing['measure']?.isNotEmpty ==
-                                                  true)
-                                              ? '${ing['measure']} ${ing['name']}'
-                                              : ing['name'] ?? '';
+                                        children: result.recipeDetails.map((
+                                          detail,
+                                        ) {
+                                          final measure =
+                                              recipeIngredients.firstWhere(
+                                                (r) =>
+                                                    r['name'] ==
+                                                    detail.recipeIngredient,
+                                                orElse: () => {},
+                                              )['measure'] ??
+                                              '';
+                                          final label = measure.isNotEmpty
+                                              ? '$measure ${detail.recipeIngredient}'
+                                              : detail.recipeIngredient;
 
-                                          final matchedUser = widget
-                                              .userIngredients
-                                              .firstWhereOrNull(
-                                                (u) => _ingredientMatches(
-                                                  ing['name'] ?? '',
-                                                  u['ingredient'] ?? '',
-                                                ),
-                                              );
-                                          final isMatched = matchedUser != null;
+                                          final s = _styleFor(detail.status);
 
-                                          final recipeNum = _extractNumber(
-                                            ing['measure'] ?? '',
-                                          );
-                                          final userNum = _extractNumber(
-                                            matchedUser?['quantity'] ?? '',
-                                          );
-                                          final isInsufficient =
-                                              isMatched &&
-                                              recipeNum != null &&
-                                              userNum != null &&
-                                              userNum < recipeNum;
-
-                                          final needsWarning =
-                                              isMatched && isInsufficient;
+                                          final hint = detail.quantityHint;
+                                          final suffix =
+                                              (hint != null &&
+                                                  hint.mayNotBeEnough)
+                                              ? ' ⚠ need ${hint.recipeAmount.toStringAsFixed(0)} ${hint.unit}'
+                                              : '';
 
                                           return Chip(
-                                            label: Text(label),
-                                            backgroundColor: !isMatched
-                                                ? const Color(0xFFF5F5F5)
-                                                : needsWarning
-                                                ? const Color(0xFFFFF3E0)
-                                                : const Color(0xFFE8F8F3),
+                                            label: Text('$label$suffix'),
+                                            backgroundColor: s.bg,
                                             labelStyle: TextStyle(
-                                              color: !isMatched
-                                                  ? const Color(0xFF666666)
-                                                  : needsWarning
-                                                  ? const Color(0xFFE65100)
-                                                  : const Color(0xFF00A86B),
+                                              color: s.text,
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
                                             ),
                                             side: BorderSide(
-                                              color: !isMatched
-                                                  ? const Color(0xFFDDDDDD)
-                                                  : needsWarning
-                                                  ? const Color(0xFFFFB74D)
-                                                  : const Color(0xFF00D084),
-                                              width: isMatched ? 1.5 : 1,
+                                              color: s.border,
+                                              width: 1.5,
                                             ),
+                                            avatar:
+                                                detail.status !=
+                                                    MatchStatus.missing
+                                                ? Icon(
+                                                    s.icon,
+                                                    size: 14,
+                                                    color: s.text,
+                                                  )
+                                                : null,
                                           );
                                         }).toList(),
                                       ),
@@ -452,91 +414,61 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       Wrap(
                                         spacing: 6,
                                         runSpacing: 6,
-                                        children: widget.userIngredients.map((
-                                          userItem,
-                                        ) {
-                                          final userIng =
-                                              userItem['ingredient'] ?? '';
-                                          final userQty =
-                                              userItem['quantity'] ?? '';
+                                        children: result.userStatuses.map((us) {
+                                          final s = _styleFor(us.status);
 
-                                          final matchedIng = ingredients
-                                              .firstWhereOrNull(
-                                                (ing) => _ingredientMatches(
-                                                  ing['name'] ?? '',
-                                                  userIng,
-                                                ),
+                                          // Quantity warning suffix (only if truly insufficient)
+                                          final hint = us.quantityHint;
+                                          final warnSuffix =
+                                              (hint != null &&
+                                                  hint.mayNotBeEnough)
+                                              ? ' (need: ${hint.recipeAmount.toStringAsFixed(0)} ${hint.unit})'
+                                              : '';
+
+                                          // ── Show quantity from user's input ──
+                                          // Look up the original entry to get
+                                          // whatever quantity the user typed.
+                                          final originalUser = widget
+                                              .userIngredients
+                                              .firstWhere(
+                                                (u) =>
+                                                    u['ingredient'] ==
+                                                    us.userIngredient,
+                                                orElse: () => {},
                                               );
+                                          final qty =
+                                              originalUser['quantity'] ?? '';
 
-                                          final matchedInRecipe =
-                                              matchedIng != null;
-                                          final requiredMeasure =
-                                              matchedIng?['measure']?.trim() ??
-                                              '';
-
-                                          final recipeNum = _extractNumber(
-                                            requiredMeasure,
-                                          );
-                                          final userNum = _extractNumber(
-                                            userQty,
-                                          );
-                                          final isInsufficient =
-                                              matchedInRecipe &&
-                                              recipeNum != null &&
-                                              userNum != null &&
-                                              userNum < recipeNum;
-
-                                          final bgColor = !matchedInRecipe
-                                              ? const Color(0xFFFFEDED)
-                                              : isInsufficient
-                                              ? const Color(0xFFFFF3E0)
-                                              : const Color(0xFFE8F8F3);
-
-                                          final borderColor = !matchedInRecipe
-                                              ? const Color(0xFFFFCDD2)
-                                              : isInsufficient
-                                              ? const Color(0xFFFFB74D)
-                                              : const Color(0xFF00D084);
-
-                                          final textColor = !matchedInRecipe
-                                              ? const Color(0xFFE53935)
-                                              : isInsufficient
-                                              ? const Color(0xFFE65100)
-                                              : const Color(0xFF00A86B);
-
-                                          final iconData = !matchedInRecipe
-                                              ? Icons.cancel
-                                              : isInsufficient
-                                              ? Icons.warning_amber_rounded
-                                              : Icons.check_circle;
+                                          // Format: "Chicken · 5 pcs (need: 450 g)"
+                                          // or just "Chicken · 5 pcs"
+                                          // or just "Chicken" if no quantity entered
+                                          final displayLabel = qty.isNotEmpty
+                                              ? '${us.userIngredient} · $qty$warnSuffix'
+                                              : '${us.userIngredient}$warnSuffix';
 
                                           return Chip(
-                                            label: Text(
-                                              isInsufficient
-                                                  ? '$userIng (need: $requiredMeasure)'
-                                                  : userIng,
-                                            ),
-                                            backgroundColor: bgColor,
+                                            label: Text(displayLabel),
+                                            backgroundColor: s.bg,
                                             labelStyle: TextStyle(
-                                              color: textColor,
+                                              color: s.text,
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
                                             ),
                                             side: BorderSide(
-                                              color: borderColor,
+                                              color: s.border,
                                               width: 1.5,
                                             ),
                                             avatar: Icon(
-                                              iconData,
+                                              s.icon,
                                               size: 14,
-                                              color: textColor,
+                                              color: s.text,
                                             ),
                                           );
                                         }).toList(),
                                       ),
                                       const SizedBox(height: 16),
 
-                                      // View Nutritions button
+                                      // View Nutritions
                                       SizedBox(
                                         width: double.infinity,
                                         child: OutlinedButton.icon(
@@ -574,7 +506,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       ),
                                       const SizedBox(height: 8),
 
-                                      // Select This Meal button
+                                      // Select This Meal
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
@@ -615,7 +547,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                   ),
                 ),
 
-                // ── Back button ──────────────────────────────────────────────
+                // ── Back button ───────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: SizedBox(
@@ -647,4 +579,120 @@ class _MealResultsModalState extends State<MealResultsModal> {
       ],
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper classes
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StatusStyle {
+  final Color bg;
+  final Color border;
+  final Color text;
+  final IconData icon;
+  final String label;
+
+  const _StatusStyle({
+    required this.bg,
+    required this.border,
+    required this.text,
+    required this.icon,
+    required this.label,
+  });
+}
+
+class _MatchScoreBadge extends StatelessWidget {
+  final int score;
+  final int matchedCount;
+  final int totalCount;
+
+  const _MatchScoreBadge({
+    required this.score,
+    required this.matchedCount,
+    required this.totalCount,
+  });
+
+  Color get _color {
+    if (score >= 70) return const Color(0xFF00A86B);
+    if (score >= 40) return const Color(0xFFE65100);
+    return const Color(0xFFE53935);
+  }
+
+  Color get _bg {
+    if (score >= 70) return const Color(0xFFE8F8F3);
+    if (score >= 40) return const Color(0xFFFFF3E0);
+    return const Color(0xFFFFEDED);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.checklist_rounded, size: 14, color: _color),
+          const SizedBox(width: 6),
+          Text(
+            '$matchedCount / $totalCount matched  •  $score%',
+            style: TextStyle(
+              color: _color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MatchLegend extends StatelessWidget {
+  const _MatchLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _dot(const Color(0xFF00A86B)),
+        const SizedBox(width: 4),
+        const Text(
+          'Exact',
+          style: TextStyle(fontSize: 10, color: Color(0xFF666666)),
+        ),
+        const SizedBox(width: 10),
+        _dot(const Color(0xFFE65100)),
+        const SizedBox(width: 4),
+        const Text(
+          'Similar',
+          style: TextStyle(fontSize: 10, color: Color(0xFF666666)),
+        ),
+        const SizedBox(width: 10),
+        _dot(const Color(0xFF666666)),
+        const SizedBox(width: 4),
+        const Text(
+          'Missing',
+          style: TextStyle(fontSize: 10, color: Color(0xFF666666)),
+        ),
+        const SizedBox(width: 10),
+        _dot(const Color(0xFFE53935)),
+        const SizedBox(width: 4),
+        const Text(
+          'Not needed',
+          style: TextStyle(fontSize: 10, color: Color(0xFF666666)),
+        ),
+      ],
+    );
+  }
+
+  Widget _dot(Color color) => Container(
+    width: 8,
+    height: 8,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }
