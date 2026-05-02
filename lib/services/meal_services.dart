@@ -132,6 +132,39 @@ class MealService {
       }).toList();
     }
 
+    // ── STEP 7: Sort by dietary preference nutrition ──────────────────────────
+    if (dietaryPrefs.isNotEmpty) {
+      filtered.sort((a, b) {
+        final aNut = a['nutrition'] as Map<String, dynamic>? ?? {};
+        final bNut = b['nutrition'] as Map<String, dynamic>? ?? {};
+
+        // Helper to parse "120g" → 120.0
+        double parse(dynamic val) =>
+            double.tryParse(
+              val?.toString().replaceAll(RegExp(r'[^0-9.]'), '') ?? '0',
+            ) ??
+            0;
+
+        if (dietaryPrefs.contains('High-Protein')) {
+          return parse(bNut['protein']).compareTo(parse(aNut['protein']));
+        }
+        if (dietaryPrefs.contains('Low-Carb')) {
+          return parse(aNut['carbs']).compareTo(parse(bNut['carbs']));
+        }
+        if (dietaryPrefs.contains('Vegan') ||
+            dietaryPrefs.contains('Vegetarian')) {
+          // Sort by lowest calories — lighter plant-based meals first
+          return parse(aNut['calories']).compareTo(parse(bNut['calories']));
+        }
+        if (dietaryPrefs.contains('Gluten-free') ||
+            dietaryPrefs.contains('Dairy-free')) {
+          // Sort by highest fiber — whole food focus
+          return parse(bNut['fiber']).compareTo(parse(aNut['fiber']));
+        }
+        return 0;
+      });
+    }
+
     return filtered;
   }
 

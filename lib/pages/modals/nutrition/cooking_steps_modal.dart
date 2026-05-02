@@ -69,13 +69,7 @@ class _CookingStepsModalState extends State<CookingStepsModal> {
 
     if (sentences.length <= 1) return _toStepMaps([text]);
 
-    // Group every 2 sentences so steps aren't too granular.
-    final grouped = <String>[];
-    for (int i = 0; i < sentences.length; i += 2) {
-      final end = (i + 2).clamp(0, sentences.length);
-      grouped.add(sentences.sublist(i, end).join(' '));
-    }
-    return _toStepMaps(grouped);
+    return _toStepMaps(sentences);
   }
 
   static List<Map<String, String>> _toStepMaps(List<String> parts) {
@@ -100,7 +94,7 @@ class _CookingStepsModalState extends State<CookingStepsModal> {
     }
 
     // Parse raw instruction string from TheMealDB ('strInstructions' field).
-    final raw = widget.meal['strInstructions'] as String?;
+    final raw = widget.meal['instructions'] as String?;
     if (raw != null && raw.trim().isNotEmpty) {
       final parsed = parseInstructions(raw);
       if (parsed.isNotEmpty) return parsed;
