@@ -5,6 +5,7 @@ import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
 import 'package:nutrisense/services/auth_service.dart';
 import 'package:nutrisense/services/goals_service.dart';
+import 'package:nutrisense/services/nutrition_service.dart';
 import 'package:nutrisense/services/profile_service.dart';
 import 'package:nutrisense/services/prototype_data_service.dart';
 
@@ -50,6 +51,13 @@ final prototypeDataServiceProvider = Provider<PrototypeDataService>((ref) {
 
 final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
   return ref.watch(profileServiceProvider).watchCurrentUserProfile();
+});
+
+final nutritionServiceProvider = Provider<NutritionService>((ref) {
+  return NutritionService(
+    auth: ref.watch(firebaseAuthProvider),
+    firestore: ref.watch(firebaseFirestoreProvider),
+  );
 });
 
 final healthProfileProvider = StreamProvider<HealthProfile?>((ref) {

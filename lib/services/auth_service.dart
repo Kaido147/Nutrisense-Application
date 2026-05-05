@@ -83,6 +83,8 @@ class AuthService {
         'displayName': displayName,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      await _initializeUserSubcollections(user.uid);
     } on FirebaseException catch (_) {
       await _auth.signOut();
       throw const AuthFlowException(
@@ -94,6 +96,15 @@ class AuthService {
         'Your account was created, but we could not finish setting up your profile. Please try again.',
       );
     }
+  }
+
+  Future<void> _initializeUserSubcollections(String uid) async {
+    final userRef = _firestore.collection('users').doc(uid);
+
+    await userRef.collection('recentMeals').add({
+      'initialized': true,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   String _mapAuthError(FirebaseAuthException error) {
