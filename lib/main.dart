@@ -9,6 +9,7 @@ import 'package:nutrisense/theme_provider.dart';
 import 'package:nutrisense/login.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 
+import 'health_profile_setup.dart';
 import 'landing_page.dart';
 import 'layout/main_navigation.dart';
 import 'pages/register.dart';
@@ -85,6 +86,7 @@ class MyApp extends StatelessWidget {
             '/login': (context) => const LoginPage(),
             '/register': (context) => const RegisterPage(),
             '/setgoals': (context) => const SetGoalsPage(),
+            '/health-profile': (context) => const HealthProfileSetupPage(),
             '/main': (context) => const MainNavigation(),
           },
         );
@@ -101,8 +103,42 @@ class AuthGate extends ConsumerWidget {
     final AsyncValue<User?> authState = ref.watch(authStateChangesProvider);
 
     return authState.when(
-      data: (user) =>
-          user == null ? const LandingPage() : const MainNavigation(),
+      data: (user) {
+        if (user == null) {
+          return const LandingPage();
+        }
+
+        final profileAsync = ref.watch(currentUserProfileProvider);
+        final healthProfileAsync = ref.watch(healthProfileProvider);
+
+        return profileAsync.when(
+          data: (profile) {
+            if (profile == null) {
+              return const LandingPage();
+            }
+            if (!profile.onboardingCompleted) {
+              return const SetGoalsPage();
+            }
+
+            return healthProfileAsync.when(
+              data: (healthProfile) {
+                if (healthProfile == null || !healthProfile.isComplete) {
+                  return const HealthProfileSetupPage();
+                }
+                return const MainNavigation();
+              },
+              loading: () => const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, _) => const HealthProfileSetupPage(),
+            );
+          },
+          loading: () => const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, _) => const LandingPage(),
+        );
+      },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (_, _) => const LandingPage(),

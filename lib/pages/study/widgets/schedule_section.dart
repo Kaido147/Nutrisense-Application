@@ -24,13 +24,26 @@ class ScheduleSection extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: StudyTheme.softShadow,
-          ),
-          child: Column(
-            children: scheduleItems
-                .map((item) => _ScheduleTile(item: item))
-                .toList(),
-          ),
+          boxShadow: StudyTheme.softShadow,
+        ),
+          child: scheduleItems.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'No classes scheduled for today.',
+                      style: TextStyle(
+                        color: StudyTheme.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: scheduleItems
+                      .map((item) => _ScheduleTile(item: item))
+                      .toList(),
+                ),
         ),
       ],
     );

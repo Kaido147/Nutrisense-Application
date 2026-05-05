@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/models/prototype_data.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
 import 'modals/nutrition/generate_meal_ideas_modal.dart';
 
-class NutritionTab extends StatefulWidget {
+class NutritionTab extends ConsumerStatefulWidget {
   const NutritionTab({super.key});
 
   @override
-  State<NutritionTab> createState() => _NutritionTabState();
+  ConsumerState<NutritionTab> createState() => _NutritionTabState();
 }
 
-class _NutritionTabState extends State<NutritionTab> {
+class _NutritionTabState extends ConsumerState<NutritionTab> {
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
 
-  final List<Map<String, dynamic>> _recentMeals = [
-    {'type': 'Breakfast', 'name': 'Oatmeal & Berries', 'calories': 320},
-    {'type': 'Lunch', 'name': 'Grilled Chicken Salad', 'calories': 485},
-    {'type': 'Snack', 'name': 'Greek Yogurt & Almonds', 'calories': 210},
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final mealLogs = ref.watch(mealLogsProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => const <MealLog>[],
+        );
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -29,13 +31,13 @@ class _NutritionTabState extends State<NutritionTab> {
           children: [
             const SizedBox(height: 16),
             // Today's Nutrition Card
-            _buildTodaysNutritionCard(),
+            _buildTodaysNutritionCard(mealLogs),
             const SizedBox(height: 24),
             // Meal Planner Section
             _buildMealPlannerSection(),
             const SizedBox(height: 24),
             // Recent Meals Section
-            _buildRecentMealsSection(),
+            _buildRecentMealsSection(mealLogs),
             const SizedBox(height: 20),
           ],
         ),
@@ -43,7 +45,17 @@ class _NutritionTabState extends State<NutritionTab> {
     );
   }
 
-  Widget _buildTodaysNutritionCard() {
+  Widget _buildTodaysNutritionCard(List<MealLog> mealLogs) {
+    final calories = mealLogs.fold<int>(
+      0,
+      (total, meal) => total + meal.caloriesEstimate,
+    );
+    final protein = mealLogs.fold<int>(
+      0,
+      (total, meal) => total + meal.proteinEstimate,
+    );
+    final progress = (calories / 2000).clamp(0.0, 1.0);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -72,9 +84,9 @@ class _NutritionTabState extends State<NutritionTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNutrientCard('1,847', 'Calories'),
-              _buildNutrientCard('125g', 'Protein'),
-              _buildNutrientCard('180g', 'Carbs'),
+              _buildNutrientCard('$calories', 'Calories'),
+              _buildNutrientCard('${protein}g', 'Protein'),
+              _buildNutrientCard('${mealLogs.length}', 'Meals'),
             ],
           ),
           const SizedBox(height: 16),
@@ -91,7 +103,7 @@ class _NutritionTabState extends State<NutritionTab> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: FractionallySizedBox(
-                    widthFactor: 0.73,
+                    widthFactor: progress == 0 ? 0.05 : progress,
                     alignment: Alignment.centerLeft,
                     child: Container(
                       decoration: BoxDecoration(
@@ -108,7 +120,7 @@ class _NutritionTabState extends State<NutritionTab> {
               ),
               const SizedBox(height: 8),
               Text(
-                '73% of daily goal',
+                '${(progress * 100).round()}% of daily calorie goal',
                 style: TextStyle(
                   color: _navyBlue,
                   fontSize: 12,
@@ -237,7 +249,7 @@ class _NutritionTabState extends State<NutritionTab> {
     );
   }
 
-  Widget _buildRecentMealsSection() {
+  Widget _buildRecentMealsSection(List<MealLog> mealLogs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -250,8 +262,22 @@ class _NutritionTabState extends State<NutritionTab> {
           ),
         ),
         const SizedBox(height: 12),
-        ..._recentMeals.map(
-          (meal) => Padding(
+        if (mealLogs.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'No meals logged yet. Generate a meal idea to start your nutrition log.',
+              style: TextStyle(color: Color(0xFF666666)),
+            ),
+          )
+        else
+          ...mealLogs.map(
+            (meal) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -274,7 +300,7 @@ class _NutritionTabState extends State<NutritionTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          meal['type'],
+                          meal.mealType,
                           style: TextStyle(
                             color: Color(0xFFFFB84D),
                             fontSize: 12,
@@ -283,7 +309,7 @@ class _NutritionTabState extends State<NutritionTab> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          meal['name'],
+                          meal.mealName,
                           style: TextStyle(
                             color: _navyBlue,
                             fontSize: 14,
@@ -297,7 +323,7 @@ class _NutritionTabState extends State<NutritionTab> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${meal['calories']}',
+                        '${meal.caloriesEstimate}',
                         style: TextStyle(
                           color: _navyBlue,
                           fontSize: 16,

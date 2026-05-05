@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
 import 'package:nutrisense/services/auth_service.dart';
 import 'package:nutrisense/services/goals_service.dart';
 import 'package:nutrisense/services/profile_service.dart';
+import 'package:nutrisense/services/prototype_data_service.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
@@ -39,6 +41,41 @@ final profileServiceProvider = Provider<ProfileService>((ref) {
   );
 });
 
+final prototypeDataServiceProvider = Provider<PrototypeDataService>((ref) {
+  return PrototypeDataService(
+    auth: ref.watch(firebaseAuthProvider),
+    firestore: ref.watch(firebaseFirestoreProvider),
+  );
+});
+
 final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
   return ref.watch(profileServiceProvider).watchCurrentUserProfile();
+});
+
+final healthProfileProvider = StreamProvider<HealthProfile?>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchHealthProfile();
+});
+
+final schedulesProvider = StreamProvider<List<ClassSchedule>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchSchedules();
+});
+
+final todayQuestsProvider = StreamProvider<List<DailyQuest>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchTodayQuests();
+});
+
+final enabledRemindersProvider = StreamProvider<List<AppReminder>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchEnabledReminders();
+});
+
+final workoutPlansProvider = StreamProvider<List<WorkoutPlan>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchWorkoutPlans();
+});
+
+final mealLogsProvider = StreamProvider<List<MealLog>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchMealLogs();
+});
+
+final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) {
+  return ref.watch(prototypeDataServiceProvider).loadDashboardStats();
 });

@@ -63,7 +63,11 @@ class _SetGoalsPageState extends ConsumerState<SetGoalsPage> {
         return;
       }
 
-      Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/health-profile',
+        (route) => false,
+      );
     } on GoalsFlowException catch (error) {
       if (!mounted) {
         return;
@@ -86,7 +90,11 @@ class _SetGoalsPageState extends ConsumerState<SetGoalsPage> {
       return;
     }
 
-    Navigator.pushNamedAndRemoveUntil(context, '/main', (route) => false);
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/health-profile',
+      (route) => false,
+    );
   }
 
   void _toggleGoal(Set<String> selectedGoals, String option) {

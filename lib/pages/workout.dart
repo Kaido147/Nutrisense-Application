@@ -1,43 +1,40 @@
 import 'package:flutter/material.dart';
-import 'modals/workout/exercise_modal.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/models/prototype_data.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
 import 'nutrition_tab.dart';
 
-class WorkoutPage extends StatefulWidget {
+class WorkoutPage extends ConsumerStatefulWidget {
   const WorkoutPage({super.key});
 
   @override
-  State<WorkoutPage> createState() => _WorkoutPageState();
+  ConsumerState<WorkoutPage> createState() => _WorkoutPageState();
 }
 
-class _WorkoutPageState extends State<WorkoutPage> {
+class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   int _selectedTab = 0;
-  bool _isPressed = false;
+  bool _isGenerating = false;
 
-  //
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _lightBg = Color(0xFFF5F0EA);
   static const Color _cream = Color(0xFFF5F0E9);
 
-  // Placeholdee for exercises list
-  final List<Map<String, dynamic>> _exercises = [
-    {'name': 'Push-ups', 'sets': '3 x 15 reps', 'done': true, 'num': 1},
-    {'name': 'Bench Press', 'sets': '4 x 10 reps', 'done': true, 'num': 2},
-    {'name': 'Shoulder Press', 'sets': '3 x 12 reps', 'done': false, 'num': 3},
-    {'name': 'Tricep Dips', 'sets': '3 x 15 reps', 'done': false, 'num': 4},
-  ];
-
-  // Weekly plan data
-  final List<Map<String, dynamic>> _weeklyPlan = [
-    {'day': 'Mon', 'activity': 'Cardio', 'completed': true},
-    {'day': 'Tue', 'activity': 'Upper Body', 'completed': true},
-    {'day': 'Wed', 'activity': 'Rest', 'completed': false},
-    {'day': 'Thu', 'activity': 'Lower Body', 'completed': false},
-    {'day': 'Fri', 'activity': 'Core', 'completed': false},
-  ];
-
-  //  Build
   @override
   Widget build(BuildContext context) {
+    final plans = ref.watch(workoutPlansProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => const <WorkoutPlan>[],
+        );
+    final healthProfile = ref.watch(healthProfileProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => null,
+        );
+    final schedules = ref.watch(schedulesProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => const <ClassSchedule>[],
+        );
+    final currentPlan = plans.isEmpty ? null : plans.first;
+
     return Scaffold(
       backgroundColor: _lightBg,
       body: SingleChildScrollView(
@@ -46,290 +43,50 @@ class _WorkoutPageState extends State<WorkoutPage> {
           children: [
             _buildHeaderStack(context),
             const SizedBox(height: 40),
-            // Conditionally show Workout or Nutrition content
-            if (_selectedTab == 0) ..._buildWorkoutContent(),
+            if (_selectedTab == 0)
+              ..._buildWorkoutContent(currentPlan, healthProfile, schedules),
             if (_selectedTab == 1) const NutritionTab(),
-            const SizedBox(height: 20), // bottom breathing room
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  /// Workout tab content
-  List<Widget> _buildWorkoutContent() {
+  List<Widget> _buildWorkoutContent(
+    WorkoutPlan? plan,
+    HealthProfile? healthProfile,
+    List<ClassSchedule> schedules,
+  ) {
     return [
-      workoutCard(),
+      _workoutCard(plan, healthProfile, schedules),
       const SizedBox(height: 24),
-      exerciseCard(),
+      _exerciseCard(plan),
       const SizedBox(height: 12),
-      weeklyPlan(),
+      _weeklyPlan(plan),
     ];
   }
 
-  Padding exerciseCard() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Exercises Title
-          Text(
-            'Exercises',
-            style: TextStyle(
-              color: _navyBlue,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Exercises List
-          Column(
-            children: _exercises.map((exercise) {
-              final isCompleted = exercise['done'];
+  Widget _workoutCard(
+    WorkoutPlan? plan,
+    HealthProfile? healthProfile,
+    List<ClassSchedule> schedules,
+  ) {
+    final progress = plan == null
+        ? 0.0
+        : plan.completed
+        ? 1.0
+        : 0.35;
+    final title = plan?.title ?? 'Generate Today\'s Plan';
+    final subtitle = plan == null
+        ? 'Based on your schedule and health profile'
+        : '${plan.durationMinutes} minutes • ${plan.intensity}';
 
-              return Opacity(
-                opacity: isCompleted ? 0.6 : 1.0,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Left side: Icon or Number
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: isCompleted
-                              ? Colors.grey.withValues(alpha: 0.2)
-                              : Colors.grey.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: isCompleted
-                            ? const Icon(
-                                Icons.check,
-                                color: Colors.green,
-                                size: 24,
-                              )
-                            : Center(
-                                child: Text(
-                                  exercise['num'].toString(),
-                                  style: const TextStyle(
-                                    color: _navyBlue,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // Middle: Exercise name and sets
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              exercise['name'],
-                              style: const TextStyle(
-                                color: _navyBlue,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              exercise['sets'],
-                              style: TextStyle(
-                                color: _navyBlue.withValues(alpha: 0.6),
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Right side: Check mark or Start button
-                      if (isCompleted)
-                        const SizedBox.shrink()
-                      else
-                        GestureDetector(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Starting ${exercise['name']}...',
-                                ),
-                                duration: const Duration(milliseconds: 1500),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _navyBlue,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Text(
-                              'Start',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Padding weeklyPlan() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // "Weekly Plan" Title with "View All"
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Weekly Plan',
-                style: TextStyle(
-                  color: _navyBlue,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('View All Plans'),
-                      duration: Duration(milliseconds: 1500),
-                    ),
-                  );
-                },
-                child: Text(
-                  'View All',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Weekly Plan Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with calendar icon and "This Week's Focus" (inside card)
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today, color: _navyBlue, size: 20),
-                    const SizedBox(width: 10),
-                    Text(
-                      'This Week\'s Focus',
-                      style: TextStyle(
-                        color: _navyBlue,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Weekly Plan List
-                ..._weeklyPlan.map((plan) {
-                  final isCompleted = plan['completed'] as bool;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: isCompleted
-                                ? Colors.green
-                                : Colors.grey.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          '${plan['day']}: ${plan['activity']}',
-                          style: TextStyle(
-                            color: _navyBlue.withValues(
-                              alpha: isCompleted ? 1.0 : 1.0,
-                            ),
-                            fontWeight: isCompleted
-                                ? FontWeight.w400
-                                : FontWeight.w400,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Column workoutCard() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 20),
+        const Padding(
+          padding: EdgeInsets.only(left: 20),
           child: Text(
             'Today\'s Routine',
             style: TextStyle(
@@ -339,9 +96,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
             ),
           ),
         ),
-
-        // Container na B
-        SizedBox(height: 15),
+        const SizedBox(height: 15),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 21),
           padding: const EdgeInsets.all(24),
@@ -352,63 +107,62 @@ class _WorkoutPageState extends State<WorkoutPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Row: Icon, Title and SubTitle
               Row(
                 children: [
                   Container(
-                    margin: EdgeInsets.symmetric(horizontal: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 10),
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
                       color: _cream.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    // Icon
                     child: const Icon(
                       Icons.fitness_center,
-                      color: Colors.black,
+                      color: _navyBlue,
                       size: 22,
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Upper Body Strength',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: _navyBlue,
-                        ),
-                      ),
-                      SizedBox(height: 3),
-                      Opacity(
-                        opacity: 0.5,
-                        child: Text(
-                          '45 minutes • Intermediate',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                             color: _navyBlue,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 3),
+                        Opacity(
+                          opacity: 0.65,
+                          child: Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: _navyBlue,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              // Percentage Bar
               const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(6),
                         child: LinearProgressIndicator(
-                          value: 0.4,
+                          value: progress,
                           minHeight: 10,
                           backgroundColor: Colors.white.withValues(alpha: 0.4),
                           valueColor: const AlwaysStoppedAnimation<Color>(
@@ -419,9 +173,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Text(
-                    '0%',
-                    style: TextStyle(
+                  Text(
+                    '${(progress * 100).round()}%',
+                    style: const TextStyle(
                       color: _navyBlue,
                       fontWeight: FontWeight.w600,
                     ),
@@ -429,47 +183,42 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Button "Continue Workout"
-              Container(
-                margin: const EdgeInsets.only(left: 8, right: 8, bottom: 10),
-                child: GestureDetector(
-                  onTap: () async {
-                    setState(() => _isPressed = true);
-                    await Future.delayed(const Duration(milliseconds: 150));
-                    setState(() => _isPressed = false);
-                    showExerciseModal(context);
-                  },
-
-                  // Animation
-                  child: AnimatedScale(
-                    scale: _isPressed ? 1.03 : 1.0,
-                    duration: const Duration(milliseconds: 150),
-                    curve: Curves.easeOut,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: null,
-                        style: ElevatedButton.styleFrom(
-                          disabledBackgroundColor: Colors.white,
-                          disabledForegroundColor: _navyBlue,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isGenerating
+                      ? null
+                      : () => _handleWorkoutAction(
+                            plan,
+                            healthProfile,
+                            schedules,
                           ),
-                          splashFactory: NoSplash.splashFactory,
-                        ),
-                        child: const Text(
-                          'Continue Workout',
-                          style: TextStyle(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: _navyBlue,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: _isGenerating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          plan == null
+                              ? 'Generate Workout Plan'
+                              : plan.completed
+                              ? 'Workout Completed'
+                              : 'Mark Workout Complete',
+                          style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                           ),
                         ),
-                      ),
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -479,8 +228,205 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 
-  //  Header Stack
-  /// Combines the navy header and the overlapping tab toggle into a Stack.
+  Future<void> _handleWorkoutAction(
+    WorkoutPlan? plan,
+    HealthProfile? healthProfile,
+    List<ClassSchedule> schedules,
+  ) async {
+    if (plan != null) {
+      await ref
+          .read(prototypeDataServiceProvider)
+          .setWorkoutCompleted(plan.id, !plan.completed);
+      ref.invalidate(workoutPlansProvider);
+      ref.invalidate(dashboardStatsProvider);
+      return;
+    }
+    if (healthProfile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Complete your health profile first.')),
+      );
+      return;
+    }
+
+    setState(() => _isGenerating = true);
+    try {
+      await ref.read(prototypeDataServiceProvider).generateWorkoutPlan(
+            healthProfile: healthProfile,
+            schedules: schedules,
+          );
+      ref.invalidate(workoutPlansProvider);
+      ref.invalidate(dashboardStatsProvider);
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  Widget _exerciseCard(WorkoutPlan? plan) {
+    final exercises = plan?.exercises ?? const <Map<String, dynamic>>[];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Exercises',
+            style: TextStyle(
+              color: _navyBlue,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (exercises.isEmpty)
+            _emptyCard('Generate a workout plan to see your exercise list.')
+          else
+            Column(
+              children: exercises.asMap().entries.map((entry) {
+                final index = entry.key + 1;
+                final exercise = entry.value;
+                final isCompleted = plan?.completed ?? false;
+
+                return Opacity(
+                  opacity: isCompleted ? 0.65 : 1,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: _cardDecoration(),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: isCompleted
+                              ? const Color(0xFFE6F8EC)
+                              : const Color(0xFFEDEFF4),
+                          child: isCompleted
+                              ? const Icon(Icons.check, color: Colors.green)
+                              : Text(
+                                  '$index',
+                                  style: const TextStyle(
+                                    color: _navyBlue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                exercise['name']?.toString() ?? 'Exercise',
+                                style: const TextStyle(
+                                  color: _navyBlue,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${exercise['sets']} sets • ${exercise['reps']}',
+                                style: TextStyle(
+                                  color: _navyBlue.withValues(alpha: 0.6),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weeklyPlan(WorkoutPlan? plan) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Plan Basis',
+            style: TextStyle(
+              color: _navyBlue,
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: _cardDecoration(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.auto_awesome, color: _navyBlue, size: 20),
+                    SizedBox(width: 10),
+                    Text(
+                      'Rule-Based Recommendation',
+                      style: TextStyle(
+                        color: _navyBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  plan == null
+                      ? 'NutriSense will use your class schedule, activity level, and fitness goal to build a routine.'
+                      : 'Goal: ${plan.fitnessGoal}\nActivity level: ${plan.activityLevel}\nIntensity: ${plan.intensity}',
+                  style: TextStyle(
+                    color: _navyBlue.withValues(alpha: 0.75),
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyCard(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
+      child: Text(
+        message,
+        style: const TextStyle(color: Color(0xFF718096)),
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
   Widget _buildHeaderStack(BuildContext context) {
     return Stack(
       clipBehavior: Clip.none,
@@ -488,8 +434,6 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 
-  // Navy Header
-  /// Dark blue rounded container showing the app title and subtitle.
   Widget _buildNavyHeader(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -509,37 +453,27 @@ class _WorkoutPageState extends State<WorkoutPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeaderTitle(),
+          const Text(
+            'Wellness Hub',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
-          _buildHeaderSubtitle(),
+          Text(
+            'Your fitness & nutrition tracker',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  /// "Wellness Hub" bold white title.
-  Widget _buildHeaderTitle() {
-    return const Text(
-      'Wellness Hub',
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 26,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  /// Muted gold subtitle beneath the title.
-  Widget _buildHeaderSubtitle() {
-    return Text(
-      'Your fitness & nutrition tracker',
-      style: TextStyle(
-          color: Theme.of(context).colorScheme.primary, fontSize: 13),
-    );
-  }
-
-  // Tab Toggle
-  /// Floating pill-shaped toggle that overlaps the bottom edge of the header.
   Widget _buildTabToggle() {
     return Positioned(
       bottom: -22,
@@ -564,7 +498,6 @@ class _WorkoutPageState extends State<WorkoutPage> {
     );
   }
 
-  /// A single animated tab inside the toggle pill.
   Widget _buildTab(String label, int index) {
     final isSelected = _selectedTab == index;
     return Expanded(
@@ -579,20 +512,15 @@ class _WorkoutPageState extends State<WorkoutPage> {
             borderRadius: BorderRadius.circular(25),
           ),
           alignment: Alignment.center,
-          child: _buildTabLabel(label, isSelected),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFF718096),
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
         ),
-      ),
-    );
-  }
-
-  /// Text label styled based on selected state.
-  Widget _buildTabLabel(String label, bool isSelected) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: isSelected ? Colors.white : const Color(0xFF718096),
-        fontWeight: FontWeight.w600,
-        fontSize: 14,
       ),
     );
   }

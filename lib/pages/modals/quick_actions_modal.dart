@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'add_class_modal.dart';
 import 'log_workout_modal.dart';
-import 'log_meal_modal.dart';
 import 'add_task_modal.dart';
 import 'journal_entry_modal.dart';
+import 'nutrition/generate_meal_ideas_modal.dart';
 
 class QuickActionsModal extends StatefulWidget {
   const QuickActionsModal({super.key});
@@ -134,7 +134,7 @@ class _QuickActionsModalState extends State<QuickActionsModal> {
                             icon: Icons.restaurant_menu_outlined,
                             color: _brightGreen,
                             onTap: () {
-                              LogMealModal.show(context);
+                              GenerateMealIdeasModal.show(context);
                             },
                           ),
                         ),

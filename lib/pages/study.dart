@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/models/prototype_data.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
 
 import 'modals/add_task_modal.dart';
 import 'study/study_controller.dart';
@@ -15,14 +18,14 @@ import 'study/widgets/study_tab_switcher.dart';
 import 'study/widgets/task_section.dart';
 import 'study/widgets/weekly_stats_card.dart';
 
-class StudyPage extends StatefulWidget {
+class StudyPage extends ConsumerStatefulWidget {
   const StudyPage({super.key});
 
   @override
-  State<StudyPage> createState() => _StudyPageState();
+  ConsumerState<StudyPage> createState() => _StudyPageState();
 }
 
-class _StudyPageState extends State<StudyPage> {
+class _StudyPageState extends ConsumerState<StudyPage> {
   StudyTab _selectedTab = StudyTab.focusMode;
   late final StudyController _controller;
 
@@ -41,6 +44,12 @@ class _StudyPageState extends State<StudyPage> {
 
   @override
   Widget build(BuildContext context) {
+    final schedulesAsync = ref.watch(schedulesProvider);
+    final scheduleItems = schedulesAsync.maybeWhen(
+      data: _mapSchedules,
+      orElse: () => const <ScheduleItem>[],
+    );
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -63,6 +72,7 @@ class _StudyPageState extends State<StudyPage> {
                         ? _FocusModeView(
                             key: const ValueKey('focus-mode'),
                             controller: _controller,
+                            scheduleItems: scheduleItems,
                           )
                         : _JournalMoodView(
                             key: const ValueKey('journal-mood'),
@@ -77,6 +87,40 @@ class _StudyPageState extends State<StudyPage> {
         );
       },
     );
+  }
+
+  List<ScheduleItem> _mapSchedules(List<ClassSchedule> schedules) {
+    final today = weekdayName();
+    final todaySchedules = schedules
+        .where((item) => item.dayOfWeek == today)
+        .toList()
+      ..sort((a, b) => a.startTimeMinutes.compareTo(b.startTimeMinutes));
+
+    return todaySchedules
+        .map(
+          (item) => ScheduleItem(
+            title: item.courseCode.isEmpty
+                ? item.title
+                : '${item.courseCode}: ${item.title}',
+            room: item.location.isEmpty ? 'No location set' : item.location,
+            time: item.timeLabel,
+            accentColor: _scheduleColor(item.color),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Color _scheduleColor(String color) {
+    switch (color) {
+      case 'purple':
+        return const Color(0xFFA72EFF);
+      case 'green':
+        return const Color(0xFF17C45B);
+      case 'gold':
+        return const Color(0xFFD6B66E);
+      default:
+        return const Color(0xFF2F65FF);
+    }
   }
 }
 
@@ -144,9 +188,14 @@ class _StudyHeader extends StatelessWidget {
 }
 
 class _FocusModeView extends StatelessWidget {
-  const _FocusModeView({super.key, required this.controller});
+  const _FocusModeView({
+    super.key,
+    required this.controller,
+    required this.scheduleItems,
+  });
 
   final StudyController controller;
+  final List<ScheduleItem> scheduleItems;
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +232,7 @@ class _FocusModeView extends StatelessWidget {
           errorMessage: controller.taskErrorMessage,
         ),
         const SizedBox(height: 24),
-        ScheduleSection(scheduleItems: controller.scheduleItems),
+        ScheduleSection(scheduleItems: scheduleItems),
         const SizedBox(height: 24),
         WeeklyStatsCard(stats: controller.weeklyStats),
       ],

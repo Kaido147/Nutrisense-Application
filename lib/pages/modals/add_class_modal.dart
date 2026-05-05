@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
+import 'package:nutrisense/services/prototype_data_service.dart';
 
-class AddClassModal extends StatefulWidget {
+class AddClassModal extends ConsumerStatefulWidget {
   const AddClassModal({super.key});
 
   @override
-  State<AddClassModal> createState() => _AddClassModalState();
+  ConsumerState<AddClassModal> createState() => _AddClassModalState();
 
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
@@ -18,16 +21,18 @@ class AddClassModal extends StatefulWidget {
   }
 }
 
-class _AddClassModalState extends State<AddClassModal> {
+class _AddClassModalState extends ConsumerState<AddClassModal> {
   static const Color _navyBlue = Color(0xFF1E2A4A);
   static const Color _lightGray = Color(0xFFF5F5F5);
-  static const Color _goldTan = Color(0xFFD4B896);
 
   final TextEditingController _classTitle = TextEditingController();
   final TextEditingController _courseCode = TextEditingController();
   final TextEditingController _startTime = TextEditingController();
   final TextEditingController _endTime = TextEditingController();
   final TextEditingController _location = TextEditingController();
+  TimeOfDay? _startTimeValue;
+  TimeOfDay? _endTimeValue;
+  bool _isSaving = false;
 
   String _selectedDay = 'Monday';
   final List<String> _days = [
@@ -50,7 +55,10 @@ class _AddClassModalState extends State<AddClassModal> {
     super.dispose();
   }
 
-  Future<void> _selectTime(TextEditingController controller) async {
+  Future<void> _selectTime({
+    required TextEditingController controller,
+    required ValueChanged<TimeOfDay> onSelected,
+  }) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -58,25 +66,56 @@ class _AddClassModalState extends State<AddClassModal> {
     if (picked != null) {
       setState(() {
         controller.text = picked.format(context);
+        onSelected(picked);
       });
     }
   }
 
-  void _addClass() {
+  Future<void> _addClass() async {
+    if (_isSaving) {
+      return;
+    }
+
     // Validate inputs
     if (_classTitle.text.isEmpty ||
-        _startTime.text.isEmpty ||
-        _endTime.text.isEmpty) {
+        _startTimeValue == null ||
+        _endTimeValue == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields')),
       );
       return;
     }
 
-    // TODO: Save class to database or state management
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(prototypeDataServiceProvider).addSchedule(
+            title: _classTitle.text,
+            courseCode: _courseCode.text,
+            dayOfWeek: _selectedDay,
+            startTimeMinutes: _toMinutes(_startTimeValue!),
+            endTimeMinutes: _toMinutes(_endTimeValue!),
+            timeLabel: '${_startTime.text} - ${_endTime.text}',
+            location: _location.text,
+          );
 
-    // Go back to Quick Actions modal
-    Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Class schedule saved.')),
+      );
+    } on PrototypeDataException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('We could not save this class.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -282,7 +321,11 @@ class _AddClassModalState extends State<AddClassModal> {
                               ),
                               const SizedBox(height: 8),
                               GestureDetector(
-                                onTap: () => _selectTime(_startTime),
+                                onTap: () => _selectTime(
+                                  controller: _startTime,
+                                  onSelected: (value) =>
+                                      _startTimeValue = value,
+                                ),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -333,7 +376,10 @@ class _AddClassModalState extends State<AddClassModal> {
                               ),
                               const SizedBox(height: 8),
                               GestureDetector(
-                                onTap: () => _selectTime(_endTime),
+                                onTap: () => _selectTime(
+                                  controller: _endTime,
+                                  onSelected: (value) => _endTimeValue = value,
+                                ),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -432,19 +478,28 @@ class _AddClassModalState extends State<AddClassModal> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextButton(
-                            onPressed: _addClass,
+                            onPressed: _isSaving ? null : _addClass,
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               backgroundColor: _navyBlue,
                             ),
-                            child: const Text(
-                              'Add Class',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
+                            child: _isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Add Class',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
@@ -457,5 +512,9 @@ class _AddClassModalState extends State<AddClassModal> {
         ),
       ],
     );
+  }
+
+  int _toMinutes(TimeOfDay time) {
+    return time.hour * 60 + time.minute;
   }
 }

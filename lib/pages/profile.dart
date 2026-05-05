@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
 import 'package:nutrisense/pages/modals/profile/edit_profile_modal.dart';
 import 'package:nutrisense/pages/modals/profile/goals_preferences_modal.dart';
@@ -57,6 +58,12 @@ class ProfilePage extends ConsumerWidget {
     final AsyncValue<UserProfile?> profileAsync = ref.watch(
       currentUserProfileProvider,
     );
+    final HealthProfile? healthProfile = ref
+        .watch(healthProfileProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    final DashboardStats? dashboardStats = ref
+        .watch(dashboardStatsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
 
     return profileAsync.when(
       data: (profile) {
@@ -68,6 +75,8 @@ class ProfilePage extends ConsumerWidget {
 
         return _ProfileContent(
           profile: profile,
+          healthProfile: healthProfile,
+          dashboardStats: dashboardStats,
           onLogout: () => _logout(context, ref),
         );
       },
@@ -81,9 +90,16 @@ class ProfilePage extends ConsumerWidget {
 }
 
 class _ProfileContent extends StatelessWidget {
-  const _ProfileContent({required this.profile, required this.onLogout});
+  const _ProfileContent({
+    required this.profile,
+    required this.healthProfile,
+    required this.dashboardStats,
+    required this.onLogout,
+  });
 
   final UserProfile profile;
+  final HealthProfile? healthProfile;
+  final DashboardStats? dashboardStats;
   final VoidCallback onLogout;
 
   static const Color _backgroundColor = Color(0xFFF4F0E8);
@@ -109,6 +125,10 @@ class _ProfileContent extends StatelessWidget {
               child: Column(
                 children: [
                   _buildGoalProgressCard(),
+                  const SizedBox(height: 18),
+                  _buildHealthProfileCard(),
+                  const SizedBox(height: 18),
+                  _buildAnalyticsCard(),
                   const SizedBox(height: 18),
                   _buildSettingsSection(context, themeProvider),
                   const SizedBox(height: 20),
@@ -265,6 +285,162 @@ class _ProfileContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHealthProfileCard() {
+    final health = healthProfile;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Health Profile',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (health == null)
+            const Text(
+              'Complete your health profile to personalize recommendations.',
+              style: TextStyle(color: _textSecondary),
+            )
+          else ...[
+            _buildInfoRow('Age', health.age?.toString() ?? 'Not set'),
+            _buildInfoRow('Gender', health.gender ?? 'Not set'),
+            _buildInfoRow('Activity', health.activityLevel),
+            _buildInfoRow('Fitness goal', health.fitnessGoal),
+            _buildInfoRow('Diet', health.dietaryPreference),
+            _buildInfoRow(
+              'Medical',
+              health.medicalConditions.isEmpty
+                  ? 'None'
+                  : health.medicalConditions.join(', '),
+            ),
+            _buildInfoRow(
+              'Allergies',
+              health.allergies.isEmpty ? 'None' : health.allergies.join(', '),
+            ),
+            _buildInfoRow('Mood', health.moodStatus),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsCard() {
+    final stats = dashboardStats;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1ECE6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2D8C9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Your Progress',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              _buildStatBlock(
+                '${stats?.completedQuests ?? 0}/${stats?.totalQuests ?? 0}',
+                'Quests',
+              ),
+              _buildStatBlock('${stats?.completedWorkouts ?? 0}', 'Workouts'),
+              _buildStatBlock('${stats?.mealsLogged ?? 0}', 'Meals'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildStatBlock('${stats?.completedStudyTasks ?? 0}', 'Tasks'),
+              _buildStatBlock('${stats?.studyMinutes ?? 0}', 'Study min'),
+              _buildStatBlock('${stats?.waterGlasses ?? 0}', 'Water'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 92,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: _textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: _textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatBlock(String value, String label) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: _textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _textSecondary, fontSize: 11),
+          ),
+        ],
+      ),
     );
   }
 
