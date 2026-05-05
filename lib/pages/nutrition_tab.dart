@@ -1,27 +1,98 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
 import 'modals/nutrition/generate_meal_ideas_modal.dart';
 import 'modals/nutrition/nutrition_modal.dart';
 
-class NutritionTab extends StatefulWidget {
+class NutritionTab extends ConsumerStatefulWidget {
   const NutritionTab({super.key});
 
   @override
-  State<NutritionTab> createState() => _NutritionTabState();
+  ConsumerState<NutritionTab> createState() => _NutritionTabState();
 }
 
-class _NutritionTabState extends State<NutritionTab> {
+class _NutritionTabState extends ConsumerState<NutritionTab> {
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
 
-  final List<Map<String, dynamic>> _recentMeals = [
-    {'type': 'Breakfast', 'name': 'Oatmeal & Berries', 'calories': 320},
-    {'type': 'Lunch', 'name': 'Grilled Chicken Salad', 'calories': 485},
-    {'type': 'Snack', 'name': 'Greek Yogurt & Almonds', 'calories': 210},
-  ];
+  List<Map<String, dynamic>> _recentMeals = [];
+  bool _isLoadingMeals = true;
+  bool _sortNewestFirst = true;
 
-  void _deleteMeal(int index) {
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentMeals();
+  }
+
+  Future<void> _loadRecentMeals() async {
+    try {
+      final meals = await ref.read(nutritionServiceProvider).getRecentMeals();
+      if (mounted) {
+        setState(() {
+          _recentMeals = meals;
+          _isLoadingMeals = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMeals = false);
+    }
+  }
+
+  Future<void> _deleteMeal(int index) async {
+    final meal = _recentMeals[index];
+    final docId = meal['docId'] as String?;
+
     setState(() => _recentMeals.removeAt(index));
+
+    if (docId != null) {
+      await ref.read(nutritionServiceProvider).deleteMeal(docId);
+    }
+  }
+
+  void _toggleSortOrder() {
+    setState(() {
+      _sortNewestFirst = !_sortNewestFirst;
+      _recentMeals.sort((a, b) {
+        final aTime = a['savedAt'] as Comparable?;
+        final bTime = b['savedAt'] as Comparable?;
+        if (_sortNewestFirst) {
+          return bTime?.compareTo(aTime) ?? 0;
+        } else {
+          return aTime?.compareTo(bTime) ?? 0;
+        }
+      });
+    });
+  }
+
+  // Calculate totals from recent meals
+  Map<String, int> _calculateNutritionTotals() {
+    int totalCalories = 0;
+    int totalProtein = 0;
+    int totalCarbs = 0;
+
+    for (final meal in _recentMeals) {
+      // Add calories
+      final calories = meal['calories'] as int? ?? 0;
+      totalCalories += calories;
+
+      // Add protein
+      final nutrition = meal['nutrition'] as Map<String, dynamic>? ?? {};
+      final protein = nutrition['protein'] as String? ?? '0g';
+      totalProtein +=
+          int.tryParse(protein.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+      // Add carbs
+      final carbs = nutrition['carbs'] as String? ?? '0g';
+      totalCarbs += int.tryParse(carbs.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
+
+    return {
+      'calories': totalCalories,
+      'protein': totalProtein,
+      'carbs': totalCarbs,
+    };
   }
 
   void _viewNutrition(Map<String, dynamic> meal) {
@@ -32,6 +103,15 @@ class _NutritionTabState extends State<NutritionTab> {
       barrierColor: Colors.transparent,
       builder: (context) => NutritionModal(meal: meal, onBack: () {}),
     );
+  }
+
+  Future<void> _onMealCompleted(Map<String, dynamic> completedMeal) async {
+    await ref.read(nutritionServiceProvider).saveMeal(completedMeal);
+    await _loadRecentMeals();
+
+    if (mounted) {
+      _showMealAddedNotification(completedMeal['name'] ?? 'Your meal');
+    }
   }
 
   void _showMealAddedNotification(String mealName) {
@@ -129,13 +209,10 @@ class _NutritionTabState extends State<NutritionTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-            // Today's Nutrition Card
             _buildTodaysNutritionCard(),
             const SizedBox(height: 24),
-            // Meal Planner Section
             _buildMealPlannerSection(),
             const SizedBox(height: 24),
-            // Recent Meals Section
             _buildRecentMealsSection(),
             const SizedBox(height: 20),
           ],
@@ -145,6 +222,15 @@ class _NutritionTabState extends State<NutritionTab> {
   }
 
   Widget _buildTodaysNutritionCard() {
+    final totals = _calculateNutritionTotals();
+    final totalCalories = totals['calories'] ?? 0;
+    final totalProtein = totals['protein'] ?? 0;
+    final totalCarbs = totals['carbs'] ?? 0;
+
+    // Calculate percentage of daily goal (assuming 2000 cal goal)
+    const dailyGoal = 2000;
+    final percentage = (totalCalories / dailyGoal).clamp(0.0, 1.0);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -173,13 +259,12 @@ class _NutritionTabState extends State<NutritionTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNutrientCard('1,847', 'Calories'),
-              _buildNutrientCard('125g', 'Protein'),
-              _buildNutrientCard('180g', 'Carbs'),
+              _buildNutrientCard('$totalCalories', 'Calories'),
+              _buildNutrientCard('${totalProtein}g', 'Protein'),
+              _buildNutrientCard('${totalCarbs}g', 'Carbs'),
             ],
           ),
           const SizedBox(height: 16),
-          // Progress Bar
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -192,7 +277,7 @@ class _NutritionTabState extends State<NutritionTab> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: FractionallySizedBox(
-                    widthFactor: 0.73,
+                    widthFactor: percentage,
                     alignment: Alignment.centerLeft,
                     child: Container(
                       decoration: BoxDecoration(
@@ -209,7 +294,7 @@ class _NutritionTabState extends State<NutritionTab> {
               ),
               const SizedBox(height: 8),
               Text(
-                '73% of daily goal',
+                '${(percentage * 100).toStringAsFixed(0)}% of daily goal',
                 style: TextStyle(
                   color: _navyBlue,
                   fontSize: 12,
@@ -260,6 +345,7 @@ class _NutritionTabState extends State<NutritionTab> {
           ),
         ),
         const SizedBox(height: 12),
+        // Smart Meal Generator
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -309,39 +395,7 @@ class _NutritionTabState extends State<NutritionTab> {
                       context,
                     );
                     if (completedMeal != null) {
-                      // Add the meal to recent meals
-                      setState(() {
-                        // Parse calories to ensure it's a number
-                        dynamic caloriesValue =
-                            completedMeal['nutrition']?['calories'] ??
-                            completedMeal['calories'] ??
-                            0;
-                        int calories = 0;
-                        if (caloriesValue is int) {
-                          calories = caloriesValue;
-                        } else if (caloriesValue is String) {
-                          // Extract numeric value from strings like "2865 kcal"
-                          calories =
-                              int.tryParse(
-                                caloriesValue.replaceAll(RegExp(r'[^0-9]'), ''),
-                              ) ??
-                              0;
-                        } else if (caloriesValue is double) {
-                          calories = caloriesValue.toInt();
-                        }
-
-                        _recentMeals.insert(0, {
-                          ...completedMeal, // Keep all original meal data
-                          'type': completedMeal['category'] ?? 'Meal',
-                          'calories': calories,
-                        });
-                      });
-                      // Show custom success notification
-                      if (mounted) {
-                        _showMealAddedNotification(
-                          completedMeal['name'] ?? 'Your meal',
-                        );
-                      }
+                      await _onMealCompleted(completedMeal);
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -379,16 +433,65 @@ class _NutritionTabState extends State<NutritionTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Recent Meals',
-          style: TextStyle(
-            color: _navyBlue,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Meals',
+              style: TextStyle(
+                color: _navyBlue,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            GestureDetector(
+              onTap: _toggleSortOrder,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _green.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _sortNewestFirst
+                          ? Icons.arrow_downward
+                          : Icons.arrow_upward,
+                      color: _green,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _sortNewestFirst ? 'Newest' : 'Oldest',
+                      style: TextStyle(
+                        color: _green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        if (_recentMeals.isEmpty)
+
+        // ✅ Show loader while fetching from Firestore
+        if (_isLoadingMeals)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_recentMeals.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 32),
@@ -424,7 +527,7 @@ class _NutritionTabState extends State<NutritionTab> {
 
   Widget _buildMealCard(Map<String, dynamic> meal, int index) {
     return Dismissible(
-      key: ValueKey('${meal['name']}_$index'),
+      key: ValueKey(meal['docId'] ?? '${meal['name']}_$index'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -456,13 +559,12 @@ class _NutritionTabState extends State<NutritionTab> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Meal info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    meal['type'],
+                    meal['type'] ?? 'Meal',
                     style: const TextStyle(
                       color: Color(0xFFFFB84D),
                       fontSize: 12,
@@ -471,7 +573,7 @@ class _NutritionTabState extends State<NutritionTab> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    meal['name'],
+                    meal['name'] ?? '',
                     style: TextStyle(
                       color: _navyBlue,
                       fontSize: 14,
@@ -481,7 +583,6 @@ class _NutritionTabState extends State<NutritionTab> {
                 ],
               ),
             ),
-            // Calories
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -493,9 +594,9 @@ class _NutritionTabState extends State<NutritionTab> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                Text(
+                const Text(
                   'cal',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Color(0xFF999999),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -504,10 +605,8 @@ class _NutritionTabState extends State<NutritionTab> {
               ],
             ),
             const SizedBox(width: 12),
-            // Action buttons
             Row(
               children: [
-                // View nutrition button
                 GestureDetector(
                   onTap: () => _viewNutrition(meal),
                   child: Container(
@@ -525,7 +624,6 @@ class _NutritionTabState extends State<NutritionTab> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Delete button
                 GestureDetector(
                   onTap: () => _deleteMeal(index),
                   child: Container(
