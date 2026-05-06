@@ -535,6 +535,7 @@ class PrototypeDataService {
       'avoidedAllergies': meal['avoidedAllergies'] ?? const <String>[],
       'medicalNotes': meal['medicalNotes'] ?? const <String>[],
       'source': 'rule-based recommendation',
+      'dateKey': todayKey(),
       'loggedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -557,7 +558,7 @@ class PrototypeDataService {
           .where('dateKey', isEqualTo: date)
           .where('completed', isEqualTo: true)
           .get(),
-      uidDoc.collection('mealLogs').get(),
+      uidDoc.collection('mealLogs').where('dateKey', isEqualTo: date).get(),
       uidDoc.collection('dailyQuests').where('dateKey', isEqualTo: date).get(),
       uidDoc.collection('wellnessLogs').doc(date).get(),
     ]);

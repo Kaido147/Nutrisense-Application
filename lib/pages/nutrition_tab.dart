@@ -144,14 +144,28 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
   }
 
   // Safely parses a numeric value that may arrive as int, double, or String.
-  static int _parseNumeric(dynamic raw) {
+  static double _parseDecimal(dynamic raw) {
     if (raw == null) return 0;
-    if (raw is int) return raw;
-    if (raw is double) return raw.toInt();
+    if (raw is num) return raw.toDouble();
     if (raw is String) {
-      return int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      return double.tryParse(raw.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
     }
     return 0;
+  }
+
+  // Safely parses a numeric value for whole-number dashboard totals.
+  static int _parseNumeric(dynamic raw) => _parseDecimal(raw).round();
+
+  static String _formatDecimal(dynamic raw) {
+    final value = _parseDecimal(raw);
+    if (value == 0) return '0';
+    if (value % 1 == 0) return value.toInt().toString();
+    return value.toStringAsFixed(1);
+  }
+
+  static String _mealCaloriesLabel(Map<String, dynamic> meal) {
+    final nutrition = _safeMap(meal['nutrition']);
+    return _formatDecimal(nutrition['calories'] ?? meal['calories']);
   }
 
   // Safely converts any Map type returned by Firestore or AI JSON.
@@ -179,8 +193,8 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     int totalVitaminD = 0;
 
     for (final meal in _recentMeals) {
-      totalCalories += _parseNumeric(meal['calories']);
       final nutrition = _safeMap(meal['nutrition']);
+      totalCalories += _parseNumeric(nutrition['calories'] ?? meal['calories']);
       totalProtein += _parseNumeric(nutrition['protein']);
       totalCarbs += _parseNumeric(nutrition['carbs']);
       totalFat += _parseNumeric(nutrition['fat']);
@@ -237,72 +251,78 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
         top: MediaQuery.of(context).padding.top + 16,
         left: 16,
         right: 16,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 400),
-          builder: (context, value, child) => Opacity(
-            opacity: value,
-            child: Transform.translate(
-              offset: Offset(0, -15 * (1 - value)),
-              child: child,
-            ),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F8F5),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _green.withValues(alpha: 0.15),
-                width: 1,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 400),
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, -15 * (1 - value)),
+                child: child,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: _green.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.check_circle, color: _green, size: 20),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F8F5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _green.withValues(alpha: 0.15),
+                  width: 1,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Added to Recent',
-                        style: TextStyle(
-                          color: _navyBlue,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        mealName,
-                        style: TextStyle(
-                          color: _navyBlue.withValues(alpha: 0.7),
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-              ],
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _green.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.check_circle, color: _green, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Added to Recent',
+                          style: TextStyle(
+                            color: _navyBlue,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          mealName,
+                          style: TextStyle(
+                            color: _navyBlue.withValues(alpha: 0.7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.none,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -510,7 +530,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                 target: dailyCalories,
                 label: 'Calories',
                 unit: '',
-                color: const Color(0xFFFF6B35),
+                color: _navyBlue,
               ),
               CircularMacroProgress(
                 current: totalProtein,
@@ -524,7 +544,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                 target: dailyCarbs,
                 label: 'Carbs',
                 unit: 'g',
-                color: const Color(0xFFFFB84D),
+                color: _navyBlue,
               ),
             ],
           ),
@@ -744,7 +764,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
         ? const Color(0xFFFF6B35)
         : isExceeded
         ? const Color(0xFFFF6B35)
-        : color;
+        : _navyBlue;
 
     final valueLabel = isLimitOnly
         ? '$current $unit'
@@ -834,7 +854,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Smart Meal Generator',
+                          'Meal Ideas Generator',
                           style: TextStyle(
                             color: _navyBlue,
                             fontSize: 14,
@@ -1124,6 +1144,21 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      if (meal['servingAmount'] != null &&
+                          meal['servingAmount'].toString().trim().isNotEmpty &&
+                          meal['servingUnit'] != null &&
+                          meal['servingUnit'].toString().trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            '${meal['servingAmount']} ${meal['servingUnit']}',
+                            style: const TextStyle(
+                              color: Color(0xFF999999),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -1131,7 +1166,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${meal['calories']}',
+                      _mealCaloriesLabel(meal),
                       style: TextStyle(
                         color: _navyBlue,
                         fontSize: 16,

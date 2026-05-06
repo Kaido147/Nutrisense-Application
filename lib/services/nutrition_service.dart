@@ -19,10 +19,15 @@ class NutritionService {
     if (uid == null) return;
 
     final userRef = _firestore.collection('users').doc(uid);
+    final recentMealRef = userRef.collection('recentMeals').doc();
+    final mealLogRef = userRef.collection('mealLogs').doc(recentMealRef.id);
     final nutrition = _safeNutritionMap(meal['nutrition']);
     final calories = _parseCalories(meal);
+    final protein = _parseNutrient(nutrition['protein']);
+    final dateKey = _todayKey();
+    final timestamp = FieldValue.serverTimestamp();
 
-    await userRef.collection('recentMeals').add({
+    final recentMeal = {
       'name': meal['name'] ?? '',
       'type': meal['category'] ?? meal['type'] ?? 'Meal',
       'calories': calories,
@@ -53,9 +58,31 @@ class NutritionService {
         'iron': nutrition['iron'] ?? '0mg',
         'vitaminD': nutrition['vitaminD'] ?? '0mcg',
       },
-      'savedAt': FieldValue.serverTimestamp(),
+      'dateKey': dateKey,
+      'savedAt': timestamp,
       'initialized': false,
-    });
+    };
+
+    final mealLog = {
+      'mealName': meal['name'] ?? '',
+      'mealType': meal['category'] ?? meal['type'] ?? 'Meal',
+      'ingredients': _ingredientNames(meal['ingredients']),
+      'caloriesEstimate': calories.round(),
+      'proteinEstimate': protein.round(),
+      'tags': const <String>[],
+      'matchedMood': null,
+      'dietaryPreference': null,
+      'avoidedAllergies': const <String>[],
+      'medicalNotes': const <String>[],
+      'source': 'nutrition log',
+      'dateKey': dateKey,
+      'loggedAt': timestamp,
+    };
+
+    final batch = _firestore.batch();
+    batch.set(recentMealRef, recentMeal);
+    batch.set(mealLogRef, mealLog);
+    await batch.commit();
   }
 
   // Get recent meals.
@@ -106,6 +133,12 @@ class NutritionService {
           .collection('recentMeals')
           .doc(docId)
           .delete();
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('mealLogs')
+          .doc(docId)
+          .delete();
     } catch (e) {
       // ignore
     }
@@ -122,13 +155,44 @@ class NutritionService {
     return {};
   }
 
-  int _parseCalories(Map<String, dynamic> meal) {
+  num _parseCalories(Map<String, dynamic> meal) {
     final raw = meal['nutrition']?['calories'] ?? meal['calories'] ?? 0;
     if (raw is int) return raw;
-    if (raw is double) return raw.toInt();
+    if (raw is double) return raw % 1 == 0 ? raw.toInt() : raw;
     if (raw is String) {
-      return int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final value = double.tryParse(raw.replaceAll(RegExp(r'[^0-9.]'), ''));
+      if (value == null) return 0;
+      return value % 1 == 0 ? value.toInt() : value;
     }
     return 0;
+  }
+
+  double _parseNutrient(dynamic raw) {
+    if (raw is num) return raw.toDouble();
+    if (raw is String) {
+      return double.tryParse(raw.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+    }
+    return 0;
+  }
+
+  List<String> _ingredientNames(dynamic raw) {
+    if (raw is! List) return const <String>[];
+
+    return raw
+        .map((item) {
+          if (item is String) return item.trim();
+          if (item is Map) {
+            return (item['name'] ?? item['ingredient'] ?? '').toString().trim();
+          }
+          return '';
+        })
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+  }
+
+  String _todayKey() {
+    final now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 }
