@@ -5,6 +5,7 @@ import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
 import 'package:nutrisense/services/auth_service.dart';
 import 'package:nutrisense/services/goals_service.dart';
+import 'package:nutrisense/services/macro_calculator.dart';
 import 'package:nutrisense/services/nutrition_service.dart';
 import 'package:nutrisense/services/profile_service.dart';
 import 'package:nutrisense/services/prototype_data_service.dart';
@@ -62,6 +63,10 @@ final nutritionServiceProvider = Provider<NutritionService>((ref) {
 
 final healthProfileProvider = StreamProvider<HealthProfile?>((ref) {
   return ref.watch(prototypeDataServiceProvider).watchHealthProfile();
+});
+
+final dailyMacrosProvider = FutureProvider<DailyMacros?>((ref) {
+  return ref.watch(profileServiceProvider).getDailyMacros();
 });
 
 final schedulesProvider = StreamProvider<List<ClassSchedule>>((ref) {

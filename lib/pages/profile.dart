@@ -370,6 +370,11 @@ class _ProfileContent extends StatelessWidget {
                   ? 'Not set'
                   : '${_formatNumber(health.targetWeightKg!)} kg',
             ),
+            // ── Goal pace ─────────────────────────────────────────────────
+            _buildInfoRow(
+              'Goal pace',
+              _formatPace(health.weightGainPaceKgPerWeek),
+            ),
             _buildInfoRow('Activity', health.activityLevel),
             _buildInfoRow('Fitness goal', health.fitnessGoal),
             _buildInfoRow('Diet', health.dietaryPreference),
@@ -701,6 +706,23 @@ class _ProfileContent extends StatelessWidget {
       return value.toStringAsFixed(0);
     }
     return value.toStringAsFixed(1);
+  }
+
+  /// Formats the pace value into a human-readable string.
+  /// e.g. 0.5 → "0.5 kg/week (Recommended)"
+  String _formatPace(double? pace) {
+    if (pace == null) return 'Not set';
+    final descriptions = {
+      0.25: 'Slow & steady',
+      0.5: 'Recommended',
+      0.75: 'Faster progress',
+      1.0: 'Aggressive',
+    };
+    final desc = descriptions[pace];
+    final paceStr = pace == pace.roundToDouble()
+        ? pace.toStringAsFixed(0)
+        : pace.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '');
+    return desc != null ? '$paceStr kg/week · $desc' : '$paceStr kg/week';
   }
 
   void _openThemeSettings(BuildContext context) {

@@ -6,6 +6,7 @@ class MealService {
   static const _mealBase = 'https://www.themealdb.com/api/json/v1/1';
   static const _usdaBase = 'https://api.nal.usda.gov/fdc/v1';
 
+  // ── USDA FoodData Central nutrient IDs ────────────────────────────────────
   static const _nidCalories = 1008;
   static const _nidProtein = 1003;
   static const _nidCarbs = 1005;
@@ -14,6 +15,12 @@ class MealService {
   static const _nidSugar = 2000;
   static const _nidSodium = 1093;
   static const _nidCholesterol = 1253;
+  static const _nidSaturatedFat = 1258; // NEW
+  static const _nidTransFat = 1257; // NEW
+  static const _nidPotassium = 1092; // NEW
+  static const _nidCalcium = 1087; // NEW
+  static const _nidIron = 1089; // NEW
+  static const _nidVitaminD = 1114; // NEW
 
   // ─────────────────────────────────────────────────────────────────────────
   // PUBLIC
@@ -25,8 +32,6 @@ class MealService {
     List<String> dietaryPrefs = const [],
   }) async {
     // ── STEP 1: Query TheMealDB once per ingredient ──────────────────────────
-    // TheMealDB filter only supports ONE ingredient per request.
-    // We fetch each separately and track how many user ingredients each meal matches.
     final Map<String, int> idMatchCount = {};
 
     for (int i = 0; i < ingredients.length; i++) {
@@ -34,7 +39,6 @@ class MealService {
       final searchTerm = _simplifyIngredient(ingredient);
       if (searchTerm.isEmpty) continue;
 
-      // ── Avoid rate-limiting on rapid sequential requests ──────────────────
       if (i > 0) await Future.delayed(const Duration(milliseconds: 300));
 
       final encoded = Uri.encodeComponent(searchTerm);
@@ -46,7 +50,6 @@ class MealService {
 
       for (final meal in meals as List) {
         final id = meal['idMeal'] as String;
-        // Each ingredient search that returns this meal adds 1 to its count.
         idMatchCount[id] = (idMatchCount[id] ?? 0) + 1;
       }
     }
@@ -54,7 +57,6 @@ class MealService {
     if (idMatchCount.isEmpty) return [];
 
     // ── STEP 2: Take top 10 meals by match count ─────────────────────────────
-    // Meals matched by more of the user's ingredients rank higher.
     final topIds =
         (idMatchCount.entries.toList()
               ..sort((a, b) => b.value.compareTo(a.value)))
@@ -138,7 +140,6 @@ class MealService {
         final aNut = a['nutrition'] as Map<String, dynamic>? ?? {};
         final bNut = b['nutrition'] as Map<String, dynamic>? ?? {};
 
-        // Helper to parse "120g" → 120.0
         double parse(dynamic val) =>
             double.tryParse(
               val?.toString().replaceAll(RegExp(r'[^0-9.]'), '') ?? '0',
@@ -153,12 +154,10 @@ class MealService {
         }
         if (dietaryPrefs.contains('Vegan') ||
             dietaryPrefs.contains('Vegetarian')) {
-          // Sort by lowest calories — lighter plant-based meals first
           return parse(aNut['calories']).compareTo(parse(bNut['calories']));
         }
         if (dietaryPrefs.contains('Gluten-free') ||
             dietaryPrefs.contains('Dairy-free')) {
-          // Sort by highest fiber — whole food focus
           return parse(bNut['fiber']).compareTo(parse(aNut['fiber']));
         }
         return 0;
@@ -217,8 +216,6 @@ class MealService {
     }
   }
 
-  /// Strips adjectives/descriptors so "boneless chicken breast" → "chicken".
-  /// Kept minimal — only strips words that TheMealDB won't understand anyway.
   static String _simplifyIngredient(String ingredient) {
     const descriptors = {
       'boneless',
@@ -251,7 +248,6 @@ class MealService {
       'wing',
       'leg',
     };
-
     final words = ingredient.toLowerCase().trim().split(RegExp(r'\s+'));
     final filtered = words.where((w) => !descriptors.contains(w)).toList();
     return filtered.isEmpty
@@ -279,6 +275,10 @@ class MealService {
     final nutrition = await _fetchNutritionForMeal(ingredients);
     meal['nutrition'] = nutrition;
 
+    // FIX: update the top-level calories int from the nutrition result so
+    // NutritionModal and NutritionTab can both read it without guessing the type.
+    meal['calories'] = _parseCaloriesInt(nutrition['calories']);
+
     return meal;
   }
 
@@ -303,7 +303,8 @@ class MealService {
       'description': '${raw['strCategory'] ?? ''} · ${raw['strArea'] ?? ''}',
       'time': _estimateTime(ingredients.length),
       'difficulty': _estimateDifficulty(ingredients.length),
-      'calories': 'Loading…',
+      // Placeholder — overwritten with a real int after nutrition is fetched.
+      'calories': 0,
     };
   }
 
@@ -318,8 +319,20 @@ class MealService {
       ingredients.map((ing) => _fetchNutrientsForIngredient(ing['name']!)),
     );
 
-    double calories = 0, protein = 0, carbs = 0, fat = 0;
-    double fiber = 0, sugar = 0, sodium = 0, cholesterol = 0;
+    double calories = 0;
+    double protein = 0;
+    double carbs = 0;
+    double fat = 0;
+    double fiber = 0;
+    double sugar = 0;
+    double sodium = 0;
+    double cholesterol = 0;
+    double saturatedFat = 0; // NEW
+    double transFat = 0; // NEW
+    double potassium = 0; // NEW
+    double calcium = 0; // NEW
+    double iron = 0; // NEW
+    double vitaminD = 0; // NEW
 
     for (final n in results) {
       if (n == null) continue;
@@ -331,6 +344,12 @@ class MealService {
       sugar += n['sugar'] ?? 0;
       sodium += n['sodium'] ?? 0;
       cholesterol += n['cholesterol'] ?? 0;
+      saturatedFat += n['saturatedFat'] ?? 0; // NEW
+      transFat += n['transFat'] ?? 0; // NEW
+      potassium += n['potassium'] ?? 0; // NEW
+      calcium += n['calcium'] ?? 0; // NEW
+      iron += n['iron'] ?? 0; // NEW
+      vitaminD += n['vitaminD'] ?? 0; // NEW
     }
 
     return {
@@ -342,6 +361,36 @@ class MealService {
       'sugar': '${sugar.round()}g',
       'sodium': '${sodium.round()}mg',
       'cholesterol': '${cholesterol.round()}mg',
+      'saturatedFat': '${saturatedFat.round()}g', // NEW
+      'transFat': '${transFat.round()}g', // NEW
+      'potassium': '${potassium.round()}mg', // NEW
+      'calcium': '${calcium.round()}mg', // NEW
+      'iron': '${iron.round()}mg', // NEW
+      'vitaminD': '${vitaminD.round()}mcg', // NEW
+    };
+  }
+
+  static Future<Map<String, dynamic>?> fetchNutritionForFoodName(
+    String foodName,
+  ) async {
+    final nutrients = await _fetchNutrientsForIngredient(foodName);
+    if (nutrients == null) return null;
+
+    return {
+      'calories': '${(nutrients['calories'] ?? 0).round()} kcal',
+      'protein': '${(nutrients['protein'] ?? 0).round()}g',
+      'carbs': '${(nutrients['carbs'] ?? 0).round()}g',
+      'fat': '${(nutrients['fat'] ?? 0).round()}g',
+      'fiber': '${(nutrients['fiber'] ?? 0).round()}g',
+      'sugar': '${(nutrients['sugar'] ?? 0).round()}g',
+      'sodium': '${(nutrients['sodium'] ?? 0).round()}mg',
+      'cholesterol': '${(nutrients['cholesterol'] ?? 0).round()}mg',
+      'saturatedFat': '${(nutrients['saturatedFat'] ?? 0).round()}g',
+      'transFat': '${(nutrients['transFat'] ?? 0).round()}g',
+      'potassium': '${(nutrients['potassium'] ?? 0).round()}mg',
+      'calcium': '${(nutrients['calcium'] ?? 0).round()}mg',
+      'iron': '${(nutrients['iron'] ?? 0).round()}mg',
+      'vitaminD': '${(nutrients['vitaminD'] ?? 0).round()}mcg',
     };
   }
 
@@ -385,10 +434,30 @@ class MealService {
         'sugar': _get(_nidSugar) ?? 0,
         'sodium': _get(_nidSodium) ?? 0,
         'cholesterol': _get(_nidCholesterol) ?? 0,
+        'saturatedFat': _get(_nidSaturatedFat) ?? 0, // NEW
+        'transFat': _get(_nidTransFat) ?? 0, // NEW
+        'potassium': _get(_nidPotassium) ?? 0, // NEW
+        'calcium': _get(_nidCalcium) ?? 0, // NEW
+        'iron': _get(_nidIron) ?? 0, // NEW
+        'vitaminD': _get(_nidVitaminD) ?? 0, // NEW
       };
     } catch (_) {
       return null;
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRIVATE — Helpers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Converts a nutrition calories string like "450 kcal" into a plain int.
+  static int _parseCaloriesInt(dynamic raw) {
+    if (raw is int) return raw;
+    if (raw is double) return raw.toInt();
+    if (raw is String) {
+      return int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
+    return 0;
   }
 
   static String _estimateTime(int n) => n <= 5
