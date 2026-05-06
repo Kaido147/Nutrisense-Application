@@ -44,6 +44,8 @@ class _ScheduleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -63,8 +65,8 @@ class _ScheduleTile extends StatelessWidget {
               children: [
                 Text(
                   item.title,
-                  style: const TextStyle(
-                    color: StudyTheme.textPrimary,
+                  style: TextStyle(
+                    color: primaryColor,
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
                   ),
@@ -82,8 +84,8 @@ class _ScheduleTile extends StatelessWidget {
           ),
           Text(
             item.time,
-            style: const TextStyle(
-              color: StudyTheme.textPrimary,
+            style: TextStyle(
+              color: primaryColor,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),

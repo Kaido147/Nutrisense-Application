@@ -88,13 +88,15 @@ class _StudyHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Container(
           width: double.infinity,
-          decoration: const BoxDecoration(
-            color: StudyTheme.navyBlue,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(30),
               bottomRight: Radius.circular(30),
@@ -121,7 +123,7 @@ class _StudyHeader extends StatelessWidget {
               Text(
                 'Deep work mode activated',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: primaryColor,
                   fontSize: 13,
                   letterSpacing: 0.2,
                 ),
@@ -167,17 +169,18 @@ class _FocusModeView extends StatelessWidget {
           },
           onAddTask: () => AddTaskModal.show(
             context,
-            onSave: ({
-              required String title,
-              String? description,
-              DateTime? dueAt,
-            }) {
-              return controller.addTask(
-                title: title,
-                description: description,
-                dueAt: dueAt,
-              );
-            },
+            onSave:
+                ({
+                  required String title,
+                  String? description,
+                  DateTime? dueAt,
+                }) {
+                  return controller.addTask(
+                    title: title,
+                    description: description,
+                    dueAt: dueAt,
+                  );
+                },
           ),
           isLoading: controller.isLoadingTasks,
           errorMessage: controller.taskErrorMessage,

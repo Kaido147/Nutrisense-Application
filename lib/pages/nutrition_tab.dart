@@ -9,9 +9,10 @@ class NutritionTab extends StatefulWidget {
 }
 
 class _NutritionTabState extends State<NutritionTab> {
-  static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
+
+  Color get _primaryColor => Theme.of(context).colorScheme.primary;
 
   final List<Map<String, dynamic>> _recentMeals = [
     {'type': 'Breakfast', 'name': 'Oatmeal & Berries', 'calories': 320},
@@ -63,7 +64,7 @@ class _NutritionTabState extends State<NutritionTab> {
           Text(
             "Today's Nutrition",
             style: TextStyle(
-              color: _navyBlue,
+              color: _primaryColor,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -96,7 +97,7 @@ class _NutritionTabState extends State<NutritionTab> {
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [_navyBlue, Color(0xFFFFB84D)],
+                          colors: [_primaryColor, Color(0xFFFFB84D)],
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
                         ),
@@ -110,7 +111,7 @@ class _NutritionTabState extends State<NutritionTab> {
               Text(
                 '73% of daily goal',
                 style: TextStyle(
-                  color: _navyBlue,
+                  color: _primaryColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -128,7 +129,7 @@ class _NutritionTabState extends State<NutritionTab> {
         Text(
           value,
           style: TextStyle(
-            color: _navyBlue,
+            color: _primaryColor,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
@@ -153,7 +154,7 @@ class _NutritionTabState extends State<NutritionTab> {
         Text(
           'Meal Planner',
           style: TextStyle(
-            color: _navyBlue,
+            color: _primaryColor,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -180,7 +181,7 @@ class _NutritionTabState extends State<NutritionTab> {
                         Text(
                           'Smart Meal Generator',
                           style: TextStyle(
-                            color: _navyBlue,
+                            color: _primaryColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -244,7 +245,7 @@ class _NutritionTabState extends State<NutritionTab> {
         Text(
           'Recent Meals',
           style: TextStyle(
-            color: _navyBlue,
+            color: _primaryColor,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -285,7 +286,7 @@ class _NutritionTabState extends State<NutritionTab> {
                         Text(
                           meal['name'],
                           style: TextStyle(
-                            color: _navyBlue,
+                            color: _primaryColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -299,7 +300,7 @@ class _NutritionTabState extends State<NutritionTab> {
                       Text(
                         '${meal['calories']}',
                         style: TextStyle(
-                          color: _navyBlue,
+                          color: _primaryColor,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),

@@ -21,7 +21,6 @@ class AddClassModal extends StatefulWidget {
 class _AddClassModalState extends State<AddClassModal> {
   static const Color _navyBlue = Color(0xFF1E2A4A);
   static const Color _lightGray = Color(0xFFF5F5F5);
-  static const Color _goldTan = Color(0xFFD4B896);
 
   final TextEditingController _classTitle = TextEditingController();
   final TextEditingController _courseCode = TextEditingController();

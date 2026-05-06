@@ -43,16 +43,30 @@ class MyApp extends StatelessWidget {
     return p.Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         final accentColor = themeProvider.accentColor.color;
+        final primaryColor = themeProvider.primaryColorValue;
 
         final lightTheme = ThemeData(
           useMaterial3: true,
           brightness: Brightness.light,
           colorScheme: ColorScheme.light(
-            primary: accentColor,
+            primary: primaryColor,
             secondary: accentColor,
           ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF243A6E),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+          ),
+          progressIndicatorTheme: ProgressIndicatorThemeData(
+            color: primaryColor,
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             elevation: 0,
           ),
@@ -63,11 +77,24 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
           brightness: Brightness.dark,
           colorScheme: ColorScheme.dark(
-            primary: accentColor,
+            primary: primaryColor,
             secondary: accentColor,
           ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF243A6E),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+          ),
+          progressIndicatorTheme: ProgressIndicatorThemeData(
+            color: primaryColor,
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             elevation: 0,
           ),

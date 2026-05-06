@@ -12,11 +12,10 @@ class WorkoutPage extends StatefulWidget {
 class _WorkoutPageState extends State<WorkoutPage> {
   int _selectedTab = 0;
   bool _isPressed = false;
-
-  //
-  static const Color _navyBlue = Color(0xFF273967);
   static const Color _lightBg = Color(0xFFF5F0EA);
   static const Color _cream = Color(0xFFF5F0E9);
+
+  Color get _primaryColor => Theme.of(context).colorScheme.primary;
 
   // Placeholdee for exercises list
   final List<Map<String, dynamic>> _exercises = [
@@ -77,7 +76,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           Text(
             'Exercises',
             style: TextStyle(
-              color: _navyBlue,
+              color: _primaryColor,
               fontSize: 18,
               fontWeight: FontWeight.w500,
             ),
@@ -128,8 +127,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             : Center(
                                 child: Text(
                                   exercise['num'].toString(),
-                                  style: const TextStyle(
-                                    color: _navyBlue,
+                                  style: TextStyle(
+                                    color: _primaryColor,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -145,8 +144,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
                           children: [
                             Text(
                               exercise['name'],
-                              style: const TextStyle(
-                                color: _navyBlue,
+                              style: TextStyle(
+                                color: _primaryColor,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
                               ),
@@ -155,7 +154,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             Text(
                               exercise['sets'],
                               style: TextStyle(
-                                color: _navyBlue.withValues(alpha: 0.6),
+                                color: _primaryColor.withValues(alpha: 0.6),
                                 fontSize: 13,
                               ),
                             ),
@@ -184,7 +183,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: _navyBlue,
+                              color: _primaryColor,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: const Text(
@@ -221,7 +220,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
               Text(
                 'Weekly Plan',
                 style: TextStyle(
-                  color: _navyBlue,
+                  color: _primaryColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 18,
                 ),
@@ -238,7 +237,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 child: Text(
                   'View All',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: _primaryColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -268,12 +267,12 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 // Header with calendar icon and "This Week's Focus" (inside card)
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, color: _navyBlue, size: 20),
+                    Icon(Icons.calendar_today, color: _primaryColor, size: 20),
                     const SizedBox(width: 10),
                     Text(
                       'This Week\'s Focus',
                       style: TextStyle(
-                        color: _navyBlue,
+                        color: _primaryColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
                       ),
@@ -303,7 +302,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                         Text(
                           '${plan['day']}: ${plan['activity']}',
                           style: TextStyle(
-                            color: _navyBlue.withValues(
+                            color: _primaryColor.withValues(
                               alpha: isCompleted ? 1.0 : 1.0,
                             ),
                             fontWeight: isCompleted
@@ -333,7 +332,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           child: Text(
             'Today\'s Routine',
             style: TextStyle(
-              color: _navyBlue,
+              color: _primaryColor,
               fontSize: 18,
               fontWeight: FontWeight.w500,
             ),
@@ -371,7 +370,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -379,7 +378,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: _navyBlue,
+                          color: _primaryColor,
                         ),
                       ),
                       SizedBox(height: 3),
@@ -390,7 +389,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: _navyBlue,
+                            color: _primaryColor,
                           ),
                         ),
                       ),
@@ -419,10 +418,10 @@ class _WorkoutPageState extends State<WorkoutPage> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Text(
+                  Text(
                     '0%',
                     style: TextStyle(
-                      color: _navyBlue,
+                      color: _primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -452,7 +451,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                         onPressed: null,
                         style: ElevatedButton.styleFrom(
                           disabledBackgroundColor: Colors.white,
-                          disabledForegroundColor: _navyBlue,
+                          disabledForegroundColor: _primaryColor,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -493,8 +492,8 @@ class _WorkoutPageState extends State<WorkoutPage> {
   Widget _buildNavyHeader(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: _navyBlue,
+      decoration: BoxDecoration(
+        color: _primaryColor,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
@@ -534,7 +533,9 @@ class _WorkoutPageState extends State<WorkoutPage> {
     return Text(
       'Your fitness & nutrition tracker',
       style: TextStyle(
-          color: Theme.of(context).colorScheme.primary, fontSize: 13),
+        color: Theme.of(context).colorScheme.primary,
+        fontSize: 13,
+      ),
     );
   }
 
@@ -575,7 +576,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           margin: const EdgeInsets.all(4),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? _navyBlue : Colors.transparent,
+            color: isSelected ? _primaryColor : Colors.transparent,
             borderRadius: BorderRadius.circular(25),
           ),
           alignment: Alignment.center,

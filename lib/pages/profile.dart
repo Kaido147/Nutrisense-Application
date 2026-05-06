@@ -80,22 +80,28 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
-class _ProfileContent extends StatelessWidget {
+class _ProfileContent extends StatefulWidget {
   const _ProfileContent({required this.profile, required this.onLogout});
 
   final UserProfile profile;
   final VoidCallback onLogout;
 
+  @override
+  State<_ProfileContent> createState() => _ProfileContentState();
+}
+
+class _ProfileContentState extends State<_ProfileContent> {
   static const Color _backgroundColor = Color(0xFFF4F0E8);
-  static const Color _navyBlue = Color(0xFF243A6E);
   static const Color _goldTan = Color(0xFFD8B56D);
-  static const Color _textPrimary = Color(0xFF24376B);
   static const Color _textSecondary = Color(0xFF6B7280);
   static const Color _cardColor = Colors.white;
+
+  late Color _textPrimary;
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = p.Provider.of<ThemeProvider>(context);
+    _textPrimary = themeProvider.primaryColorValue;
 
     return Scaffold(
       backgroundColor: _backgroundColor,
@@ -127,9 +133,9 @@ class _ProfileContent extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(top: 36, left: 24, right: 24, bottom: 78),
-      decoration: const BoxDecoration(
-        color: _navyBlue,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: _textPrimary,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(34),
           bottomRight: Radius.circular(34),
         ),
@@ -149,7 +155,7 @@ class _ProfileContent extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            profile.fullName,
+            widget.profile.fullName,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
@@ -160,7 +166,7 @@ class _ProfileContent extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            profile.displayEmail,
+            widget.profile.displayEmail,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 10,
@@ -192,7 +198,7 @@ class _ProfileContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Goal Progress',
             style: TextStyle(
               color: _textPrimary,
@@ -204,16 +210,16 @@ class _ProfileContent extends StatelessWidget {
           _buildProgressRow(
             icon: LucideIcons.target,
             title: 'Weekly Study Goal',
-            value: profile.studySummaryValue,
-            progress: profile.studySummaryProgress,
-            color: _navyBlue,
+            value: widget.profile.studySummaryValue,
+            progress: widget.profile.studySummaryProgress,
+            color: _textPrimary,
           ),
           const SizedBox(height: 24),
           _buildProgressRow(
             icon: Icons.trending_up_rounded,
             title: 'Workout Streak',
-            value: profile.workoutSummaryValue,
-            progress: profile.workoutSummaryProgress,
+            value: widget.profile.workoutSummaryValue,
+            progress: widget.profile.workoutSummaryProgress,
             color: _goldTan,
           ),
         ],
@@ -237,7 +243,7 @@ class _ProfileContent extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,
                   color: _textPrimary,
@@ -246,7 +252,7 @@ class _ProfileContent extends StatelessWidget {
             ),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
                 color: _textPrimary,
@@ -277,7 +283,7 @@ class _ProfileContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(left: 2, bottom: 12),
             child: Text(
               'Settings',
@@ -304,11 +310,11 @@ class _ProfileContent extends StatelessWidget {
               children: [
                 _buildSettingsTile(
                   icon: LucideIcons.user,
-                  iconColor: _navyBlue,
+                  iconColor: _textPrimary,
                   iconBackground: const Color(0xFFF1F3F8),
                   title: 'Edit Profile',
                   subtitle: 'Update your information',
-                  onTap: () => EditProfileModal.show(context, profile),
+                  onTap: () => EditProfileModal.show(context, widget.profile),
                 ),
                 const Divider(
                   height: 1,
@@ -323,7 +329,8 @@ class _ProfileContent extends StatelessWidget {
                   iconBackground: const Color(0xFFF8F4EA),
                   title: 'Goals & Preferences',
                   subtitle: 'Manage your targets',
-                  onTap: () => GoalsPreferencesModal.show(context, profile),
+                  onTap: () =>
+                      GoalsPreferencesModal.show(context, widget.profile),
                 ),
                 const Divider(
                   height: 1,
@@ -381,7 +388,7 @@ class _ProfileContent extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: _textPrimary,
@@ -390,7 +397,7 @@ class _ProfileContent extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: _textSecondary,
                         fontWeight: FontWeight.w500,
@@ -418,7 +425,7 @@ class _ProfileContent extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
-          onTap: onLogout,
+          onTap: widget.onLogout,
           borderRadius: BorderRadius.circular(24),
           child: Container(
             width: double.infinity,
@@ -493,12 +500,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
                     child: Row(
                       children: [
-                        const Text(
+                        Text(
                           'Theme Settings',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF24376B),
+                            color: themeProvider.primaryColorValue,
                           ),
                         ),
                         const Spacer(),
@@ -528,12 +535,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
                         // --- Appearance Section ---
-                        const Text(
+                        Text(
                           'Appearance',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF24376B),
+                            color: themeProvider.primaryColorValue,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -544,7 +551,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
                           icon: Icons.wb_sunny_rounded,
                           label: 'Light',
                           subtitle: 'Always use light mode',
-                          iconBgColor: const Color(0xFF243A6E),
+                          iconBgColor: themeProvider.primaryColorValue,
                           iconColor: Colors.white,
                         ),
                         const SizedBox(height: 10),
@@ -572,13 +579,40 @@ class _ThemeSettingsSheet extends StatelessWidget {
 
                         const SizedBox(height: 24),
 
+                        // --- Primary Color Section ---
+                        Text(
+                          'Primary Color',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: themeProvider.primaryColorValue,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        GridView.count(
+                          crossAxisCount: 3,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          children: [
+                            for (final primary in PrimaryColor.values)
+                              _buildPrimaryColorTile(
+                                themeProvider: themeProvider,
+                                primary: primary,
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
                         // --- Accent Color Section ---
-                        const Text(
+                        Text(
                           'Accent Color',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF24376B),
+                            color: themeProvider.primaryColorValue,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -610,12 +644,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Preview',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF24376B),
+                                  color: themeProvider.primaryColorValue,
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -637,11 +671,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                     CircleAvatar(
                                       radius: 22,
                                       backgroundColor: themeProvider
-                                          .accentColor.color
+                                          .accentColor
+                                          .color
                                           .withValues(alpha: 0.25),
                                     ),
                                     const SizedBox(width: 12),
-                                    const Expanded(
+                                    Expanded(
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -651,11 +686,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 13,
-                                              color: Color(0xFF24376B),
+                                              color: themeProvider
+                                                  .primaryColorValue,
                                             ),
                                           ),
-                                          SizedBox(height: 2),
-                                          Text(
+                                          const SizedBox(height: 2),
+                                          const Text(
                                             'This is how your theme will look',
                                             style: TextStyle(
                                               fontSize: 11,
@@ -674,25 +710,25 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                   Expanded(
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 10),
+                                        vertical: 10,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: themeProvider.accentColor.color
+                                        color: themeProvider.primaryColorValue
                                             .withValues(alpha: 0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color:
-                                              themeProvider.accentColor.color,
+                                              themeProvider.primaryColorValue,
                                         ),
                                       ),
                                       child: Center(
                                         child: Text(
-                                          'Primary Button',
+                                          'Accent Button',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
-                                            color: themeProvider
-                                                .accentColor.color,
+                                            color:
+                                                themeProvider.accentColor.color,
                                           ),
                                         ),
                                       ),
@@ -702,15 +738,15 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                   Expanded(
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 10),
+                                        vertical: 10,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF243A6E),
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        color: themeProvider.primaryColorValue,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Center(
                                         child: Text(
-                                          'Secondary',
+                                          'Primary',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
@@ -731,17 +767,19 @@ class _ThemeSettingsSheet extends StatelessWidget {
                         // --- Note Banner ---
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 12),
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF0F4FF),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFD0DAF8)),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Note: Theme changes will be applied immediately and saved to your preferences.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF24376B),
+                              color: themeProvider.primaryColorValue,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -756,10 +794,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                               child: OutlinedButton(
                                 onPressed: () => Navigator.pop(context),
                                 style: OutlinedButton.styleFrom(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   side: const BorderSide(
-                                      color: Color(0xFFD0D5DD)),
+                                    color: Color(0xFFD0D5DD),
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -779,9 +819,11 @@ class _ThemeSettingsSheet extends StatelessWidget {
                               child: ElevatedButton(
                                 onPressed: () => Navigator.pop(context),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF243A6E),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor:
+                                      themeProvider.primaryColorValue,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -832,7 +874,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF243A6E)
+                ? themeProvider.primaryColorValue
                 : const Color(0xFFE4E7EC),
             width: isSelected ? 2 : 1,
           ),
@@ -844,7 +886,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFF243A6E)
+                    ? themeProvider.primaryColorValue
                     : const Color(0xFFF2F4F7),
                 shape: BoxShape.circle,
               ),
@@ -865,7 +907,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: isSelected
-                          ? const Color(0xFF243A6E)
+                          ? themeProvider.primaryColorValue
                           : const Color(0xFF344054),
                     ),
                   ),
@@ -883,12 +925,56 @@ class _ThemeSettingsSheet extends StatelessWidget {
               Container(
                 width: 22,
                 height: 22,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF243A6E),
+                decoration: BoxDecoration(
+                  color: themeProvider.primaryColorValue,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check, size: 14, color: Colors.white),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrimaryColorTile({
+    required ThemeProvider themeProvider,
+    required PrimaryColor primary,
+  }) {
+    final bool isSelected = themeProvider.primaryColor == primary;
+    return GestureDetector(
+      onTap: () => themeProvider.setPrimaryColor(primary),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? primary.color : const Color(0xFFE4E7EC),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: primary.color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              primary.label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF344054),
+              ),
+            ),
           ],
         ),
       ),
@@ -908,7 +994,9 @@ class _ThemeSettingsSheet extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? const Color(0xFF243A6E) : const Color(0xFFE4E7EC),
+            color: isSelected
+                ? themeProvider.primaryColorValue
+                : const Color(0xFFE4E7EC),
             width: isSelected ? 2 : 1,
           ),
         ),
