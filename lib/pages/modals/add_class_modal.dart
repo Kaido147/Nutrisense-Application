@@ -45,6 +45,12 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
     'Sunday',
   ];
 
+  static const TextStyle _inputTextStyle = TextStyle(
+    color: _navyBlue,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+  );
+
   @override
   void dispose() {
     _classTitle.dispose();
@@ -88,7 +94,9 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(prototypeDataServiceProvider).addSchedule(
+      await ref
+          .read(prototypeDataServiceProvider)
+          .addSchedule(
             title: _classTitle.text,
             courseCode: _courseCode.text,
             dayOfWeek: _selectedDay,
@@ -97,17 +105,20 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
             timeLabel: '${_startTime.text} - ${_endTime.text}',
             location: _location.text,
           );
+      ref.invalidate(schedulesProvider);
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(workoutPlansProvider);
 
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Class schedule saved.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Class schedule saved.')));
     } on PrototypeDataException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,6 +195,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _classTitle,
+                      style: _inputTextStyle,
                       decoration: InputDecoration(
                         hintText: 'e.g., Introduction to Psychology',
                         hintStyle: const TextStyle(
@@ -220,6 +232,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _courseCode,
+                      style: _inputTextStyle,
                       decoration: InputDecoration(
                         hintText: 'e.g., PSYCH 101',
                         hintStyle: const TextStyle(
@@ -431,6 +444,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _location,
+                      style: _inputTextStyle,
                       decoration: InputDecoration(
                         hintText: 'e.g., Building A, Room 201',
                         hintStyle: const TextStyle(

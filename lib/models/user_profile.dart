@@ -116,8 +116,7 @@ class UserProfile {
 
   int get editorWorkoutDaysPerWeek => effectiveWorkoutDaysPerWeek ?? 5;
 
-  int get editorDailyWaterGlasses =>
-      preferences.health.dailyWaterGlasses ?? 8;
+  int get editorDailyWaterGlasses => preferences.health.dailyWaterGlasses ?? 8;
 
   int get editorTargetSleepHours => preferences.health.targetSleepHours ?? 8;
 

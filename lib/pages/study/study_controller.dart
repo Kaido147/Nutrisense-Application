@@ -179,8 +179,11 @@ class StudyController extends ChangeNotifier {
         shouldRun = persistence.isRunning && restoredRemaining > Duration.zero;
 
         if (shouldRun) {
-          final Duration elapsed = DateTime.now().difference(persistence.savedAt);
-          final int nextSeconds = restoredRemaining.inSeconds - elapsed.inSeconds;
+          final Duration elapsed = DateTime.now().difference(
+            persistence.savedAt,
+          );
+          final int nextSeconds =
+              restoredRemaining.inSeconds - elapsed.inSeconds;
 
           if (nextSeconds <= 0) {
             restoredRemaining = Duration.zero;

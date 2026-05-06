@@ -36,23 +36,15 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(currentUserProfileProvider).maybeWhen(
-          data: (value) => value,
-          orElse: () => null,
-        );
-    final stats = ref.watch(dashboardStatsProvider).maybeWhen(
-          data: (value) => value,
-          orElse: () => null,
-        );
-    final quests = ref.watch(todayQuestsProvider).maybeWhen(
-          data: (value) => value,
-          orElse: () => const <DailyQuest>[],
-        );
-    final reminders = ref.watch(enabledRemindersProvider).maybeWhen(
-          data: (value) => value,
-          orElse: () => const <AppReminder>[],
-        );
-
+    final profile = ref
+        .watch(currentUserProfileProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    final stats = ref
+        .watch(dashboardStatsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    final quests = ref
+        .watch(todayQuestsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => const <DailyQuest>[]);
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
@@ -60,7 +52,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           onRefresh: () async {
             ref.invalidate(dashboardStatsProvider);
             ref.invalidate(todayQuestsProvider);
-            ref.invalidate(enabledRemindersProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -73,7 +64,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     padding: const EdgeInsets.symmetric(horizontal: 22),
                     child: Column(
                       children: [
-                        _ProgressCard(stats: stats),
+                        _ProgressCard(stats: stats, profile: profile),
                         const SizedBox(height: 26),
                         _sectionTitle('Today Overview'),
                         const SizedBox(height: 14),
@@ -106,8 +97,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ),
                         const SizedBox(height: 26),
                         _QuestSection(quests: quests),
-                        const SizedBox(height: 22),
-                        _ReminderSection(reminders: reminders),
                         const SizedBox(height: 30),
                       ],
                     ),
@@ -207,15 +196,34 @@ class _Header extends StatelessWidget {
 }
 
 class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({required this.stats});
+  const _ProgressCard({required this.stats, required this.profile});
 
   final DashboardStats? stats;
+  final UserProfile? profile;
 
   @override
   Widget build(BuildContext context) {
-    final studyHours = ((stats?.studyMinutes ?? 0) / 60).toStringAsFixed(1);
-    final workoutMinutes = (stats?.completedWorkouts ?? 0) > 0 ? 'Done' : '0';
-    final sleepHours = (stats?.sleepHours ?? 0).toStringAsFixed(0);
+    final studyTasks = stats?.studyTasks ?? 0;
+    final completedStudyTasks = stats?.completedStudyTasks ?? 0;
+    final studyMinutes = stats?.studyMinutes ?? 0;
+    final studyTargetMinutes = (profile?.editorFocusMinutes ?? 25)
+        .clamp(1, 240)
+        .toDouble();
+    final studyProgress = studyTasks > 0
+        ? completedStudyTasks / studyTasks
+        : studyMinutes / studyTargetMinutes;
+    final studyValue = studyTasks > 0
+        ? '$completedStudyTasks/$studyTasks'
+        : (studyMinutes / 60).toStringAsFixed(studyMinutes >= 60 ? 1 : 0);
+    final studyUnit = studyTasks > 0 ? 'tasks' : 'hrs';
+
+    final workoutDone = (stats?.completedWorkouts ?? 0) > 0;
+    final sleepHours = stats?.sleepHours ?? 0;
+    final sleepTarget = (profile?.editorTargetSleepHours ?? 8)
+        .clamp(1, 24)
+        .toDouble();
+    final totalQuests = stats?.totalQuests ?? 0;
+    final completedQuests = stats?.completedQuests ?? 0;
 
     return Container(
       width: double.infinity,
@@ -246,23 +254,43 @@ class _ProgressCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              ProgressCircle(
-                value: studyHours,
-                unit: 'hrs',
-                label: 'Study',
-                color: _HomePageState.navy,
+              Expanded(
+                child: ProgressCircle(
+                  valueLabel: studyValue,
+                  unit: studyUnit,
+                  label: 'Study',
+                  progress: studyProgress,
+                  color: _HomePageState.navy,
+                ),
               ),
-              ProgressCircle(
-                value: workoutMinutes,
-                unit: workoutMinutes == 'Done' ? '' : 'min',
-                label: 'Workout',
-                color: _HomePageState.gold,
+              Expanded(
+                child: ProgressCircle(
+                  valueLabel: workoutDone ? 'Done' : '0',
+                  unit: workoutDone ? '' : 'plan',
+                  label: 'Workout',
+                  progress: workoutDone ? 1.0 : 0.0,
+                  color: _HomePageState.gold,
+                ),
               ),
-              ProgressCircle(
-                value: sleepHours,
-                unit: 'hrs',
-                label: 'Sleep',
-                color: _HomePageState.blue,
+              Expanded(
+                child: ProgressCircle(
+                  valueLabel: sleepHours.toStringAsFixed(0),
+                  unit: 'hrs',
+                  label: 'Sleep',
+                  progress: sleepHours / sleepTarget,
+                  color: _HomePageState.blue,
+                ),
+              ),
+              Expanded(
+                child: ProgressCircle(
+                  valueLabel: '$completedQuests/$totalQuests',
+                  unit: 'done',
+                  label: 'Quests',
+                  progress: totalQuests == 0
+                      ? 0.0
+                      : completedQuests / totalQuests,
+                  color: _HomePageState.green,
+                ),
               ),
             ],
           ),
@@ -450,45 +478,6 @@ class _QuestSection extends ConsumerWidget {
   }
 }
 
-class _ReminderSection extends ConsumerWidget {
-  const _ReminderSection({required this.reminders});
-
-  final List<AppReminder> reminders;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return _InfoPanel(
-      title: 'Reminders',
-      emptyText: 'No reminders are enabled.',
-      children: reminders.take(4).map((reminder) {
-        return SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          value: reminder.enabled,
-          activeThumbColor: _HomePageState.navy,
-          title: Text(
-            reminder.title,
-            style: const TextStyle(
-              color: _HomePageState.textDark,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          subtitle: Text(reminder.timeLabel),
-          secondary: const CircleAvatar(
-            backgroundColor: Color(0xFFF8F3E8),
-            child: Icon(Icons.notifications_none, color: _HomePageState.gold),
-          ),
-          onChanged: (value) async {
-            await ref
-                .read(prototypeDataServiceProvider)
-                .setReminderEnabled(reminder.id, value);
-            ref.invalidate(enabledRemindersProvider);
-          },
-        );
-      }).toList(),
-    );
-  }
-}
-
 class _InfoPanel extends StatelessWidget {
   const _InfoPanel({
     required this.title,
@@ -547,15 +536,17 @@ class _InfoPanel extends StatelessWidget {
 class ProgressCircle extends StatelessWidget {
   const ProgressCircle({
     super.key,
-    required this.value,
+    required this.valueLabel,
     required this.unit,
     required this.label,
+    required this.progress,
     required this.color,
   });
 
-  final String value;
+  final String valueLabel;
   final String unit;
   final String label;
+  final double progress;
   final Color color;
 
   @override
@@ -563,16 +554,16 @@ class ProgressCircle extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          width: 86,
-          height: 86,
+          width: 72,
+          height: 72,
           child: Stack(
             alignment: Alignment.center,
             children: [
               SizedBox(
-                width: 86,
-                height: 86,
+                width: 72,
+                height: 72,
                 child: CircularProgressIndicator(
-                  value: value == '0' || value == '0.0' ? 0.08 : 0.78,
+                  value: progress.clamp(0.0, 1.0),
                   strokeWidth: 5,
                   backgroundColor: color.withValues(alpha: 0.18),
                   valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -582,9 +573,9 @@ class ProgressCircle extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    value,
+                    valueLabel,
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: _HomePageState.navy,
                     ),

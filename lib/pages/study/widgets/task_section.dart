@@ -37,10 +37,7 @@ class TaskSection extends StatelessWidget {
             child: Center(child: CircularProgressIndicator()),
           )
         else if (errorMessage != null)
-          _TaskMessageCard(
-            message: errorMessage!,
-            icon: Icons.error_outline,
-          )
+          _TaskMessageCard(message: errorMessage!, icon: Icons.error_outline)
         else if (tasks.isEmpty)
           const _TaskMessageCard(
             message: 'No study tasks yet. Tap Add Task to create one.',

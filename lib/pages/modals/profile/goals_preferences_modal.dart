@@ -442,7 +442,9 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
             children: [
               _stepperButton(
                 icon: Icons.remove,
-                onTap: _isSaving || value <= 1 ? null : () => onChanged(value - 1),
+                onTap: _isSaving || value <= 1
+                    ? null
+                    : () => onChanged(value - 1),
               ),
               Expanded(
                 child: Center(
@@ -483,7 +485,9 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
         ),
         child: Icon(
           icon,
-          color: onTap == null ? const Color(0xFFB9C0D0) : const Color(0xFF24376B),
+          color: onTap == null
+              ? const Color(0xFFB9C0D0)
+              : const Color(0xFF24376B),
           size: 18,
         ),
       ),
@@ -520,7 +524,9 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
               width: 26,
               height: 26,
               decoration: BoxDecoration(
-                color: value ? const Color(0xFF2F477A) : const Color(0xFF3F3F3F),
+                color: value
+                    ? const Color(0xFF2F477A)
+                    : const Color(0xFF3F3F3F),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: value

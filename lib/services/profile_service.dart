@@ -51,8 +51,7 @@ class ProfileService {
     final User user = _requireUser();
     final String resolvedFirstName = firstName.trim();
     final String resolvedLastName = lastName.trim();
-    final String displayName =
-        '$resolvedFirstName $resolvedLastName'.trim();
+    final String displayName = '$resolvedFirstName $resolvedLastName'.trim();
 
     if (displayName.isEmpty) {
       throw const ProfileFlowException(
@@ -106,9 +105,7 @@ class ProfileService {
             'focusMinutes': focusMinutes,
             'breakMinutes': breakMinutes,
           },
-          'workout': {
-            'daysPerWeek': workoutDaysPerWeek,
-          },
+          'workout': {'daysPerWeek': workoutDaysPerWeek},
           'health': {
             'dailyWaterGlasses': dailyWaterGlasses,
             'targetSleepHours': targetSleepHours,

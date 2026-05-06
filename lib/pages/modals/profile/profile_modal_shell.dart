@@ -31,7 +31,8 @@ class ProfileModalShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double modalHeight = MediaQuery.of(context).size.height * heightFactor;
+    final double modalHeight =
+        MediaQuery.of(context).size.height * heightFactor;
     final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Stack(

@@ -6,6 +6,7 @@ class HealthProfile {
     required this.gender,
     required this.heightCm,
     required this.weightKg,
+    required this.targetWeightKg,
     required this.activityLevel,
     required this.fitnessGoal,
     required this.dietaryPreference,
@@ -22,6 +23,7 @@ class HealthProfile {
       gender: null,
       heightCm: null,
       weightKg: null,
+      targetWeightKg: null,
       activityLevel: 'Moderate',
       fitnessGoal: 'General fitness',
       dietaryPreference: 'No preference',
@@ -40,6 +42,7 @@ class HealthProfile {
       gender: _readString(source['gender']),
       heightCm: _readDouble(source['heightCm']),
       weightKg: _readDouble(source['weightKg']),
+      targetWeightKg: _readDouble(source['targetWeightKg']),
       activityLevel: _readString(source['activityLevel']) ?? 'Moderate',
       fitnessGoal: _readString(source['fitnessGoal']) ?? 'General fitness',
       dietaryPreference:
@@ -56,6 +59,7 @@ class HealthProfile {
   final String? gender;
   final double? heightCm;
   final double? weightKg;
+  final double? targetWeightKg;
   final String activityLevel;
   final String fitnessGoal;
   final String dietaryPreference;
@@ -70,6 +74,7 @@ class HealthProfile {
         gender != null &&
         heightCm != null &&
         weightKg != null &&
+        targetWeightKg != null &&
         activityLevel.trim().isNotEmpty &&
         fitnessGoal.trim().isNotEmpty &&
         dietaryPreference.trim().isNotEmpty;
@@ -81,6 +86,7 @@ class HealthProfile {
       'gender': gender,
       'heightCm': heightCm,
       'weightKg': weightKg,
+      'targetWeightKg': targetWeightKg,
       'activityLevel': activityLevel,
       'fitnessGoal': fitnessGoal,
       'dietaryPreference': dietaryPreference,
@@ -99,6 +105,7 @@ class ClassSchedule {
     required this.title,
     required this.courseCode,
     required this.dayOfWeek,
+    required this.dayIndex,
     required this.startTimeMinutes,
     required this.endTimeMinutes,
     required this.timeLabel,
@@ -123,10 +130,14 @@ class ClassSchedule {
       title: _readString(source['title']) ?? 'Untitled Class',
       courseCode: _readString(source['courseCode']) ?? '',
       dayOfWeek: _readString(source['dayOfWeek']) ?? 'Monday',
+      dayIndex:
+          _readInt(source['dayIndex']) ??
+          weekdayIndex(_readString(source['dayOfWeek']) ?? 'Monday'),
       startTimeMinutes: start,
       endTimeMinutes: end,
       timeLabel:
-          _readString(source['timeLabel']) ?? '${_formatMinutes(start)} - ${_formatMinutes(end)}',
+          _readString(source['timeLabel']) ??
+          '${_formatMinutes(start)} - ${_formatMinutes(end)}',
       location: _readString(source['location']) ?? '',
       color: _readString(source['color']) ?? 'blue',
       createdAt: _readDateTime(source['createdAt']),
@@ -138,6 +149,7 @@ class ClassSchedule {
   final String title;
   final String courseCode;
   final String dayOfWeek;
+  final int dayIndex;
   final int startTimeMinutes;
   final int endTimeMinutes;
   final String timeLabel;
@@ -151,6 +163,7 @@ class ClassSchedule {
       'title': title,
       'courseCode': courseCode,
       'dayOfWeek': dayOfWeek,
+      'dayIndex': dayIndex,
       'startTimeMinutes': startTimeMinutes,
       'endTimeMinutes': endTimeMinutes,
       'timeLabel': timeLabel,
@@ -165,6 +178,8 @@ class WorkoutPlan {
   const WorkoutPlan({
     required this.id,
     required this.title,
+    required this.category,
+    required this.source,
     required this.dateKey,
     required this.durationMinutes,
     required this.intensity,
@@ -179,10 +194,16 @@ class WorkoutPlan {
   factory WorkoutPlan.fromFirestore(
     QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
   ) {
-    final source = snapshot.data();
+    return WorkoutPlan.fromMap(snapshot.id, snapshot.data());
+  }
+
+  factory WorkoutPlan.fromMap(String id, Map<String, dynamic>? data) {
+    final source = data ?? <String, dynamic>{};
     return WorkoutPlan(
-      id: snapshot.id,
+      id: id,
       title: _readString(source['title']) ?? 'Today\'s Workout',
+      category: _readString(source['category']) ?? 'Balanced',
+      source: _readString(source['source']) ?? 'generated',
       dateKey: _readString(source['dateKey']) ?? todayKey(),
       durationMinutes: _readInt(source['durationMinutes']) ?? 20,
       intensity: _readString(source['intensity']) ?? 'Moderate',
@@ -197,6 +218,8 @@ class WorkoutPlan {
 
   final String id;
   final String title;
+  final String category;
+  final String source;
   final String dateKey;
   final int durationMinutes;
   final String intensity;
@@ -244,6 +267,73 @@ class MealLog {
   final int proteinEstimate;
   final List<String> tags;
   final DateTime? loggedAt;
+}
+
+class JournalRecord {
+  const JournalRecord({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.mood,
+    required this.tags,
+    required this.entryDate,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory JournalRecord.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    return JournalRecord.fromMap(snapshot.id, snapshot.data());
+  }
+
+  factory JournalRecord.fromMap(String id, Map<String, dynamic>? data) {
+    final source = data ?? <String, dynamic>{};
+    return JournalRecord(
+      id: id,
+      title: _readString(source['title']) ?? 'Untitled Entry',
+      content: _readString(source['content']) ?? '',
+      mood: _readString(source['mood']) ?? 'Calm',
+      tags: _readStringList(source['tags']),
+      entryDate:
+          _readDateTime(source['entryDate']) ??
+          _readDateTime(source['createdAt']) ??
+          DateTime.now(),
+      createdAt: _readDateTime(source['createdAt']),
+      updatedAt: _readDateTime(source['updatedAt']),
+    );
+  }
+
+  final String id;
+  final String title;
+  final String content;
+  final String mood;
+  final List<String> tags;
+  final DateTime entryDate;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  String get preview => content;
+
+  String get moodInitial => mood.isEmpty ? '?' : mood[0].toUpperCase();
+
+  String get dateLabel {
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[entryDate.month - 1]} ${entryDate.day}';
+  }
 }
 
 class DailyQuest {
@@ -361,6 +451,22 @@ String weekdayName([DateTime? date]) {
     'Sunday',
   ];
   return names[(date ?? DateTime.now()).weekday - 1];
+}
+
+int weekdayIndex(String dayOfWeek) {
+  const names = <String>[
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  final index = names.indexWhere(
+    (name) => name.toLowerCase() == dayOfWeek.trim().toLowerCase(),
+  );
+  return index < 0 ? 0 : index;
 }
 
 String _formatMinutes(int minutes) {

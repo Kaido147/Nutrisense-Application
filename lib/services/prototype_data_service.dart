@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nutrisense/models/prototype_data.dart';
+import 'package:nutrisense/models/workout_catalog.dart';
 
 class PrototypeDataException implements Exception {
   const PrototypeDataException(this.message);
@@ -24,14 +25,12 @@ class PrototypeDataService {
   Stream<HealthProfile?> watchHealthProfile() {
     return _auth.authStateChanges().asyncExpand((user) {
       if (user == null) return Stream<HealthProfile?>.value(null);
-      return _userDoc(user.uid)
-          .collection('healthProfile')
-          .doc('current')
-          .snapshots()
-          .map((snapshot) {
-            final data = snapshot.data();
-            return data == null ? null : HealthProfile.fromMap(data);
-          });
+      return _userDoc(
+        user.uid,
+      ).collection('healthProfile').doc('current').snapshots().map((snapshot) {
+        final data = snapshot.data();
+        return data == null ? null : HealthProfile.fromMap(data);
+      });
     });
   }
 
@@ -49,18 +48,17 @@ class PrototypeDataService {
   }
 
   Stream<List<ClassSchedule>> watchSchedules() {
-    final user = _auth.currentUser;
-    if (user == null) return Stream.value(const <ClassSchedule>[]);
-    return _userDoc(user.uid)
-        .collection('schedules')
-        .orderBy('dayOfWeek')
-        .orderBy('startTimeMinutes')
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(ClassSchedule.fromFirestore)
-              .toList(growable: false),
-        );
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(const <ClassSchedule>[]);
+      return _userDoc(user.uid).collection('schedules').snapshots().map((
+        snapshot,
+      ) {
+        final schedules = snapshot.docs
+            .map(ClassSchedule.fromFirestore)
+            .toList(growable: false);
+        return _sortSchedules(schedules);
+      });
+    });
   }
 
   Future<void> addSchedule({
@@ -84,6 +82,7 @@ class PrototypeDataService {
       'title': title.trim(),
       'courseCode': courseCode.trim(),
       'dayOfWeek': dayOfWeek,
+      'dayIndex': weekdayIndex(dayOfWeek),
       'startTimeMinutes': startTimeMinutes,
       'endTimeMinutes': endTimeMinutes,
       'timeLabel': timeLabel,
@@ -96,51 +95,36 @@ class PrototypeDataService {
 
   Future<List<ClassSchedule>> loadSchedules() async {
     final user = _requireUser();
-    final snapshot = await _userDoc(user.uid)
-        .collection('schedules')
-        .orderBy('dayOfWeek')
-        .orderBy('startTimeMinutes')
-        .get();
-    return snapshot.docs.map(ClassSchedule.fromFirestore).toList(growable: false);
+    final snapshot = await _userDoc(user.uid).collection('schedules').get();
+    return _sortSchedules(
+      snapshot.docs.map(ClassSchedule.fromFirestore).toList(growable: false),
+    );
   }
 
   Future<void> ensureDailyQuests() async {
     final user = _requireUser();
     final dateKey = todayKey();
     final collection = _userDoc(user.uid).collection('dailyQuests');
-    final existing = await collection.where('dateKey', isEqualTo: dateKey).get();
+    final existing = await collection
+        .where('dateKey', isEqualTo: dateKey)
+        .get();
     if (existing.docs.isNotEmpty) return;
 
+    final userSnapshot = await _userDoc(user.uid).get();
+    final healthSnapshot = await _userDoc(
+      user.uid,
+    ).collection('healthProfile').doc('current').get();
+    final healthProfile = HealthProfile.fromMap(healthSnapshot.data());
+    final quests = _dailyQuestTemplates(
+      uid: user.uid,
+      dateKey: dateKey,
+      userData: userSnapshot.data() ?? <String, dynamic>{},
+      healthProfile: healthProfile,
+    );
     final batch = _firestore.batch();
-    final quests = <Map<String, dynamic>>[
-      {
-        'type': 'hydration',
-        'title': 'Drink water',
-        'description': 'Reach your daily hydration goal.',
-        'targetValue': 8,
-      },
-      {
-        'type': 'meal',
-        'title': 'Log a healthy meal',
-        'description': 'Save one meal recommendation or meal log.',
-        'targetValue': 1,
-      },
-      {
-        'type': 'workout',
-        'title': 'Move your body',
-        'description': 'Complete today\'s recommended workout.',
-        'targetValue': 1,
-      },
-      {
-        'type': 'studyBreak',
-        'title': 'Take a study break',
-        'description': 'Protect your focus with a short recovery break.',
-        'targetValue': 1,
-      },
-    ];
 
     for (final quest in quests) {
-      final doc = collection.doc();
+      final doc = collection.doc('${dateKey}_${quest['type']}');
       batch.set(doc, {
         ...quest,
         'dateKey': dateKey,
@@ -179,11 +163,16 @@ class PrototypeDataService {
   Future<void> ensureDefaultReminders() async {
     final user = _requireUser();
     final collection = _userDoc(user.uid).collection('reminders');
-    final existing = await collection.limit(1).get();
-    if (existing.docs.isNotEmpty) return;
+    final existing = await collection.get();
+    final existingIds = existing.docs.map((doc) => doc.id).toSet();
 
     final batch = _firestore.batch();
     final reminders = <Map<String, dynamic>>[
+      {
+        'type': 'notifications',
+        'title': 'Notification preferences',
+        'timeLabel': 'App reminders',
+      },
       {
         'type': 'hydration',
         'title': 'Hydration check',
@@ -192,6 +181,7 @@ class PrototypeDataService {
       {'type': 'meal', 'title': 'Healthy meal', 'timeLabel': '12:00 PM'},
       {'type': 'workout', 'title': 'Workout window', 'timeLabel': '5:30 PM'},
       {'type': 'sleep', 'title': 'Sleep wind down', 'timeLabel': '10:00 PM'},
+      {'type': 'study', 'title': 'Study focus', 'timeLabel': 'Before blocks'},
       {
         'type': 'mentalBreak',
         'title': 'Mental break',
@@ -201,6 +191,7 @@ class PrototypeDataService {
 
     for (final reminder in reminders) {
       final doc = collection.doc(reminder['type']! as String);
+      if (existingIds.contains(doc.id)) continue;
       batch.set(doc, {
         ...reminder,
         'enabled': true,
@@ -209,6 +200,21 @@ class PrototypeDataService {
       });
     }
     await batch.commit();
+  }
+
+  Stream<List<AppReminder>> watchReminders() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(const <AppReminder>[]);
+    return _userDoc(user.uid)
+        .collection('reminders')
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map(AppReminder.fromFirestore)
+                  .toList(growable: false)
+                ..sort((a, b) => a.title.compareTo(b.title)),
+        );
   }
 
   Stream<List<AppReminder>> watchEnabledReminders() {
@@ -249,32 +255,92 @@ class PrototypeDataService {
   }
 
   Future<void> generateWorkoutPlan({
+    required String category,
     required HealthProfile healthProfile,
     required List<ClassSchedule> schedules,
   }) async {
-    final user = _requireUser();
-    final freeMinutes = _largestFreeBlockMinutes(schedules);
-    final duration = freeMinutes >= 60
-        ? 45
-        : freeMinutes >= 35
-        ? 30
-        : 20;
-    final intensity = healthProfile.activityLevel == 'High'
-        ? 'High'
-        : healthProfile.activityLevel == 'Low'
-        ? 'Light'
-        : 'Moderate';
-    final exercises = _exercisePlanFor(healthProfile.fitnessGoal, duration);
+    final draft = buildGeneratedWorkoutDraft(
+      category: category,
+      healthProfile: healthProfile,
+      schedules: schedules,
+    );
+    await saveWorkoutDraft(draft, schedules: schedules);
+  }
 
+  WorkoutPlanDraft buildGeneratedWorkoutDraft({
+    required String category,
+    required HealthProfile healthProfile,
+    required List<ClassSchedule> schedules,
+  }) {
+    final selectedCategory = workoutCategoryByName(category);
+    final freeMinutes = _largestFreeBlockMinutes(schedules);
+    final duration = _durationForFreeBlock(freeMinutes);
+    final intensity = _intensityFor(healthProfile);
+    final exercises = _generatedExercisesFor(
+      category: selectedCategory,
+      healthProfile: healthProfile,
+      duration: duration,
+    );
+
+    return WorkoutPlanDraft(
+      title: _workoutTitleFor(
+        category: selectedCategory.name,
+        goal: healthProfile.fitnessGoal,
+      ),
+      category: selectedCategory.name,
+      source: 'generated',
+      durationMinutes: duration,
+      intensity: intensity,
+      fitnessGoal: healthProfile.fitnessGoal,
+      activityLevel: healthProfile.activityLevel,
+      exercises: exercises,
+    );
+  }
+
+  Future<void> saveManualWorkoutPlan({
+    required String category,
+    required List<WorkoutExercise> exercises,
+    required HealthProfile? healthProfile,
+    required List<ClassSchedule> schedules,
+  }) {
+    if (exercises.isEmpty) {
+      throw const PrototypeDataException('Select at least one exercise.');
+    }
+    final duration = exercises.fold<int>(
+      0,
+      (total, exercise) => total + _estimatedExerciseMinutes(exercise),
+    );
+    final draft = WorkoutPlanDraft(
+      title: '$category Custom Plan',
+      category: category,
+      source: 'manual',
+      durationMinutes: duration.clamp(10, 90),
+      intensity: healthProfile == null
+          ? 'Moderate'
+          : _intensityFor(healthProfile),
+      fitnessGoal: healthProfile?.fitnessGoal ?? 'General fitness',
+      activityLevel: healthProfile?.activityLevel ?? 'Moderate',
+      exercises: exercises,
+    );
+    return saveWorkoutDraft(draft, schedules: schedules);
+  }
+
+  Future<void> saveWorkoutDraft(
+    WorkoutPlanDraft draft, {
+    required List<ClassSchedule> schedules,
+  }) async {
+    final user = _requireUser();
     await _userDoc(user.uid).collection('workoutPlans').add({
-      'title': _workoutTitleFor(healthProfile.fitnessGoal),
+      'title': draft.title,
+      'category': draft.category,
+      'source': draft.source,
       'dateKey': todayKey(),
-      'durationMinutes': duration,
-      'intensity': intensity,
-      'fitnessGoal': healthProfile.fitnessGoal,
-      'activityLevel': healthProfile.activityLevel,
+      'durationMinutes': draft.durationMinutes,
+      'intensity': draft.intensity,
+      'fitnessGoal': draft.fitnessGoal,
+      'activityLevel': draft.activityLevel,
       'basedOnScheduleIds': schedules.map((item) => item.id).toList(),
-      'exercises': exercises,
+      'exercises': draft.planExercises,
       'completed': false,
       'completedAt': null,
       'createdAt': FieldValue.serverTimestamp(),
@@ -298,10 +364,84 @@ class PrototypeDataService {
         .limit(10)
         .snapshots()
         .map(
+          (snapshot) =>
+              snapshot.docs.map(MealLog.fromFirestore).toList(growable: false),
+        );
+  }
+
+  Stream<List<JournalRecord>> watchJournalEntries() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(const <JournalRecord>[]);
+    return _userDoc(user.uid)
+        .collection('journalEntries')
+        .orderBy('entryDate', descending: true)
+        .snapshots()
+        .map(
           (snapshot) => snapshot.docs
-              .map(MealLog.fromFirestore)
+              .map(JournalRecord.fromFirestore)
               .toList(growable: false),
         );
+  }
+
+  Future<void> addJournalEntry({
+    required String title,
+    required String content,
+    required String mood,
+    required DateTime entryDate,
+    required List<String> tags,
+  }) async {
+    final user = _requireUser();
+    final trimmedContent = content.trim();
+    if (trimmedContent.isEmpty) {
+      throw const PrototypeDataException('Please write a journal entry.');
+    }
+
+    await _userDoc(user.uid).collection('journalEntries').add({
+      'title': _journalTitle(title, trimmedContent),
+      'content': trimmedContent,
+      'mood': mood.trim().isEmpty ? 'Calm' : mood.trim(),
+      'tags': tags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .toList(growable: false),
+      'entryDate': Timestamp.fromDate(entryDate),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateJournalEntry({
+    required String entryId,
+    required String title,
+    required String content,
+    required String mood,
+    required DateTime entryDate,
+    required List<String> tags,
+  }) async {
+    final user = _requireUser();
+    final trimmedContent = content.trim();
+    if (trimmedContent.isEmpty) {
+      throw const PrototypeDataException('Please write a journal entry.');
+    }
+
+    await _userDoc(user.uid).collection('journalEntries').doc(entryId).set({
+      'title': _journalTitle(title, trimmedContent),
+      'content': trimmedContent,
+      'mood': mood.trim().isEmpty ? 'Calm' : mood.trim(),
+      'tags': tags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .toList(growable: false),
+      'entryDate': Timestamp.fromDate(entryDate),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteJournalEntry(String entryId) async {
+    final user = _requireUser();
+    await _userDoc(user.uid).collection('journalEntries').doc(entryId).delete();
   }
 
   Future<List<Map<String, dynamic>>> generateMealRecommendations({
@@ -315,49 +455,53 @@ class PrototypeDataService {
         .where((item) => item.isNotEmpty)
         .toSet();
 
-    final results = _recipeCatalog.where((recipe) {
-      final recipeIngredients = (recipe['ingredients']! as List<String>)
-          .map((item) => item.toLowerCase())
-          .toSet();
-      final tags = (recipe['tags']! as List<String>)
-          .map((item) => item.toLowerCase())
-          .toSet();
-      final allergens = (recipe['allergens']! as List<String>)
-          .map((item) => item.toLowerCase())
-          .toSet();
-      final conditions = healthProfile.medicalConditions
-          .map((item) => item.toLowerCase())
-          .toSet();
-      final allergyFilters = healthProfile.allergies
-          .map((item) => item.toLowerCase())
-          .toSet();
+    final results = _recipeCatalog
+        .where((recipe) {
+          final recipeIngredients = (recipe['ingredients']! as List<String>)
+              .map((item) => item.toLowerCase())
+              .toSet();
+          final tags = (recipe['tags']! as List<String>)
+              .map((item) => item.toLowerCase())
+              .toSet();
+          final allergens = (recipe['allergens']! as List<String>)
+              .map((item) => item.toLowerCase())
+              .toSet();
+          final conditions = healthProfile.medicalConditions
+              .map((item) => item.toLowerCase())
+              .toSet();
+          final allergyFilters = healthProfile.allergies
+              .map((item) => item.toLowerCase())
+              .toSet();
 
-      final hasIngredientMatch =
-          normalizedIngredients.isEmpty ||
-          recipeIngredients.intersection(normalizedIngredients).isNotEmpty;
-      final matchesMealType =
-          mealType == 'Any' ||
-          (recipe['mealType']! as String).toLowerCase() == mealType.toLowerCase();
-      final avoidsAllergy =
-          allergens.intersection(allergyFilters).isEmpty &&
-          allergens.intersection(normalizedIngredients).isEmpty;
-      final matchesDiet =
-          healthProfile.dietaryPreference == 'No preference' ||
-          tags.contains(healthProfile.dietaryPreference.toLowerCase());
-      final conditionSafe =
-          !conditions.contains('Diabetes'.toLowerCase()) ||
-          tags.contains('low sugar');
-      final hypertensionSafe =
-          !conditions.contains('Hypertension'.toLowerCase()) ||
-          tags.contains('low sodium');
+          final hasIngredientMatch =
+              normalizedIngredients.isEmpty ||
+              recipeIngredients.intersection(normalizedIngredients).isNotEmpty;
+          final matchesMealType =
+              mealType == 'Any' ||
+              (recipe['mealType']! as String).toLowerCase() ==
+                  mealType.toLowerCase();
+          final avoidsAllergy =
+              allergens.intersection(allergyFilters).isEmpty &&
+              allergens.intersection(normalizedIngredients).isEmpty;
+          final matchesDiet =
+              healthProfile.dietaryPreference == 'No preference' ||
+              tags.contains(healthProfile.dietaryPreference.toLowerCase());
+          final conditionSafe =
+              !conditions.contains('Diabetes'.toLowerCase()) ||
+              tags.contains('low sugar');
+          final hypertensionSafe =
+              !conditions.contains('Hypertension'.toLowerCase()) ||
+              tags.contains('low sodium');
 
-      return hasIngredientMatch &&
-          matchesMealType &&
-          avoidsAllergy &&
-          matchesDiet &&
-          conditionSafe &&
-          hypertensionSafe;
-    }).take(3).toList(growable: false);
+          return hasIngredientMatch &&
+              matchesMealType &&
+              avoidsAllergy &&
+              matchesDiet &&
+              conditionSafe &&
+              hypertensionSafe;
+        })
+        .take(3)
+        .toList(growable: false);
 
     final fallback = results.isEmpty
         ? _recipeCatalog.take(3).toList(growable: false)
@@ -404,7 +548,10 @@ class PrototypeDataService {
     final results = await Future.wait([
       uidDoc.collection('schedules').where('dayOfWeek', isEqualTo: today).get(),
       uidDoc.collection('studyTasks').get(),
-      uidDoc.collection('studySessions').where('dateKey', isEqualTo: date).get(),
+      uidDoc
+          .collection('studySessions')
+          .where('dateKey', isEqualTo: date)
+          .get(),
       uidDoc
           .collection('workoutPlans')
           .where('dateKey', isEqualTo: date)
@@ -467,16 +614,26 @@ String _scheduleColorFor(String dayOfWeek) {
   return colors[dayOfWeek.length % colors.length];
 }
 
+List<ClassSchedule> _sortSchedules(List<ClassSchedule> schedules) {
+  final sorted = schedules.toList();
+  sorted.sort((a, b) {
+    final dayCompare = a.dayIndex.compareTo(b.dayIndex);
+    if (dayCompare != 0) return dayCompare;
+    return a.startTimeMinutes.compareTo(b.startTimeMinutes);
+  });
+  return sorted;
+}
+
 int _largestFreeBlockMinutes(List<ClassSchedule> schedules) {
-  final todaySchedules = schedules
-      .where((item) => item.dayOfWeek == weekdayName())
-      .toList()
-    ..sort((a, b) => a.startTimeMinutes.compareTo(b.startTimeMinutes));
+  final todaySchedules =
+      schedules.where((item) => item.dayOfWeek == weekdayName()).toList()
+        ..sort((a, b) => a.startTimeMinutes.compareTo(b.startTimeMinutes));
   if (todaySchedules.isEmpty) return 60;
   var largest = (todaySchedules.first.startTimeMinutes - 7 * 60).clamp(0, 240);
   for (var i = 0; i < todaySchedules.length - 1; i++) {
     final gap =
-        todaySchedules[i + 1].startTimeMinutes - todaySchedules[i].endTimeMinutes;
+        todaySchedules[i + 1].startTimeMinutes -
+        todaySchedules[i].endTimeMinutes;
     if (gap > largest) largest = gap;
   }
   final eveningGap = (21 * 60) - todaySchedules.last.endTimeMinutes;
@@ -484,7 +641,58 @@ int _largestFreeBlockMinutes(List<ClassSchedule> schedules) {
   return largest;
 }
 
-String _workoutTitleFor(String goal) {
+int _durationForFreeBlock(int freeMinutes) {
+  if (freeMinutes >= 60) return 45;
+  if (freeMinutes >= 35) return 30;
+  return 20;
+}
+
+String _intensityFor(HealthProfile healthProfile) {
+  final activity = healthProfile.activityLevel.toLowerCase();
+  if (activity.contains('high')) return 'High';
+  if (activity.contains('low')) return 'Light';
+  final current = healthProfile.weightKg;
+  final target = healthProfile.targetWeightKg;
+  if (current != null && target != null && current > target + 5) {
+    return 'Moderate';
+  }
+  return 'Moderate';
+}
+
+List<WorkoutExercise> _generatedExercisesFor({
+  required WorkoutCategory category,
+  required HealthProfile healthProfile,
+  required int duration,
+}) {
+  final targetCount = duration >= 45
+      ? 5
+      : duration >= 30
+      ? 4
+      : 3;
+  final exercises = category.exercises.toList();
+  if (healthProfile.activityLevel == 'Low') {
+    exercises.sort((a, b) => a.difficulty.compareTo(b.difficulty));
+  }
+  return exercises.take(targetCount).toList(growable: false);
+}
+
+int _estimatedExerciseMinutes(WorkoutExercise exercise) {
+  final value = exercise.repsOrDuration.toLowerCase();
+  final explicitMinutes = RegExp(r'(\d+)\s*min').firstMatch(value);
+  if (explicitMinutes != null) {
+    return int.tryParse(explicitMinutes.group(1) ?? '') ?? 5;
+  }
+  if (value.contains('sec')) return exercise.sets * 2;
+  return exercise.sets * 3;
+}
+
+String _workoutTitleFor({required String category, required String goal}) {
+  final normalizedCategory = category.toLowerCase();
+  if (normalizedCategory.contains('strength')) return 'Strength Builder';
+  if (normalizedCategory.contains('cardio')) return 'Cardio Circuit';
+  if (normalizedCategory.contains('hiit')) return 'HIIT Study Break';
+  if (normalizedCategory.contains('mobility')) return 'Mobility Flow';
+  if (normalizedCategory.contains('recovery')) return 'Recovery Reset';
   final normalized = goal.toLowerCase();
   if (normalized.contains('strength')) return 'Strength Builder';
   if (normalized.contains('weight')) return 'Fat-Burn Circuit';
@@ -492,54 +700,126 @@ String _workoutTitleFor(String goal) {
   return 'Balanced Student Routine';
 }
 
-List<Map<String, dynamic>> _exercisePlanFor(String goal, int duration) {
-  final normalized = goal.toLowerCase();
-  final base = normalized.contains('strength')
-      ? _strengthExercises
-      : normalized.contains('weight')
-      ? _cardioExercises
-      : normalized.contains('flex')
-      ? _mobilityExercises
-      : _balancedExercises;
-  final count = duration >= 45
-      ? 5
-      : duration >= 30
-      ? 4
-      : 3;
-  return base.take(count).map((item) => {...item, 'completed': false}).toList();
+List<Map<String, dynamic>> _dailyQuestTemplates({
+  required String uid,
+  required String dateKey,
+  required Map<String, dynamic> userData,
+  required HealthProfile healthProfile,
+}) {
+  final goals = _mapValue(userData['goals']);
+  final wellnessGoals = _stringListValue(goals['wellness']);
+  final studyGoals = _stringListValue(goals['study']);
+  final workoutGoals = _stringListValue(goals['workout']);
+  final preferences = _mapValue(userData['preferences']);
+  final healthPreferences = _mapValue(preferences['health']);
+  final waterTarget =
+      _intValue(healthPreferences['dailyWaterGlasses']) ??
+      (healthProfile.activityLevel == 'High' ? 10 : 8);
+  final sleepTarget =
+      _intValue(healthPreferences['targetSleepHours']) ??
+      (wellnessGoals.contains('Better sleep') ? 8 : 7);
+  final seed = _stableHash(
+    '$uid|$dateKey|${healthProfile.fitnessGoal}|'
+    '${healthProfile.activityLevel}|${wellnessGoals.join(',')}',
+  );
+
+  final quests = <Map<String, dynamic>>[
+    {
+      'type': 'hydration',
+      'title': 'Reach your hydration goal',
+      'description': 'Drink $waterTarget glasses of water today.',
+      'targetValue': waterTarget,
+    },
+  ];
+
+  final optional = <Map<String, dynamic>>[
+    {
+      'type': 'workout',
+      'title': workoutGoals.isEmpty
+          ? 'Move your body'
+          : 'Train toward your goal',
+      'description':
+          'Complete one workout that fits your ${healthProfile.activityLevel.toLowerCase()} activity level.',
+      'targetValue': 1,
+    },
+    {
+      'type': 'meal',
+      'title': 'Log a supportive meal',
+      'description':
+          'Log one meal that fits your ${healthProfile.dietaryPreference.toLowerCase()} preference.',
+      'targetValue': 1,
+    },
+    {
+      'type': 'studyFocus',
+      'title': studyGoals.isEmpty
+          ? 'Finish one study task'
+          : 'Protect focus time',
+      'description': 'Complete one study task or focus block.',
+      'targetValue': 1,
+    },
+    {
+      'type': 'sleep',
+      'title': 'Plan your sleep window',
+      'description': 'Aim for $sleepTarget hours of sleep tonight.',
+      'targetValue': sleepTarget,
+    },
+    {
+      'type': 'reflection',
+      'title': 'Log a quick reflection',
+      'description': 'Write one short journal entry about your day.',
+      'targetValue': 1,
+    },
+  ];
+
+  for (var i = 0; i < 3; i++) {
+    quests.add(optional[(seed + i) % optional.length]);
+  }
+
+  return quests;
 }
 
-const _balancedExercises = <Map<String, dynamic>>[
-  {'name': 'Bodyweight Squats', 'sets': 3, 'reps': '12', 'durationMinutes': 6},
-  {'name': 'Push-ups', 'sets': 3, 'reps': '10', 'durationMinutes': 6},
-  {'name': 'Plank', 'sets': 3, 'reps': '30 sec', 'durationMinutes': 5},
-  {'name': 'Lunges', 'sets': 3, 'reps': '10 each', 'durationMinutes': 7},
-  {'name': 'Cool-down Stretch', 'sets': 1, 'reps': '5 min', 'durationMinutes': 5},
-];
+String _journalTitle(String title, String content) {
+  final trimmedTitle = title.trim();
+  if (trimmedTitle.isNotEmpty) return trimmedTitle;
+  final firstLine = content.split(RegExp(r'\s+')).take(5).join(' ');
+  return firstLine.isEmpty ? 'Journal Entry' : firstLine;
+}
 
-const _strengthExercises = <Map<String, dynamic>>[
-  {'name': 'Push-ups', 'sets': 4, 'reps': '12', 'durationMinutes': 7},
-  {'name': 'Squats', 'sets': 4, 'reps': '15', 'durationMinutes': 7},
-  {'name': 'Tricep Dips', 'sets': 3, 'reps': '12', 'durationMinutes': 6},
-  {'name': 'Glute Bridges', 'sets': 3, 'reps': '15', 'durationMinutes': 6},
-  {'name': 'Core Hold', 'sets': 3, 'reps': '40 sec', 'durationMinutes': 5},
-];
+int _stableHash(String value) {
+  var hash = 0;
+  for (final codeUnit in value.codeUnits) {
+    hash = (hash * 31 + codeUnit) & 0x7fffffff;
+  }
+  return hash;
+}
 
-const _cardioExercises = <Map<String, dynamic>>[
-  {'name': 'Jumping Jacks', 'sets': 3, 'reps': '45 sec', 'durationMinutes': 5},
-  {'name': 'High Knees', 'sets': 3, 'reps': '40 sec', 'durationMinutes': 5},
-  {'name': 'Mountain Climbers', 'sets': 3, 'reps': '30 sec', 'durationMinutes': 6},
-  {'name': 'Fast Walk', 'sets': 1, 'reps': '10 min', 'durationMinutes': 10},
-  {'name': 'Breathing Cooldown', 'sets': 1, 'reps': '4 min', 'durationMinutes': 4},
-];
+Map<String, dynamic> _mapValue(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    return value.map(
+      (key, dynamic nestedValue) => MapEntry(key.toString(), nestedValue),
+    );
+  }
+  return <String, dynamic>{};
+}
 
-const _mobilityExercises = <Map<String, dynamic>>[
-  {'name': 'Neck and Shoulder Rolls', 'sets': 2, 'reps': '60 sec', 'durationMinutes': 4},
-  {'name': 'Hip Flexor Stretch', 'sets': 2, 'reps': '45 sec', 'durationMinutes': 5},
-  {'name': 'Cat-Cow Stretch', 'sets': 3, 'reps': '8', 'durationMinutes': 5},
-  {'name': 'Hamstring Stretch', 'sets': 2, 'reps': '45 sec', 'durationMinutes': 5},
-  {'name': 'Deep Breathing', 'sets': 1, 'reps': '3 min', 'durationMinutes': 3},
-];
+List<String> _stringListValue(Object? value) {
+  if (value is List) {
+    return value
+        .whereType<String>()
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+  return const <String>[];
+}
+
+int? _intValue(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
+}
 
 const _recipeCatalog = <Map<String, dynamic>>[
   {
@@ -552,7 +832,8 @@ const _recipeCatalog = <Map<String, dynamic>>[
     'allergens': <String>['egg'],
     'time': '20 min',
     'difficulty': 'Easy',
-    'description': 'A filling student-friendly bowl with lean protein and rice.',
+    'description':
+        'A filling student-friendly bowl with lean protein and rice.',
   },
   {
     'name': 'Tuna Veggie Sandwich',

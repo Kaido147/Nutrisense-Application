@@ -115,7 +115,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
       return null;
     }
 
-    final TimeOfDay selectedTime = _selectedTime ?? const TimeOfDay(hour: 9, minute: 0);
+    final TimeOfDay selectedTime =
+        _selectedTime ?? const TimeOfDay(hour: 9, minute: 0);
     return DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
@@ -230,7 +231,11 @@ class _AddTaskModalState extends State<AddTaskModal> {
                           ),
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
-                            child: Icon(Icons.close, color: _navyBlue, size: 24),
+                            child: Icon(
+                              Icons.close,
+                              color: _navyBlue,
+                              size: 24,
+                            ),
                           ),
                         ],
                       ),
@@ -361,7 +366,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
                             const SizedBox(height: 12),
                             Row(
                               children: _priorities.map((priority) {
-                                final bool isSelected = _selectedPriority == priority;
+                                final bool isSelected =
+                                    _selectedPriority == priority;
                                 final Color priorityColor = switch (priority) {
                                   'Low' => const Color(0xFF3B82F6),
                                   'Medium' => _goldTan,
@@ -385,7 +391,9 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: isSelected
-                                              ? priorityColor.withValues(alpha: 0.08)
+                                              ? priorityColor.withValues(
+                                                  alpha: 0.08,
+                                                )
                                               : Colors.white,
                                           border: Border.all(
                                             color: isSelected
@@ -393,7 +401,9 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                                 : const Color(0xFFE5E7EB),
                                             width: isSelected ? 1.5 : 1,
                                           ),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
@@ -430,7 +440,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Due Date',
@@ -450,7 +461,9 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: _lightGray,
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                           child: Row(
                                             children: [
@@ -481,7 +494,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Due Time',
@@ -501,7 +515,9 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: _lightGray,
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                           child: Row(
                                             children: [
@@ -556,7 +572,9 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: _lightGray,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           date,

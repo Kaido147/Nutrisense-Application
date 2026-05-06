@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
+import 'package:nutrisense/pages/modals/profile/edit_health_profile_modal.dart';
 import 'package:nutrisense/pages/modals/profile/edit_profile_modal.dart';
 import 'package:nutrisense/pages/modals/profile/goals_preferences_modal.dart';
+import 'package:nutrisense/pages/modals/profile/reminder_settings_modal.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 import 'package:nutrisense/services/auth_service.dart';
 import 'package:nutrisense/theme_provider.dart';
@@ -126,7 +128,7 @@ class _ProfileContent extends StatelessWidget {
                 children: [
                   _buildGoalProgressCard(),
                   const SizedBox(height: 18),
-                  _buildHealthProfileCard(),
+                  _buildHealthProfileCard(context),
                   const SizedBox(height: 18),
                   _buildAnalyticsCard(),
                   const SizedBox(height: 18),
@@ -288,7 +290,7 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-  Widget _buildHealthProfileCard() {
+  Widget _buildHealthProfileCard(BuildContext context) {
     final health = healthProfile;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -307,23 +309,67 @@ class _ProfileContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Health Profile',
-            style: TextStyle(
-              color: _textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Health Profile',
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => EditHealthProfileModal.show(context, health),
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit'),
+                style: TextButton.styleFrom(
+                  foregroundColor: _navyBlue,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           if (health == null)
-            const Text(
-              'Complete your health profile to personalize recommendations.',
-              style: TextStyle(color: _textSecondary),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Complete your health profile to personalize recommendations.',
+                  style: TextStyle(color: _textSecondary),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => EditHealthProfileModal.show(context, null),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Health Profile'),
+                ),
+              ],
             )
           else ...[
             _buildInfoRow('Age', health.age?.toString() ?? 'Not set'),
             _buildInfoRow('Gender', health.gender ?? 'Not set'),
+            _buildInfoRow(
+              'Height',
+              health.heightCm == null
+                  ? 'Not set'
+                  : '${_formatNumber(health.heightCm!)} cm',
+            ),
+            _buildInfoRow(
+              'Current weight',
+              health.weightKg == null
+                  ? 'Not set'
+                  : '${_formatNumber(health.weightKg!)} kg',
+            ),
+            _buildInfoRow(
+              'Target weight',
+              health.targetWeightKg == null
+                  ? 'Not set'
+                  : '${_formatNumber(health.targetWeightKg!)} kg',
+            ),
             _buildInfoRow('Activity', health.activityLevel),
             _buildInfoRow('Fitness goal', health.fitnessGoal),
             _buildInfoRow('Diet', health.dietaryPreference),
@@ -509,6 +555,21 @@ class _ProfileContent extends StatelessWidget {
                   endIndent: 24,
                 ),
                 _buildSettingsTile(
+                  icon: Icons.notifications_none,
+                  iconColor: const Color(0xFF00A63E),
+                  iconBackground: const Color(0xFFEFFCF4),
+                  title: 'Reminders',
+                  subtitle: 'Hydration, sleep, workout, and breaks',
+                  onTap: () => ReminderSettingsModal.show(context),
+                ),
+                const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Color(0xFFEAEAEA),
+                  indent: 24,
+                  endIndent: 24,
+                ),
+                _buildSettingsTile(
                   icon: LucideIcons.moon,
                   iconColor: const Color(0xFF9A35FF),
                   iconBackground: const Color(0xFFF5ECFF),
@@ -633,6 +694,13 @@ class _ProfileContent extends StatelessWidget {
   String _capitalize(String value) {
     if (value.isEmpty) return value;
     return '${value[0].toUpperCase()}${value.substring(1)}';
+  }
+
+  String _formatNumber(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(1);
   }
 
   void _openThemeSettings(BuildContext context) {
@@ -813,7 +881,8 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                     CircleAvatar(
                                       radius: 22,
                                       backgroundColor: themeProvider
-                                          .accentColor.color
+                                          .accentColor
+                                          .color
                                           .withValues(alpha: 0.25),
                                     ),
                                     const SizedBox(width: 12),
@@ -850,12 +919,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                   Expanded(
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 10),
+                                        vertical: 10,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: themeProvider.accentColor.color
                                             .withValues(alpha: 0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color:
                                               themeProvider.accentColor.color,
@@ -867,8 +936,8 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
-                                            color: themeProvider
-                                                .accentColor.color,
+                                            color:
+                                                themeProvider.accentColor.color,
                                           ),
                                         ),
                                       ),
@@ -878,11 +947,11 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                   Expanded(
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 10),
+                                        vertical: 10,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF243A6E),
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Center(
                                         child: Text(
@@ -907,7 +976,9 @@ class _ThemeSettingsSheet extends StatelessWidget {
                         // --- Note Banner ---
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 12),
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF0F4FF),
                             borderRadius: BorderRadius.circular(12),
@@ -932,10 +1003,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                               child: OutlinedButton(
                                 onPressed: () => Navigator.pop(context),
                                 style: OutlinedButton.styleFrom(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   side: const BorderSide(
-                                      color: Color(0xFFD0D5DD)),
+                                    color: Color(0xFFD0D5DD),
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -956,8 +1029,9 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                 onPressed: () => Navigator.pop(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF243A6E),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -1084,7 +1158,9 @@ class _ThemeSettingsSheet extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? const Color(0xFF243A6E) : const Color(0xFFE4E7EC),
+            color: isSelected
+                ? const Color(0xFF243A6E)
+                : const Color(0xFFE4E7EC),
             width: isSelected ? 2 : 1,
           ),
         ),

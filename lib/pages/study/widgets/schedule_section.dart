@@ -1,13 +1,94 @@
+import 'package:nutrisense/models/prototype_data.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../study_models.dart';
 import '../study_theme.dart';
 import 'study_section_header.dart';
 
 class ScheduleSection extends StatelessWidget {
-  const ScheduleSection({super.key, required this.scheduleItems});
+  const ScheduleSection({super.key, required this.schedulesAsync});
 
-  final List<ScheduleItem> scheduleItems;
+  final AsyncValue<List<ClassSchedule>> schedulesAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    return schedulesAsync.when(
+      data: (schedules) => _ScheduleContent(schedules: schedules),
+      loading: () => const _ScheduleShell(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (_, _) => const _ScheduleShell(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Text(
+              'We could not load your class schedule.',
+              style: TextStyle(color: Colors.redAccent, fontSize: 13),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleContent extends StatelessWidget {
+  const _ScheduleContent({required this.schedules});
+
+  final List<ClassSchedule> schedules;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = weekdayName();
+    final todaySchedules =
+        schedules.where((item) => item.dayOfWeek == today).toList()
+          ..sort((a, b) => a.startTimeMinutes.compareTo(b.startTimeMinutes));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ScheduleShell(
+          child: todaySchedules.isEmpty
+              ? _ScheduleEmptyMessage(
+                  message: schedules.isEmpty
+                      ? 'No classes have been added yet.'
+                      : 'No classes scheduled for today.',
+                )
+              : Column(
+                  children: todaySchedules
+                      .map((item) => _ScheduleTile(item: item))
+                      .toList(),
+                ),
+        ),
+        const SizedBox(height: 18),
+        const StudySectionHeader(
+          title: 'All Classes',
+          actionIcon: Icons.calendar_view_week_outlined,
+        ),
+        const SizedBox(height: 12),
+        _ScheduleCard(
+          child: schedules.isEmpty
+              ? const _ScheduleEmptyMessage(
+                  message: 'Added classes will appear here.',
+                )
+              : Column(
+                  children: schedules
+                      .map((item) => _ScheduleTile(item: item, showDay: true))
+                      .toList(),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScheduleShell extends StatelessWidget {
+  const _ScheduleShell({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -19,41 +100,17 @@ class ScheduleSection extends StatelessWidget {
           actionIcon: Icons.calendar_today_outlined,
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          boxShadow: StudyTheme.softShadow,
-        ),
-          child: scheduleItems.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                    child: Text(
-                      'No classes scheduled for today.',
-                      style: TextStyle(
-                        color: StudyTheme.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                )
-              : Column(
-                  children: scheduleItems
-                      .map((item) => _ScheduleTile(item: item))
-                      .toList(),
-                ),
-        ),
+        _ScheduleCard(child: child),
       ],
     );
   }
 }
 
 class _ScheduleTile extends StatelessWidget {
-  const _ScheduleTile({required this.item});
+  const _ScheduleTile({required this.item, this.showDay = false});
 
-  final ScheduleItem item;
+  final ClassSchedule item;
+  final bool showDay;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +122,7 @@ class _ScheduleTile extends StatelessWidget {
             width: 3,
             height: 42,
             decoration: BoxDecoration(
-              color: item.accentColor,
+              color: accentColor,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -75,7 +132,9 @@ class _ScheduleTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.title,
+                  item.courseCode.isEmpty
+                      ? item.title
+                      : '${item.courseCode}: ${item.title}',
                   style: const TextStyle(
                     color: StudyTheme.textPrimary,
                     fontSize: 17,
@@ -84,7 +143,10 @@ class _ScheduleTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  item.room,
+                  [
+                    if (showDay) item.dayOfWeek,
+                    item.location.isEmpty ? 'No location set' : item.location,
+                  ].join(' - '),
                   style: const TextStyle(
                     color: StudyTheme.textSecondary,
                     fontSize: 12,
@@ -94,7 +156,7 @@ class _ScheduleTile extends StatelessWidget {
             ),
           ),
           Text(
-            item.time,
+            item.timeLabel,
             style: const TextStyle(
               color: StudyTheme.textPrimary,
               fontSize: 14,
@@ -102,6 +164,57 @@ class _ScheduleTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Color get accentColor {
+    switch (item.color) {
+      case 'purple':
+        return const Color(0xFFA72EFF);
+      case 'green':
+        return const Color(0xFF17C45B);
+      case 'gold':
+        return const Color(0xFFD6B66E);
+      default:
+        return const Color(0xFF2F65FF);
+    }
+  }
+}
+
+class _ScheduleCard extends StatelessWidget {
+  const _ScheduleCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: StudyTheme.softShadow,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _ScheduleEmptyMessage extends StatelessWidget {
+  const _ScheduleEmptyMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: Text(
+          message,
+          style: const TextStyle(color: StudyTheme.textSecondary, fontSize: 13),
+        ),
       ),
     );
   }

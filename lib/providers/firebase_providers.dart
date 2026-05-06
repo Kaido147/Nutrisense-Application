@@ -76,12 +76,20 @@ final enabledRemindersProvider = StreamProvider<List<AppReminder>>((ref) {
   return ref.watch(prototypeDataServiceProvider).watchEnabledReminders();
 });
 
+final remindersProvider = StreamProvider<List<AppReminder>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchReminders();
+});
+
 final workoutPlansProvider = StreamProvider<List<WorkoutPlan>>((ref) {
   return ref.watch(prototypeDataServiceProvider).watchWorkoutPlans();
 });
 
 final mealLogsProvider = StreamProvider<List<MealLog>>((ref) {
   return ref.watch(prototypeDataServiceProvider).watchMealLogs();
+});
+
+final journalEntriesProvider = StreamProvider<List<JournalRecord>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchJournalEntries();
 });
 
 final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) {

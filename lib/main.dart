@@ -133,9 +133,8 @@ class AuthGate extends ConsumerWidget {
               error: (_, _) => const HealthProfileSetupPage(),
             );
           },
-          loading: () => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (_, _) => const LandingPage(),
         );
       },

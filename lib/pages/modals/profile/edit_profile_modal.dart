@@ -72,8 +72,7 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
     final DateTime now = DateTime.now();
     final int safeDay = now.day > 28 ? 28 : now.day;
     final DateTime initialDate =
-        _selectedBirthDate ??
-        DateTime(now.year - 18, now.month, safeDay);
+        _selectedBirthDate ?? DateTime(now.year - 18, now.month, safeDay);
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -191,10 +190,7 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
                   const SizedBox(height: 10),
                   const Text(
                     'Tap to change photo',
-                    style: TextStyle(
-                      color: Color(0xFF8B93A7),
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Color(0xFF8B93A7), fontSize: 13),
                   ),
                 ],
               ),
@@ -386,7 +382,8 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
           maxLines: maxLines,
           enabled: enabled,
           style: TextStyle(
-            color: enabled ? const Color(0xFF223660) : const Color(0xFF7E889A),
+            color: enabled ? const Color(0xFF1F2A44) : const Color(0xFF667085),
+            fontWeight: FontWeight.w600,
           ),
           decoration: _fieldDecoration(hintText: hintText, icon: icon),
         ),
@@ -401,7 +398,12 @@ class _EditProfileModalState extends ConsumerState<EditProfileModal> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: const TextStyle(color: Color(0xFFA5AEBD)),
+      hintStyle: const TextStyle(color: Color(0xFF98A2B3)),
+      labelStyle: const TextStyle(color: Color(0xFF233866)),
+      floatingLabelStyle: const TextStyle(
+        color: Color(0xFF25396F),
+        fontWeight: FontWeight.w700,
+      ),
       prefixIcon: icon == null
           ? null
           : Icon(icon, color: const Color(0xFFA5AEBD), size: 20),

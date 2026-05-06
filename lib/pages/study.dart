@@ -4,6 +4,7 @@ import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 
 import 'modals/add_task_modal.dart';
+import 'modals/journal_entry_modal.dart';
 import 'study/study_controller.dart';
 import 'study/study_models.dart';
 import 'study/study_repository.dart';
@@ -45,10 +46,6 @@ class _StudyPageState extends ConsumerState<StudyPage> {
   @override
   Widget build(BuildContext context) {
     final schedulesAsync = ref.watch(schedulesProvider);
-    final scheduleItems = schedulesAsync.maybeWhen(
-      data: _mapSchedules,
-      orElse: () => const <ScheduleItem>[],
-    );
 
     return AnimatedBuilder(
       animation: _controller,
@@ -72,7 +69,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                         ? _FocusModeView(
                             key: const ValueKey('focus-mode'),
                             controller: _controller,
-                            scheduleItems: scheduleItems,
+                            schedulesAsync: schedulesAsync,
                           )
                         : _JournalMoodView(
                             key: const ValueKey('journal-mood'),
@@ -87,40 +84,6 @@ class _StudyPageState extends ConsumerState<StudyPage> {
         );
       },
     );
-  }
-
-  List<ScheduleItem> _mapSchedules(List<ClassSchedule> schedules) {
-    final today = weekdayName();
-    final todaySchedules = schedules
-        .where((item) => item.dayOfWeek == today)
-        .toList()
-      ..sort((a, b) => a.startTimeMinutes.compareTo(b.startTimeMinutes));
-
-    return todaySchedules
-        .map(
-          (item) => ScheduleItem(
-            title: item.courseCode.isEmpty
-                ? item.title
-                : '${item.courseCode}: ${item.title}',
-            room: item.location.isEmpty ? 'No location set' : item.location,
-            time: item.timeLabel,
-            accentColor: _scheduleColor(item.color),
-          ),
-        )
-        .toList(growable: false);
-  }
-
-  Color _scheduleColor(String color) {
-    switch (color) {
-      case 'purple':
-        return const Color(0xFFA72EFF);
-      case 'green':
-        return const Color(0xFF17C45B);
-      case 'gold':
-        return const Color(0xFFD6B66E);
-      default:
-        return const Color(0xFF2F65FF);
-    }
   }
 }
 
@@ -191,11 +154,11 @@ class _FocusModeView extends StatelessWidget {
   const _FocusModeView({
     super.key,
     required this.controller,
-    required this.scheduleItems,
+    required this.schedulesAsync,
   });
 
   final StudyController controller;
-  final List<ScheduleItem> scheduleItems;
+  final AsyncValue<List<ClassSchedule>> schedulesAsync;
 
   @override
   Widget build(BuildContext context) {
@@ -216,23 +179,24 @@ class _FocusModeView extends StatelessWidget {
           },
           onAddTask: () => AddTaskModal.show(
             context,
-            onSave: ({
-              required String title,
-              String? description,
-              DateTime? dueAt,
-            }) {
-              return controller.addTask(
-                title: title,
-                description: description,
-                dueAt: dueAt,
-              );
-            },
+            onSave:
+                ({
+                  required String title,
+                  String? description,
+                  DateTime? dueAt,
+                }) {
+                  return controller.addTask(
+                    title: title,
+                    description: description,
+                    dueAt: dueAt,
+                  );
+                },
           ),
           isLoading: controller.isLoadingTasks,
           errorMessage: controller.taskErrorMessage,
         ),
         const SizedBox(height: 24),
-        ScheduleSection(scheduleItems: scheduleItems),
+        ScheduleSection(schedulesAsync: schedulesAsync),
         const SizedBox(height: 24),
         WeeklyStatsCard(stats: controller.weeklyStats),
       ],
@@ -240,31 +204,143 @@ class _FocusModeView extends StatelessWidget {
   }
 }
 
-class _JournalMoodView extends StatelessWidget {
+class _JournalMoodView extends ConsumerWidget {
   const _JournalMoodView({super.key, required this.controller});
 
   final StudyController controller;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entriesAsync = ref.watch(journalEntriesProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MoodSummaryCard(items: controller.moodSummaryItems),
+        entriesAsync.maybeWhen(
+          data: (entries) => MoodSummaryCard(items: _moodSummaryItems(entries)),
+          orElse: () => MoodSummaryCard(items: _moodSummaryItems(const [])),
+        ),
         const SizedBox(height: 20),
-        const StudySectionHeader(
+        StudySectionHeader(
           title: 'Recent Entries',
           actionLabel: '+ New Entry',
+          onActionTap: () => JournalEntryModal.show(context),
         ),
         const SizedBox(height: 12),
-        for (var i = 0; i < controller.recentEntries.length; i++) ...[
-          JournalEntryCard(entry: controller.recentEntries[i]),
-          if (i != controller.recentEntries.length - 1)
-            const SizedBox(height: 14),
-        ],
+        entriesAsync.when(
+          data: (entries) {
+            if (entries.isEmpty) {
+              return const _EmptyJournalState();
+            }
+            return Column(
+              children: [
+                for (var i = 0; i < entries.length; i++) ...[
+                  JournalEntryCard(
+                    entry: entries[i],
+                    onEdit: () =>
+                        JournalEntryModal.show(context, entry: entries[i]),
+                    onDelete: () => _confirmDelete(context, ref, entries[i]),
+                  ),
+                  if (i != entries.length - 1) const SizedBox(height: 14),
+                ],
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, _) => const Text(
+            'We could not load your journal entries.',
+            style: TextStyle(color: Colors.redAccent),
+          ),
+        ),
         const SizedBox(height: 24),
         InsightsCard(data: controller.insights),
       ],
+    );
+  }
+
+  List<MoodSummaryItem> _moodSummaryItems(List<JournalRecord> entries) {
+    final DateTime now = DateTime.now();
+    final DateTime startOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - DateTime.monday));
+    final Map<StudyMood, int> counts = {
+      for (final mood in StudyMood.values) mood: 0,
+    };
+
+    for (final entry in entries) {
+      if (entry.entryDate.isBefore(startOfWeek)) continue;
+      final mood = _toStudyMood(entry.mood);
+      counts.update(mood, (value) => value + 1);
+    }
+
+    return StudyMood.values
+        .map((mood) => MoodSummaryItem(mood: mood, count: counts[mood] ?? 0))
+        .toList(growable: false);
+  }
+
+  StudyMood _toStudyMood(String mood) {
+    switch (mood.toLowerCase()) {
+      case 'happy':
+        return StudyMood.happy;
+      case 'motivated':
+        return StudyMood.motivated;
+      case 'stressed':
+      case 'sad':
+      case 'tired':
+        return StudyMood.stressed;
+      default:
+        return StudyMood.calm;
+    }
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    JournalRecord entry,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete journal entry?'),
+        content: Text('Delete "${entry.title}" permanently?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(prototypeDataServiceProvider).deleteJournalEntry(entry.id);
+    ref.invalidate(journalEntriesProvider);
+  }
+}
+
+class _EmptyJournalState extends StatelessWidget {
+  const _EmptyJournalState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: StudyTheme.softShadow,
+      ),
+      child: const Text(
+        'No journal entries yet. Add one to start tracking your mood and reflections.',
+        style: TextStyle(color: StudyTheme.textSecondary),
+      ),
     );
   }
 }

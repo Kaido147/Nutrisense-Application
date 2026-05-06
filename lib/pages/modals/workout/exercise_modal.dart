@@ -144,7 +144,9 @@ void showExerciseModal(
                                         Text(
                                           '12 reps',
                                           style: TextStyle(
-                                            color: Theme.of(context).colorScheme.primary,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                             fontSize: 24,
                                             fontWeight: FontWeight.w800,
                                           ),
