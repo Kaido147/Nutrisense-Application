@@ -76,10 +76,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                                 AddClassModal.show(context, schedule: schedule),
                             onDeleteSchedule: _confirmDeleteSchedule,
                           )
-                        : _JournalMoodView(
-                            key: const ValueKey('journal-mood'),
-                            controller: _controller,
-                          ),
+                        : _JournalMoodView(key: const ValueKey('journal-mood')),
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -317,9 +314,7 @@ class _FocusModeView extends StatelessWidget {
 }
 
 class _JournalMoodView extends ConsumerWidget {
-  const _JournalMoodView({super.key, required this.controller});
-
-  final StudyController controller;
+  const _JournalMoodView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -365,8 +360,99 @@ class _JournalMoodView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 24),
-        InsightsCard(data: controller.insights),
+        entriesAsync.maybeWhen(
+          data: (entries) => InsightsCard(data: _journalInsights(entries)),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          orElse: () => InsightsCard(data: _journalInsights(const [])),
+        ),
       ],
+    );
+  }
+
+  InsightData _journalInsights(List<JournalRecord> entries) {
+    final DateTime now = DateTime.now();
+    final DateTime startOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - DateTime.monday));
+    final weeklyEntries = entries
+        .where((entry) => !entry.entryDate.isBefore(startOfWeek))
+        .toList(growable: false);
+
+    if (entries.isEmpty) {
+      return const InsightData(
+        title: 'Start your reflection habit',
+        message:
+            'No journal entries have been logged yet. Add one mood check-in to start seeing patterns.',
+        tip:
+            'Tip: A short note after study or exercise can make your wellness trends easier to understand.',
+      );
+    }
+
+    if (weeklyEntries.isEmpty) {
+      final latest = entries.first;
+      return InsightData(
+        title: 'No check-ins this week yet',
+        message:
+            'Your latest journal mood was "${latest.mood}" on ${latest.dateLabel}. Add a new entry this week to refresh your mood trend.',
+        tip:
+            'Tip: Try logging one sentence about your energy, focus, and stress level today.',
+      );
+    }
+
+    final Map<StudyMood, int> moodCounts = {
+      for (final mood in StudyMood.values) mood: 0,
+    };
+    final Map<String, int> tagCounts = <String, int>{};
+    for (final entry in weeklyEntries) {
+      final mood = _toStudyMood(entry.mood);
+      moodCounts.update(mood, (value) => value + 1);
+      for (final tag in entry.tags) {
+        tagCounts.update(tag, (value) => value + 1, ifAbsent: () => 1);
+      }
+    }
+
+    final dominantMood = moodCounts.entries
+        .reduce((left, right) => left.value >= right.value ? left : right)
+        .key;
+    final entryLabel = weeklyEntries.length == 1
+        ? '1 journal entry'
+        : '${weeklyEntries.length} journal entries';
+    final topTag = tagCounts.entries.isEmpty
+        ? null
+        : tagCounts.entries
+              .reduce((left, right) => left.value >= right.value ? left : right)
+              .key;
+
+    final moodPhrase = switch (dominantMood) {
+      StudyMood.happy => 'positive',
+      StudyMood.motivated => 'motivated',
+      StudyMood.calm => 'steady',
+      StudyMood.stressed => 'strained',
+    };
+    final title = switch (dominantMood) {
+      StudyMood.happy => 'A positive week so far',
+      StudyMood.motivated => 'Motivation is showing up',
+      StudyMood.calm => 'Your mood looks steady',
+      StudyMood.stressed => 'Stress is showing up',
+    };
+    final tip = switch (dominantMood) {
+      StudyMood.happy =>
+        'Tip: Repeat the routines that helped this week feel lighter.',
+      StudyMood.motivated =>
+        'Tip: Use that momentum for your hardest study task first.',
+      StudyMood.calm =>
+        'Tip: Keep pairing focused work with short recovery breaks.',
+      StudyMood.stressed =>
+        'Tip: Split tomorrow into smaller blocks and schedule one real pause.',
+    };
+
+    return InsightData(
+      title: title,
+      message:
+          'You logged $entryLabel this week. Your most common mood is ${dominantMood.label.toLowerCase()}, so your current pattern looks $moodPhrase${topTag == null ? '.' : ' with "$topTag" showing up most often.'}',
+      tip: tip,
     );
   }
 

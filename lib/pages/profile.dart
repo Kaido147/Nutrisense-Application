@@ -1,9 +1,5 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
@@ -14,8 +10,8 @@ import 'package:nutrisense/pages/modals/profile/reminder_settings_modal.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 import 'package:nutrisense/services/auth_service.dart';
 import 'package:nutrisense/theme_provider.dart';
+import 'package:nutrisense/widgets/profile_avatar.dart';
 import 'package:provider/provider.dart' as p;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -68,9 +64,6 @@ class ProfilePage extends ConsumerWidget {
     final HealthProfile? healthProfile = ref
         .watch(healthProfileProvider)
         .maybeWhen(data: (value) => value, orElse: () => null);
-    final DashboardStats? dashboardStats = ref
-        .watch(dashboardStatsProvider)
-        .maybeWhen(data: (value) => value, orElse: () => null);
 
     return profileAsync.when(
       data: (profile) {
@@ -83,7 +76,6 @@ class ProfilePage extends ConsumerWidget {
         return _ProfileContent(
           profile: profile,
           healthProfile: healthProfile,
-          dashboardStats: dashboardStats,
           onLogout: () => _logout(context, ref),
         );
       },
@@ -100,13 +92,11 @@ class _ProfileContent extends StatelessWidget {
   const _ProfileContent({
     required this.profile,
     required this.healthProfile,
-    required this.dashboardStats,
     required this.onLogout,
   });
 
   final UserProfile profile;
   final HealthProfile? healthProfile;
-  final DashboardStats? dashboardStats;
   final VoidCallback onLogout;
 
   static const Color _backgroundColor = Color(0xFFF4F0E8);
@@ -135,8 +125,6 @@ class _ProfileContent extends StatelessWidget {
                   const SizedBox(height: 18),
                   _buildHealthProfileCard(context),
                   const SizedBox(height: 18),
-                  _buildAnalyticsCard(),
-                  const SizedBox(height: 18),
                   _buildSettingsSection(context, themeProvider),
                   const SizedBox(height: 20),
                   _buildLogoutButton(),
@@ -163,7 +151,17 @@ class _ProfileContent extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _ProfileAvatar(uid: profile.uid),
+          ProfileAvatar(
+            uid: profile.uid,
+            size: 122,
+            borderWidth: 5,
+            borderColor: const Color(0xFF8D8D93),
+            backgroundColor: const Color(0xFF5B6478),
+            fallbackIconColor: const Color(0xFF5B2CA0),
+            editable: true,
+            editButtonColor: _goldTan,
+            editIconColor: _navyBlue,
+          ),
           const SizedBox(height: 18),
           Text(
             profile.fullName,
@@ -433,51 +431,6 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-  Widget _buildAnalyticsCard() {
-    final stats = dashboardStats;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1ECE6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2D8C9)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Your Progress',
-            style: TextStyle(
-              color: _textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              _buildStatBlock(
-                '${stats?.completedQuests ?? 0}/${stats?.totalQuests ?? 0}',
-                'Quests',
-              ),
-              _buildStatBlock('${stats?.completedWorkouts ?? 0}', 'Workouts'),
-              _buildStatBlock('${stats?.mealsLogged ?? 0}', 'Meals'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildStatBlock('${stats?.completedStudyTasks ?? 0}', 'Tasks'),
-              _buildStatBlock('${stats?.studyMinutes ?? 0}', 'Study min'),
-              _buildStatBlock('${stats?.waterGlasses ?? 0}', 'Water'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -504,29 +457,6 @@ class _ProfileContent extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatBlock(String value, String label) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: _textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: _textSecondary, fontSize: 11),
           ),
         ],
       ),
@@ -769,122 +699,6 @@ class _ProfileContent extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const _ThemeSettingsSheet(),
-    );
-  }
-}
-
-class _ProfileAvatar extends StatefulWidget {
-  const _ProfileAvatar({required this.uid});
-
-  final String uid;
-
-  @override
-  State<_ProfileAvatar> createState() => _ProfileAvatarState();
-}
-
-class _ProfileAvatarState extends State<_ProfileAvatar> {
-  Uint8List? _imageBytes;
-  bool _isPicking = false;
-
-  String get _storageKey => 'profile_image_${widget.uid}';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadImage();
-  }
-
-  Future<void> _loadImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded = prefs.getString(_storageKey);
-    if (!mounted || encoded == null || encoded.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      _imageBytes = base64Decode(encoded);
-    });
-  }
-
-  Future<void> _pickImage() async {
-    if (_isPicking) return;
-    setState(() => _isPicking = true);
-    try {
-      final image = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        imageQuality: 82,
-      );
-      if (image == null) return;
-
-      final bytes = await image.readAsBytes();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_storageKey, base64Encode(bytes));
-
-      if (!mounted) return;
-      setState(() => _imageBytes = bytes);
-    } finally {
-      if (mounted) setState(() => _isPicking = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final imageBytes = _imageBytes;
-    return GestureDetector(
-      onTap: _pickImage,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 122,
-            height: 122,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF8D8D93), width: 5),
-            ),
-            child: CircleAvatar(
-              backgroundColor: const Color(0xFF5B6478),
-              backgroundImage: imageBytes == null
-                  ? null
-                  : MemoryImage(imageBytes),
-              child: imageBytes == null
-                  ? const Icon(
-                      LucideIcons.user,
-                      size: 48,
-                      color: Color(0xFF5B2CA0),
-                    )
-                  : null,
-            ),
-          ),
-          Positioned(
-            right: 2,
-            bottom: 6,
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: _ProfileContent._goldTan,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
-              ),
-              child: _isPicking
-                  ? const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: _ProfileContent._navyBlue,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.camera_alt_outlined,
-                      color: _ProfileContent._navyBlue,
-                      size: 17,
-                    ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

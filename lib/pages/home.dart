@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
+import 'package:nutrisense/widgets/profile_avatar.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key, this.onNavigateTab});
@@ -152,18 +153,27 @@ class _Header extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFB8A98B), width: 2),
-            ),
-            child: const CircleAvatar(
+          if (profile == null)
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFB8A98B), width: 2),
+              ),
+              child: const CircleAvatar(
+                backgroundColor: Colors.transparent,
+                child: Icon(Icons.person, color: Color(0xFF7C5AA6)),
+              ),
+            )
+          else
+            ProfileAvatar(
+              uid: profile!.uid,
+              size: 48,
+              borderColor: const Color(0xFFB8A98B),
               backgroundColor: Colors.transparent,
-              child: Icon(Icons.person, color: Color(0xFF7C5AA6)),
+              fallbackIconColor: const Color(0xFF7C5AA6),
             ),
-          ),
         ],
       ),
     );
