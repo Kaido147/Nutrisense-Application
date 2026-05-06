@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
+import 'package:nutrisense/widgets/circular_macro_progress.dart';
 import 'modals/nutrition/generate_meal_ideas_modal.dart';
 import 'modals/nutrition/nutrition_modal.dart';
 
@@ -70,6 +71,8 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     int totalCalories = 0;
     int totalProtein = 0;
     int totalCarbs = 0;
+    int totalFat = 0;
+    int totalFiber = 0;
 
     for (final meal in _recentMeals) {
       final calories = meal['calories'] as int? ?? 0;
@@ -82,12 +85,20 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
 
       final carbs = nutrition['carbs'] as String? ?? '0g';
       totalCarbs += int.tryParse(carbs.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+      final fat = nutrition['fat'] as String? ?? '0g';
+      totalFat += int.tryParse(fat.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+      final fiber = nutrition['fiber'] as String? ?? '0g';
+      totalFiber += int.tryParse(fiber.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
     }
 
     return {
       'calories': totalCalories,
       'protein': totalProtein,
       'carbs': totalCarbs,
+      'fat': totalFat,
+      'fiber': totalFiber,
     };
   }
 
@@ -205,7 +216,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-            _buildTodaysNutritionCard(),
+            _buildTodaysNutritionCard(ref),
             const SizedBox(height: 24),
             _buildMealPlannerSection(),
             const SizedBox(height: 24),
@@ -217,14 +228,136 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     );
   }
 
-  Widget _buildTodaysNutritionCard() {
+  Widget _buildTodaysNutritionCard(WidgetRef ref) {
     final totals = _calculateNutritionTotals();
     final totalCalories = totals['calories'] ?? 0;
     final totalProtein = totals['protein'] ?? 0;
     final totalCarbs = totals['carbs'] ?? 0;
+    final totalFat = totals['fat'] ?? 0;
+    final totalFiber = totals['fiber'] ?? 0;
 
-    const dailyGoal = 2000;
-    final percentage = (totalCalories / dailyGoal).clamp(0.0, 1.0);
+    // Get daily macro targets from provider
+    final dailyMacrosAsync = ref.watch(dailyMacrosProvider);
+
+    return dailyMacrosAsync.when(
+      data: (dailyMacros) {
+        // Use daily macros if available, otherwise use defaults
+        final dailyCalories = dailyMacros?.calories ?? 2000;
+        final dailyProtein = dailyMacros?.protein ?? 150;
+        final dailyCarbs = dailyMacros?.carbs ?? 225;
+        final dailyFat = dailyMacros?.fat ?? 65;
+        final dailyFiber = dailyMacros?.fiber ?? 25;
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Today's Nutrition",
+                style: TextStyle(
+                  color: _navyBlue,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  CircularMacroProgress(
+                    current: totalCalories,
+                    target: dailyCalories,
+                    label: 'Calories',
+                    unit: '',
+                    color: const Color(0xFFFF6B35),
+                  ),
+                  CircularMacroProgress(
+                    current: totalProtein,
+                    target: dailyProtein,
+                    label: 'Protein',
+                    unit: 'g',
+                    color: _navyBlue,
+                  ),
+                  CircularMacroProgress(
+                    current: totalCarbs,
+                    target: dailyCarbs,
+                    label: 'Carbs',
+                    unit: 'g',
+                    color: const Color(0xFFFFB84D),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              _buildHorizontalMacroBar(
+                label: 'Fat',
+                current: totalFat,
+                target: dailyFat,
+                unit: 'g',
+                color: _green,
+              ),
+              const SizedBox(height: 14),
+              _buildHorizontalMacroBar(
+                label: 'Fiber',
+                current: totalFiber,
+                target: dailyFiber,
+                unit: 'g',
+                color: Colors.grey[600]!,
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(_navyBlue),
+          ),
+        ),
+      ),
+      error: (_, __) {
+        final totals = _calculateNutritionTotals();
+        return _buildNutritionCardWithDefaults(totals);
+      },
+    );
+  }
+
+  Widget _buildNutritionCardWithDefaults(Map<String, int> totals) {
+    final totalCalories = totals['calories'] ?? 0;
+    final totalProtein = totals['protein'] ?? 0;
+    final totalCarbs = totals['carbs'] ?? 0;
+    final totalFat = totals['fat'] ?? 0;
+    final totalFiber = totals['fiber'] ?? 0;
+
+    // Default targets
+    const dailyCalories = 2000;
+    const dailyProtein = 150;
+    const dailyCarbs = 225;
+    const dailyFat = 65;
+    const dailyFiber = 25;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -252,51 +385,46 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
           ),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildNutrientCard('$totalCalories', 'Calories'),
-              _buildNutrientCard('${totalProtein}g', 'Protein'),
-              _buildNutrientCard('${totalCarbs}g', 'Carbs'),
+              CircularMacroProgress(
+                current: totalCalories,
+                target: dailyCalories,
+                label: 'Calories',
+                unit: '',
+                color: const Color(0xFFFF6B35),
+              ),
+              CircularMacroProgress(
+                current: totalProtein,
+                target: dailyProtein,
+                label: 'Protein',
+                unit: 'g',
+                color: _navyBlue,
+              ),
+              CircularMacroProgress(
+                current: totalCarbs,
+                target: dailyCarbs,
+                label: 'Carbs',
+                unit: 'g',
+                color: const Color(0xFFFFB84D),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: _lightGray,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: FractionallySizedBox(
-                    widthFactor: percentage,
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [_navyBlue, const Color(0xFFFFB84D)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${(percentage * 100).toStringAsFixed(0)}% of daily goal',
-                style: TextStyle(
-                  color: _navyBlue,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          const SizedBox(height: 28),
+          _buildHorizontalMacroBar(
+            label: 'Fat',
+            current: totalFat,
+            target: dailyFat,
+            unit: 'g',
+            color: _green,
+          ),
+          const SizedBox(height: 14),
+          _buildHorizontalMacroBar(
+            label: 'Fiber',
+            current: totalFiber,
+            target: dailyFiber,
+            unit: 'g',
+            color: Colors.grey[600]!,
           ),
         ],
       ),
@@ -321,6 +449,65 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
             color: Color(0xFF999999),
             fontSize: 12,
             fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalMacroBar({
+    required String label,
+    required int current,
+    required int target,
+    required String unit,
+    required Color color,
+  }) {
+    final percentage = (current / target).clamp(0.0, 1.5);
+    final isExceeded = current > target;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: _navyBlue,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              '$current / $target $unit',
+              style: TextStyle(
+                color: isExceeded ? const Color(0xFFFF6B35) : color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: _lightGray,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: FractionallySizedBox(
+              widthFactor: percentage,
+              alignment: Alignment.centerLeft,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isExceeded ? const Color(0xFFFF6B35) : color,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
           ),
         ),
       ],

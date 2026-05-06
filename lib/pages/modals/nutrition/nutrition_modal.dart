@@ -34,10 +34,16 @@ class NutritionModal extends StatelessWidget {
           'cholesterol': '85mg',
         };
 
+    // Get calories from root level or nutrition object
+    final calorieValue = meal['calories'] as int?;
+    final caloriesDisplay = calorieValue != null
+        ? '$calorieValue kcal'
+        : (nutrition['calories'] ?? '—');
+
     final macros = [
       _MacroItem(
         label: 'Calories',
-        value: nutrition['calories'] ?? '—',
+        value: caloriesDisplay,
         icon: Icons.local_fire_department,
         color: const Color(0xFFFF6B35),
         fillRatio: 0.72,

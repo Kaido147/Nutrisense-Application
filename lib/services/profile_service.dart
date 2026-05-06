@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
+import 'package:nutrisense/services/macro_calculator.dart';
 
 class ProfileFlowException implements Exception {
   const ProfileFlowException(this.message);
@@ -125,6 +127,69 @@ class ProfileService {
     } catch (_) {
       throw const ProfileFlowException(
         'Something went wrong while saving your preferences. Please try again.',
+      );
+    }
+  }
+
+  /// Calculates and saves daily macro targets based on health profile
+  Future<DailyMacros> calculateAndSaveDailyMacros(
+    HealthProfile healthProfile,
+  ) async {
+    final User user = _requireUser();
+
+    try {
+      final macros = MacroCalculator.calculateMacros(healthProfile);
+
+      await _firestore.collection('users').doc(user.uid).set({
+        'dailyMacros': {
+          'calories': macros.calories,
+          'protein': macros.protein,
+          'carbs': macros.carbs,
+          'fat': macros.fat,
+          'fiber': macros.fiber,
+          'calculatedAt': FieldValue.serverTimestamp(),
+        },
+      }, SetOptions(merge: true));
+
+      return macros;
+    } on ArgumentError catch (e) {
+      throw ProfileFlowException('Cannot calculate macros: ${e.message}');
+    } on FirebaseException catch (_) {
+      throw const ProfileFlowException(
+        'We could not save your daily macros right now. Please try again.',
+      );
+    } catch (_) {
+      throw const ProfileFlowException(
+        'Something went wrong while calculating your macros. Please try again.',
+      );
+    }
+  }
+
+  /// Gets the current daily macro targets
+  Future<DailyMacros?> getDailyMacros() async {
+    final User user = _requireUser();
+
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      final data = doc.data();
+      final macrosData = data?['dailyMacros'] as Map<String, dynamic>?;
+
+      if (macrosData == null) return null;
+
+      return DailyMacros(
+        calories: macrosData['calories'] as int? ?? 0,
+        protein: macrosData['protein'] as int? ?? 0,
+        carbs: macrosData['carbs'] as int? ?? 0,
+        fat: macrosData['fat'] as int? ?? 0,
+        fiber: macrosData['fiber'] as int? ?? 0,
+      );
+    } on FirebaseException catch (_) {
+      throw const ProfileFlowException(
+        'We could not retrieve your daily macros. Please try again.',
+      );
+    } catch (_) {
+      throw const ProfileFlowException(
+        'Something went wrong while retrieving your macros.',
       );
     }
   }

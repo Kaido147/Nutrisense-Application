@@ -24,6 +24,11 @@ class HealthProfileSetupPage extends ConsumerWidget {
             onSubmit: (profile) async {
               final service = ref.read(prototypeDataServiceProvider);
               await service.saveHealthProfile(profile);
+
+              // Calculate and save daily macros based on health profile
+              final profileService = ref.read(profileServiceProvider);
+              await profileService.calculateAndSaveDailyMacros(profile);
+
               await service.ensureDailyQuests();
               await service.ensureDefaultReminders();
 
