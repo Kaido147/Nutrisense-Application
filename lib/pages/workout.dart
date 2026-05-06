@@ -52,7 +52,7 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeaderStack(context),
-            const SizedBox(height: 48),
+            const SizedBox(height: 54),
             if (_selectedTab == 0)
               _WorkoutContent(
                 selectedCategory: _selectedCategory,
@@ -341,13 +341,13 @@ class _WorkoutContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle("Today's Routine"),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _RoutineCard(plan: currentPlan),
-        const SizedBox(height: 28),
+        const SizedBox(height: 30),
         _sectionTitle('Workout Categories'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         SizedBox(
-          height: 104,
+          height: 112,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             scrollDirection: Axis.horizontal,
@@ -363,9 +363,9 @@ class _WorkoutContent extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 26),
         _sectionTitle('${selectedCategory.name} Picker'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
@@ -388,14 +388,14 @@ class _WorkoutContent extends StatelessWidget {
           onGenerate: onGenerate,
           onSaveGenerated: onSaveGenerated,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 30),
         _sectionTitle('Exercises'),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _SavedExercisesList(
           plan: currentPlan,
           onStartExercise: onStartExercise,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 30),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -420,7 +420,7 @@ class _WorkoutContent extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         _WeeklyPlanCard(plan: currentPlan),
       ],
     );
@@ -463,7 +463,7 @@ class _RoutineCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(26),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: _gold,
           borderRadius: BorderRadius.circular(18),
@@ -513,7 +513,7 @@ class _RoutineCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
             Row(
               children: [
                 Expanded(
@@ -539,7 +539,7 @@ class _RoutineCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
             Container(
               width: double.infinity,
               alignment: Alignment.center,
@@ -586,8 +586,8 @@ class _CategoryCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        width: 138,
-        padding: const EdgeInsets.all(14),
+        width: 146,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF273967) : Colors.white,
           borderRadius: BorderRadius.circular(18),
@@ -719,7 +719,7 @@ class _PlanActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -769,7 +769,7 @@ class _PlanActions extends StatelessWidget {
             ),
           ),
           if (generatedDraft != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             _GeneratedDraftCard(
               draft: generatedDraft!,
               isSaving: isSavingGenerated,
@@ -797,7 +797,7 @@ class _GeneratedDraftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: _cardDecoration(borderColor: const Color(0xFFE2C783)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -910,7 +910,7 @@ class _SavedExerciseTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
         decoration: _cardDecoration(),
         child: Row(
           children: [
@@ -997,7 +997,7 @@ class _WeeklyPlanCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
         decoration: _cardDecoration(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1020,11 +1020,11 @@ class _WeeklyPlanCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
             ...items.asMap().entries.map((entry) {
               final active = entry.key < 2;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
                   children: [
                     CircleAvatar(

@@ -10,6 +10,8 @@ class TaskSection extends StatelessWidget {
     required this.tasks,
     required this.onTaskToggle,
     required this.onAddTask,
+    required this.onEditTask,
+    required this.onDeleteTask,
     required this.isLoading,
     required this.errorMessage,
   });
@@ -17,6 +19,8 @@ class TaskSection extends StatelessWidget {
   final List<StudyTask> tasks;
   final ValueChanged<String> onTaskToggle;
   final VoidCallback onAddTask;
+  final ValueChanged<StudyTask> onEditTask;
+  final ValueChanged<StudyTask> onDeleteTask;
   final bool isLoading;
   final String? errorMessage;
 
@@ -52,6 +56,8 @@ class TaskSection extends StatelessWidget {
                     child: _TaskCard(
                       task: task,
                       onTap: () => onTaskToggle(task.id),
+                      onEdit: () => onEditTask(task),
+                      onDelete: () => onDeleteTask(task),
                     ),
                   ),
                 )
@@ -98,10 +104,17 @@ class _TaskMessageCard extends StatelessWidget {
 }
 
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.task, required this.onTap});
+  const _TaskCard({
+    required this.task,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final StudyTask task;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -111,21 +124,22 @@ class _TaskCard extends StatelessWidget {
 
     return Opacity(
       opacity: task.isCompleted ? 0.72 : 1,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: StudyTheme.softShadow,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: StudyTheme.softShadow,
+        ),
+        child: Row(
+          children: [
+            InkWell(
+              onTap: onTap,
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
                   color: task.isCompleted
                       ? StudyTheme.chipBackground
@@ -145,37 +159,60 @@ class _TaskCard extends StatelessWidget {
                       )
                     : null,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      style: TextStyle(
-                        color: titleColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        decoration: task.isCompleted
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                      ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      color: titleColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      decoration: task.isCompleted
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      task.subject,
-                      style: const TextStyle(
-                        color: StudyTheme.textSecondary,
-                        fontSize: 12,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    task.subject,
+                    style: const TextStyle(
+                      color: StudyTheme.textSecondary,
+                      fontSize: 12,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            PopupMenuButton<_TaskAction>(
+              icon: const Icon(
+                Icons.more_horiz,
+                color: StudyTheme.textSecondary,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              onSelected: (action) {
+                switch (action) {
+                  case _TaskAction.edit:
+                    onEdit();
+                  case _TaskAction.delete:
+                    onDelete();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: _TaskAction.edit, child: Text('Edit')),
+                PopupMenuItem(value: _TaskAction.delete, child: Text('Delete')),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
+enum _TaskAction { edit, delete }

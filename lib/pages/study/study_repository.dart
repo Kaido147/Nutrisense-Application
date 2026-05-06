@@ -162,6 +162,48 @@ class StudyRepository {
         });
   }
 
+  Future<void> updateTask({
+    required String taskId,
+    required String title,
+    String? description,
+    DateTime? dueAt,
+  }) async {
+    final User user = _requireUser();
+    final String trimmedTitle = title.trim();
+    if (taskId.trim().isEmpty) {
+      throw const StudyTaskException('Study task was not found.');
+    }
+    if (trimmedTitle.isEmpty) {
+      throw const StudyTaskException('Please enter a task title.');
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('studyTasks')
+        .doc(taskId)
+        .set({
+          'title': trimmedTitle,
+          'description': _nullableString(description),
+          'dueAt': dueAt == null ? null : Timestamp.fromDate(dueAt),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    final User user = _requireUser();
+    if (taskId.trim().isEmpty) {
+      throw const StudyTaskException('Study task was not found.');
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('studyTasks')
+        .doc(taskId)
+        .delete();
+  }
+
   Future<void> updateTaskCompletion(String taskId, bool isCompleted) async {
     final User user = _requireUser();
     await _firestore

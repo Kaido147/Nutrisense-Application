@@ -17,7 +17,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   static const Color navy = Color(0xFF24376B);
   static const Color bg = Color(0xFFF3F0EC);
   static const Color gold = Color(0xFFD6B66E);
-  static const Color blue = Color(0xFF6A9CF6);
   static const Color green = Color(0xFF22C55E);
   static const Color textDark = Color(0xFF1F2A44);
 
@@ -70,33 +69,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                         const SizedBox(height: 14),
                         _OverviewGrid(stats: stats),
                         const SizedBox(height: 26),
-                        _sectionTitle('Quick Actions'),
-                        const SizedBox(height: 14),
-                        _QuickActionButton(
-                          color: navy,
-                          iconBackground: const Color(0xFF3C4E82),
-                          icon: Icons.access_time,
-                          title: 'Start Study Session',
-                          subtitle: 'Focus mode with timer',
-                          titleColor: Colors.white,
-                          subtitleColor: const Color(0xFFD8E0F2),
-                          iconColor: Colors.white,
-                          onTap: () => widget.onNavigateTab?.call(2),
-                        ),
-                        const SizedBox(height: 14),
-                        _QuickActionButton(
-                          color: gold,
-                          iconBackground: const Color(0xFFE7D4A5),
-                          icon: Icons.gps_fixed,
-                          title: 'Open Wellness Hub',
-                          subtitle: 'Workout and meal recommendations',
-                          titleColor: navy,
-                          subtitleColor: const Color(0xFF3F4A5A),
-                          iconColor: navy,
-                          onTap: () => widget.onNavigateTab?.call(1),
-                        ),
-                        const SizedBox(height: 26),
                         _QuestSection(quests: quests),
+                        const SizedBox(height: 26),
+                        const _DailyQuoteCard(),
                         const SizedBox(height: 30),
                       ],
                     ),
@@ -218,10 +193,6 @@ class _ProgressCard extends StatelessWidget {
     final studyUnit = studyTasks > 0 ? 'tasks' : 'hrs';
 
     final workoutDone = (stats?.completedWorkouts ?? 0) > 0;
-    final sleepHours = stats?.sleepHours ?? 0;
-    final sleepTarget = (profile?.editorTargetSleepHours ?? 8)
-        .clamp(1, 24)
-        .toDouble();
     final totalQuests = stats?.totalQuests ?? 0;
     final completedQuests = stats?.completedQuests ?? 0;
 
@@ -274,15 +245,6 @@ class _ProgressCard extends StatelessWidget {
               ),
               Expanded(
                 child: ProgressCircle(
-                  valueLabel: sleepHours.toStringAsFixed(0),
-                  unit: 'hrs',
-                  label: 'Sleep',
-                  progress: sleepHours / sleepTarget,
-                  color: _HomePageState.blue,
-                ),
-              ),
-              Expanded(
-                child: ProgressCircle(
                   valueLabel: '$completedQuests/$totalQuests',
                   unit: 'done',
                   label: 'Quests',
@@ -325,23 +287,6 @@ class _OverviewGrid extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: OverviewCard(
-                icon: Icons.task_alt_outlined,
-                iconColor: _HomePageState.gold,
-                value:
-                    '${stats?.completedStudyTasks ?? 0}/${stats?.studyTasks ?? 0}',
-                title: 'Study Tasks',
-                subtitle: 'Completed',
-                subtitleColor: _HomePageState.green,
-                bgIconColor: const Color(0xFFF8F3E8),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OverviewCard(
                 icon: Icons.restaurant_menu_outlined,
                 iconColor: const Color(0xFF22C55E),
                 value: '${stats?.mealsLogged ?? 0}',
@@ -351,92 +296,9 @@ class _OverviewGrid extends StatelessWidget {
                 bgIconColor: const Color(0xFFE8F8F0),
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: OverviewCard(
-                icon: Icons.auto_awesome,
-                iconColor: _HomePageState.navy,
-                value:
-                    '${stats?.completedQuests ?? 0}/${stats?.totalQuests ?? 0}',
-                title: 'Daily Quests',
-                subtitle: 'Progress',
-                subtitleColor: _HomePageState.green,
-                bgIconColor: const Color(0xFFEFF2F8),
-              ),
-            ),
           ],
         ),
       ],
-    );
-  }
-}
-
-class _QuickActionButton extends StatelessWidget {
-  const _QuickActionButton({
-    required this.color,
-    required this.iconBackground,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.titleColor,
-    required this.subtitleColor,
-    required this.iconColor,
-    required this.onTap,
-  });
-
-  final Color color;
-  final Color iconBackground;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color titleColor;
-  final Color subtitleColor;
-  final Color iconColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: iconBackground,
-              child: Icon(icon, color: iconColor),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: titleColor,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(color: subtitleColor, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_forward, color: titleColor),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -452,28 +314,98 @@ class _QuestSection extends ConsumerWidget {
       title: 'Daily Quests',
       emptyText: 'Your quests are being prepared.',
       children: quests.take(4).map((quest) {
-        return CheckboxListTile(
-          value: quest.completed,
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          activeColor: _HomePageState.navy,
-          title: Text(
-            quest.title,
-            style: const TextStyle(
-              color: _HomePageState.textDark,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          subtitle: Text(quest.description),
+        return _QuestTile(
+          quest: quest,
           onChanged: (value) async {
             await ref
                 .read(prototypeDataServiceProvider)
-                .setQuestCompleted(quest.id, value ?? false);
+                .setQuestCompleted(quest.id, value);
             ref.invalidate(todayQuestsProvider);
             ref.invalidate(dashboardStatsProvider);
           },
         );
       }).toList(),
+    );
+  }
+}
+
+class _QuestTile extends StatelessWidget {
+  const _QuestTile({required this.quest, required this.onChanged});
+
+  final DailyQuest quest;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final completed = quest.completed;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Material(
+        color: completed ? const Color(0xFFF1F8F3) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => onChanged(!completed),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: completed
+                        ? _HomePageState.green
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: completed
+                          ? _HomePageState.green
+                          : const Color(0xFFD0D5DD),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: completed
+                      ? const Icon(Icons.check, color: Colors.white, size: 16)
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        quest.title,
+                        style: TextStyle(
+                          color: completed
+                              ? const Color(0xFF667085)
+                              : _HomePageState.textDark,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          decoration: completed
+                              ? TextDecoration.lineThrough
+                              : TextDecoration.none,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        quest.description,
+                        style: const TextStyle(
+                          color: Color(0xFF667085),
+                          fontSize: 12.5,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -531,6 +463,94 @@ class _InfoPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DailyQuoteCard extends StatelessWidget {
+  const _DailyQuoteCard();
+
+  static const List<_DailyQuote> _quotes = [
+    _DailyQuote(
+      quote: 'Small healthy choices compound into a stronger week.',
+      author: 'NutriSense',
+    ),
+    _DailyQuote(
+      quote: 'Protect your focus, fuel your body, and take the next step.',
+      author: 'NutriSense',
+    ),
+    _DailyQuote(
+      quote: 'Progress feels lighter when you balance effort with recovery.',
+      author: 'NutriSense',
+    ),
+    _DailyQuote(
+      quote: 'One focused block can turn a busy day into a clear one.',
+      author: 'NutriSense',
+    ),
+    _DailyQuote(
+      quote: 'Your routine is built one meal, one workout, one task at a time.',
+      author: 'NutriSense',
+    ),
+    _DailyQuote(
+      quote: 'Rest is part of the plan, not a break from it.',
+      author: 'NutriSense',
+    ),
+    _DailyQuote(
+      quote: 'Start where you are and make today easier to repeat tomorrow.',
+      author: 'NutriSense',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final quote = _quotes[DateTime.now().weekday - 1];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1ECE6),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2D8C9)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome, color: _HomePageState.gold, size: 26),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '"${quote.quote}"',
+                  style: const TextStyle(
+                    color: _HomePageState.navy,
+                    fontSize: 14,
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '- ${quote.author}',
+                  style: const TextStyle(
+                    color: Color(0xFF667085),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DailyQuote {
+  const _DailyQuote({required this.quote, required this.author});
+
+  final String quote;
+  final String author;
 }
 
 class ProgressCircle extends StatelessWidget {

@@ -1,9 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:nutrisense/pages/study/study_models.dart';
 
 class AddTaskModal extends StatefulWidget {
-  const AddTaskModal({super.key, this.onSave});
+  const AddTaskModal({super.key, this.task, this.onSave});
+
+  final StudyTask? task;
 
   final Future<void> Function({
     required String title,
@@ -14,6 +17,7 @@ class AddTaskModal extends StatefulWidget {
 
   static Future<void> show(
     BuildContext context, {
+    StudyTask? task,
     Future<void> Function({
       required String title,
       String? description,
@@ -26,7 +30,7 @@ class AddTaskModal extends StatefulWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.transparent,
-      builder: (context) => AddTaskModal(onSave: onSave),
+      builder: (context) => AddTaskModal(task: task, onSave: onSave),
     );
   }
 
@@ -52,6 +56,34 @@ class _AddTaskModalState extends State<AddTaskModal> {
 
   final List<String> _priorities = ['Low', 'Medium', 'High', 'Urgent'];
   final List<String> _quickDates = ['Today', 'Tomorrow', 'Next Week'];
+
+  @override
+  void initState() {
+    super.initState();
+    final task = widget.task;
+    if (task == null) {
+      return;
+    }
+
+    _taskTitle.text = task.title;
+    _description.text = task.description ?? '';
+    final DateTime? dueAt = task.dueAt;
+    if (dueAt != null) {
+      _selectedDate = DateTime(dueAt.year, dueAt.month, dueAt.day);
+      _selectedTime = TimeOfDay(hour: dueAt.hour, minute: dueAt.minute);
+      _dueDate.text =
+          '${dueAt.month.toString().padLeft(2, '0')}/${dueAt.day.toString().padLeft(2, '0')}/${dueAt.year}';
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final TimeOfDay? selectedTime = _selectedTime;
+    if (selectedTime != null && _dueTime.text.isEmpty) {
+      _dueTime.text = selectedTime.format(context);
+    }
+  }
 
   @override
   void dispose() {
@@ -222,7 +254,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Add Task',
+                            widget.task == null ? 'Add Task' : 'Edit Task',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -637,9 +669,11 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                                   ),
                                             ),
                                           )
-                                        : const Text(
-                                            'Add Task',
-                                            style: TextStyle(
+                                        : Text(
+                                            widget.task == null
+                                                ? 'Add Task'
+                                                : 'Save Task',
+                                            style: const TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                               color: Colors.white,

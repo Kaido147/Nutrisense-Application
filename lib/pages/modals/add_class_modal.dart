@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 import 'package:nutrisense/services/prototype_data_service.dart';
 
 class AddClassModal extends ConsumerStatefulWidget {
-  const AddClassModal({super.key});
+  const AddClassModal({super.key, this.schedule});
+
+  final ClassSchedule? schedule;
 
   @override
   ConsumerState<AddClassModal> createState() => _AddClassModalState();
 
-  static Future<void> show(BuildContext context) {
+  static Future<void> show(BuildContext context, {ClassSchedule? schedule}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.transparent,
-      builder: (context) => const AddClassModal(),
+      builder: (context) => AddClassModal(schedule: schedule),
     );
   }
 }
@@ -52,6 +55,35 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    final schedule = widget.schedule;
+    if (schedule == null) {
+      return;
+    }
+
+    _classTitle.text = schedule.title;
+    _courseCode.text = schedule.courseCode;
+    _location.text = schedule.location;
+    _selectedDay = schedule.dayOfWeek;
+    _startTimeValue = _fromMinutes(schedule.startTimeMinutes);
+    _endTimeValue = _fromMinutes(schedule.endTimeMinutes);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final TimeOfDay? start = _startTimeValue;
+    final TimeOfDay? end = _endTimeValue;
+    if (start != null && _startTime.text.isEmpty) {
+      _startTime.text = start.format(context);
+    }
+    if (end != null && _endTime.text.isEmpty) {
+      _endTime.text = end.format(context);
+    }
+  }
+
+  @override
   void dispose() {
     _classTitle.dispose();
     _courseCode.dispose();
@@ -77,7 +109,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
     }
   }
 
-  Future<void> _addClass() async {
+  Future<void> _saveClass() async {
     if (_isSaving) {
       return;
     }
@@ -94,17 +126,30 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
 
     setState(() => _isSaving = true);
     try {
-      await ref
-          .read(prototypeDataServiceProvider)
-          .addSchedule(
-            title: _classTitle.text,
-            courseCode: _courseCode.text,
-            dayOfWeek: _selectedDay,
-            startTimeMinutes: _toMinutes(_startTimeValue!),
-            endTimeMinutes: _toMinutes(_endTimeValue!),
-            timeLabel: '${_startTime.text} - ${_endTime.text}',
-            location: _location.text,
-          );
+      final service = ref.read(prototypeDataServiceProvider);
+      final schedule = widget.schedule;
+      if (schedule == null) {
+        await service.addSchedule(
+          title: _classTitle.text,
+          courseCode: _courseCode.text,
+          dayOfWeek: _selectedDay,
+          startTimeMinutes: _toMinutes(_startTimeValue!),
+          endTimeMinutes: _toMinutes(_endTimeValue!),
+          timeLabel: '${_startTime.text} - ${_endTime.text}',
+          location: _location.text,
+        );
+      } else {
+        await service.updateSchedule(
+          scheduleId: schedule.id,
+          title: _classTitle.text,
+          courseCode: _courseCode.text,
+          dayOfWeek: _selectedDay,
+          startTimeMinutes: _toMinutes(_startTimeValue!),
+          endTimeMinutes: _toMinutes(_endTimeValue!),
+          timeLabel: '${_startTime.text} - ${_endTime.text}',
+          location: _location.text,
+        );
+      }
       ref.invalidate(schedulesProvider);
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(workoutPlansProvider);
@@ -168,7 +213,9 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Add Class Schedule',
+                          widget.schedule == null
+                              ? 'Add Class Schedule'
+                              : 'Edit Class Schedule',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -492,7 +539,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextButton(
-                            onPressed: _isSaving ? null : _addClass,
+                            onPressed: _isSaving ? null : _saveClass,
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               backgroundColor: _navyBlue,
@@ -506,9 +553,11 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text(
-                                    'Add Class',
-                                    style: TextStyle(
+                                : Text(
+                                    widget.schedule == null
+                                        ? 'Add Class'
+                                        : 'Save Class',
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
@@ -530,5 +579,10 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
 
   int _toMinutes(TimeOfDay time) {
     return time.hour * 60 + time.minute;
+  }
+
+  TimeOfDay _fromMinutes(int minutes) {
+    final boundedMinutes = minutes.clamp(0, 23 * 60 + 59);
+    return TimeOfDay(hour: boundedMinutes ~/ 60, minute: boundedMinutes % 60);
   }
 }

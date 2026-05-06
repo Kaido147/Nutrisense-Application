@@ -76,9 +76,11 @@ class StudyController extends ChangeNotifier {
     final int totalMinutesThisWeek = _state.sessionHistory
         .where((record) => !_isBeforeCurrentWeek(record.date))
         .fold<int>(0, (sum, record) => sum + record.duration.inMinutes);
-    final int tasksDone =
-        _seedData.completedTasksBeforeToday +
-        _state.tasks.where((task) => task.isCompleted).length;
+    final int tasksDone = _state.tasks.where((task) {
+      final dueAt = task.dueAt;
+      return task.isCompleted &&
+          (dueAt == null || !dueAt.isBefore(_startOfWeek(DateTime.now())));
+    }).length;
 
     return [
       WeeklyStat(
@@ -355,6 +357,26 @@ class StudyController extends ChangeNotifier {
       description: description,
       dueAt: dueAt,
     );
+    await reloadTasks();
+  }
+
+  Future<void> updateTask({
+    required String taskId,
+    required String title,
+    String? description,
+    DateTime? dueAt,
+  }) async {
+    await _repository.updateTask(
+      taskId: taskId,
+      title: title,
+      description: description,
+      dueAt: dueAt,
+    );
+    await reloadTasks();
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    await _repository.deleteTask(taskId);
     await reloadTasks();
   }
 

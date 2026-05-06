@@ -6,14 +6,25 @@ import '../study_theme.dart';
 import 'study_section_header.dart';
 
 class ScheduleSection extends StatelessWidget {
-  const ScheduleSection({super.key, required this.schedulesAsync});
+  const ScheduleSection({
+    super.key,
+    required this.schedulesAsync,
+    required this.onEditSchedule,
+    required this.onDeleteSchedule,
+  });
 
   final AsyncValue<List<ClassSchedule>> schedulesAsync;
+  final ValueChanged<ClassSchedule> onEditSchedule;
+  final ValueChanged<ClassSchedule> onDeleteSchedule;
 
   @override
   Widget build(BuildContext context) {
     return schedulesAsync.when(
-      data: (schedules) => _ScheduleContent(schedules: schedules),
+      data: (schedules) => _ScheduleContent(
+        schedules: schedules,
+        onEditSchedule: onEditSchedule,
+        onDeleteSchedule: onDeleteSchedule,
+      ),
       loading: () => const _ScheduleShell(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 20),
@@ -36,9 +47,15 @@ class ScheduleSection extends StatelessWidget {
 }
 
 class _ScheduleContent extends StatelessWidget {
-  const _ScheduleContent({required this.schedules});
+  const _ScheduleContent({
+    required this.schedules,
+    required this.onEditSchedule,
+    required this.onDeleteSchedule,
+  });
 
   final List<ClassSchedule> schedules;
+  final ValueChanged<ClassSchedule> onEditSchedule;
+  final ValueChanged<ClassSchedule> onDeleteSchedule;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +93,14 @@ class _ScheduleContent extends StatelessWidget {
                 )
               : Column(
                   children: schedules
-                      .map((item) => _ScheduleTile(item: item, showDay: true))
+                      .map(
+                        (item) => _ScheduleTile(
+                          item: item,
+                          showDay: true,
+                          onEdit: () => onEditSchedule(item),
+                          onDelete: () => onDeleteSchedule(item),
+                        ),
+                      )
                       .toList(),
                 ),
         ),
@@ -107,10 +131,17 @@ class _ScheduleShell extends StatelessWidget {
 }
 
 class _ScheduleTile extends StatelessWidget {
-  const _ScheduleTile({required this.item, this.showDay = false});
+  const _ScheduleTile({
+    required this.item,
+    this.showDay = false,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final ClassSchedule item;
   final bool showDay;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -155,13 +186,48 @@ class _ScheduleTile extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            item.timeLabel,
-            style: const TextStyle(
-              color: StudyTheme.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                item.timeLabel,
+                style: const TextStyle(
+                  color: StudyTheme.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (onEdit != null && onDelete != null)
+                PopupMenuButton<_ScheduleAction>(
+                  icon: const Icon(
+                    Icons.more_horiz,
+                    color: StudyTheme.textSecondary,
+                  ),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  onSelected: (action) {
+                    switch (action) {
+                      case _ScheduleAction.edit:
+                        onEdit?.call();
+                      case _ScheduleAction.delete:
+                        onDelete?.call();
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _ScheduleAction.edit,
+                      child: Text('Edit'),
+                    ),
+                    PopupMenuItem(
+                      value: _ScheduleAction.delete,
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ),
+            ],
           ),
         ],
       ),
@@ -181,6 +247,8 @@ class _ScheduleTile extends StatelessWidget {
     }
   }
 }
+
+enum _ScheduleAction { edit, delete }
 
 class _ScheduleCard extends StatelessWidget {
   const _ScheduleCard({required this.child});

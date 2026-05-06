@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
@@ -11,6 +15,7 @@ import 'package:nutrisense/providers/firebase_providers.dart';
 import 'package:nutrisense/services/auth_service.dart';
 import 'package:nutrisense/theme_provider.dart';
 import 'package:provider/provider.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -158,17 +163,7 @@ class _ProfileContent extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 122,
-            height: 122,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF8D8D93), width: 5),
-            ),
-            child: const Center(
-              child: Icon(LucideIcons.user, size: 48, color: Color(0xFF5B2CA0)),
-            ),
-          ),
+          _ProfileAvatar(uid: profile.uid),
           const SizedBox(height: 18),
           Text(
             profile.fullName,
@@ -294,7 +289,6 @@ class _ProfileContent extends StatelessWidget {
     final health = healthProfile;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(24),
@@ -309,87 +303,131 @@ class _ProfileContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Health Profile',
-                  style: TextStyle(
-                    color: _textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => EditHealthProfileModal.show(context, health),
+              borderRadius: BorderRadius.circular(24),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 18,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEFFCF4),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite_border_rounded,
+                        color: Color(0xFF00A63E),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Health Profile',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: _textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            health == null
+                                ? 'Complete your wellness details'
+                                : '${health.fitnessGoal} - ${health.activityLevel}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: _textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 15,
+                      color: Color(0xFF98A2B3),
+                    ),
+                  ],
                 ),
               ),
-              TextButton.icon(
-                onPressed: () => EditHealthProfileModal.show(context, health),
-                icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Edit'),
-                style: TextButton.styleFrom(
-                  foregroundColor: _navyBlue,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
           if (health == null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Complete your health profile to personalize recommendations.',
-                  style: TextStyle(color: _textSecondary),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
+              child: Text(
+                'Personalized meals and workouts will use these details once added.',
+                style: TextStyle(
+                  color: _textSecondary,
+                  fontSize: 12.5,
+                  height: 1.35,
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => EditHealthProfileModal.show(context, null),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Health Profile'),
-                ),
-              ],
+              ),
             )
-          else ...[
-            _buildInfoRow('Age', health.age?.toString() ?? 'Not set'),
-            _buildInfoRow('Gender', health.gender ?? 'Not set'),
-            _buildInfoRow(
-              'Height',
-              health.heightCm == null
-                  ? 'Not set'
-                  : '${_formatNumber(health.heightCm!)} cm',
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+              child: Column(
+                children: [
+                  _buildInfoRow('Age', health.age?.toString() ?? 'Not set'),
+                  _buildInfoRow('Gender', health.gender ?? 'Not set'),
+                  _buildInfoRow(
+                    'Height',
+                    health.heightCm == null
+                        ? 'Not set'
+                        : '${_formatNumber(health.heightCm!)} cm',
+                  ),
+                  _buildInfoRow(
+                    'Current weight',
+                    health.weightKg == null
+                        ? 'Not set'
+                        : '${_formatNumber(health.weightKg!)} kg',
+                  ),
+                  _buildInfoRow(
+                    'Target weight',
+                    health.targetWeightKg == null
+                        ? 'Not set'
+                        : '${_formatNumber(health.targetWeightKg!)} kg',
+                  ),
+                  // ── Goal pace ─────────────────────────────────────────────────
+                  _buildInfoRow(
+                    'Goal pace',
+                    _formatPace(health.weightGainPaceKgPerWeek),
+                  ),
+                  _buildInfoRow('Activity', health.activityLevel),
+                  _buildInfoRow('Fitness goal', health.fitnessGoal),
+                  _buildInfoRow('Diet', health.dietaryPreference),
+                  _buildInfoRow(
+                    'Medical',
+                    health.medicalConditions.isEmpty
+                        ? 'None'
+                        : health.medicalConditions.join(', '),
+                  ),
+                  _buildInfoRow(
+                    'Allergies',
+                    health.allergies.isEmpty
+                        ? 'None'
+                        : health.allergies.join(', '),
+                  ),
+                  _buildInfoRow('Mood', health.moodStatus),
+                ],
+              ),
             ),
-            _buildInfoRow(
-              'Current weight',
-              health.weightKg == null
-                  ? 'Not set'
-                  : '${_formatNumber(health.weightKg!)} kg',
-            ),
-            _buildInfoRow(
-              'Target weight',
-              health.targetWeightKg == null
-                  ? 'Not set'
-                  : '${_formatNumber(health.targetWeightKg!)} kg',
-            ),
-            // ── Goal pace ─────────────────────────────────────────────────
-            _buildInfoRow(
-              'Goal pace',
-              _formatPace(health.weightGainPaceKgPerWeek),
-            ),
-            _buildInfoRow('Activity', health.activityLevel),
-            _buildInfoRow('Fitness goal', health.fitnessGoal),
-            _buildInfoRow('Diet', health.dietaryPreference),
-            _buildInfoRow(
-              'Medical',
-              health.medicalConditions.isEmpty
-                  ? 'None'
-                  : health.medicalConditions.join(', '),
-            ),
-            _buildInfoRow(
-              'Allergies',
-              health.allergies.isEmpty ? 'None' : health.allergies.join(', '),
-            ),
-            _buildInfoRow('Mood', health.moodStatus),
-          ],
         ],
       ),
     );
@@ -731,6 +769,122 @@ class _ProfileContent extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const _ThemeSettingsSheet(),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatefulWidget {
+  const _ProfileAvatar({required this.uid});
+
+  final String uid;
+
+  @override
+  State<_ProfileAvatar> createState() => _ProfileAvatarState();
+}
+
+class _ProfileAvatarState extends State<_ProfileAvatar> {
+  Uint8List? _imageBytes;
+  bool _isPicking = false;
+
+  String get _storageKey => 'profile_image_${widget.uid}';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  Future<void> _loadImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = prefs.getString(_storageKey);
+    if (!mounted || encoded == null || encoded.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _imageBytes = base64Decode(encoded);
+    });
+  }
+
+  Future<void> _pickImage() async {
+    if (_isPicking) return;
+    setState(() => _isPicking = true);
+    try {
+      final image = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        imageQuality: 82,
+      );
+      if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_storageKey, base64Encode(bytes));
+
+      if (!mounted) return;
+      setState(() => _imageBytes = bytes);
+    } finally {
+      if (mounted) setState(() => _isPicking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imageBytes = _imageBytes;
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 122,
+            height: 122,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF8D8D93), width: 5),
+            ),
+            child: CircleAvatar(
+              backgroundColor: const Color(0xFF5B6478),
+              backgroundImage: imageBytes == null
+                  ? null
+                  : MemoryImage(imageBytes),
+              child: imageBytes == null
+                  ? const Icon(
+                      LucideIcons.user,
+                      size: 48,
+                      color: Color(0xFF5B2CA0),
+                    )
+                  : null,
+            ),
+          ),
+          Positioned(
+            right: 2,
+            bottom: 6,
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: _ProfileContent._goldTan,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3),
+              ),
+              child: _isPicking
+                  ? const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _ProfileContent._navyBlue,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.camera_alt_outlined,
+                      color: _ProfileContent._navyBlue,
+                      size: 17,
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

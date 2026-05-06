@@ -93,6 +93,49 @@ class PrototypeDataService {
     });
   }
 
+  Future<void> updateSchedule({
+    required String scheduleId,
+    required String title,
+    required String courseCode,
+    required String dayOfWeek,
+    required int startTimeMinutes,
+    required int endTimeMinutes,
+    required String timeLabel,
+    required String location,
+  }) async {
+    final user = _requireUser();
+    if (scheduleId.trim().isEmpty) {
+      throw const PrototypeDataException('Class schedule was not found.');
+    }
+    if (title.trim().isEmpty) {
+      throw const PrototypeDataException('Please enter a class title.');
+    }
+    if (endTimeMinutes <= startTimeMinutes) {
+      throw const PrototypeDataException('End time must be after start time.');
+    }
+
+    await _userDoc(user.uid).collection('schedules').doc(scheduleId).set({
+      'title': title.trim(),
+      'courseCode': courseCode.trim(),
+      'dayOfWeek': dayOfWeek,
+      'dayIndex': weekdayIndex(dayOfWeek),
+      'startTimeMinutes': startTimeMinutes,
+      'endTimeMinutes': endTimeMinutes,
+      'timeLabel': timeLabel,
+      'location': location.trim(),
+      'color': _scheduleColorFor(dayOfWeek),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteSchedule(String scheduleId) async {
+    final user = _requireUser();
+    if (scheduleId.trim().isEmpty) {
+      throw const PrototypeDataException('Class schedule was not found.');
+    }
+    await _userDoc(user.uid).collection('schedules').doc(scheduleId).delete();
+  }
+
   Future<List<ClassSchedule>> loadSchedules() async {
     final user = _requireUser();
     final snapshot = await _userDoc(user.uid).collection('schedules').get();

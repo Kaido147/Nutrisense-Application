@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 
+import 'modals/add_class_modal.dart';
 import 'modals/add_task_modal.dart';
 import 'modals/journal_entry_modal.dart';
 import 'study/study_controller.dart';
@@ -70,6 +71,10 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                             key: const ValueKey('focus-mode'),
                             controller: _controller,
                             schedulesAsync: schedulesAsync,
+                            onDeleteTask: _confirmDeleteTask,
+                            onEditSchedule: (schedule) =>
+                                AddClassModal.show(context, schedule: schedule),
+                            onDeleteSchedule: _confirmDeleteSchedule,
                           )
                         : _JournalMoodView(
                             key: const ValueKey('journal-mood'),
@@ -84,6 +89,70 @@ class _StudyPageState extends ConsumerState<StudyPage> {
         );
       },
     );
+  }
+
+  Future<void> _confirmDeleteTask(StudyTask task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: Text('Delete "${task.title}" permanently?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _controller.deleteTask(task.id);
+      ref.invalidate(dashboardStatsProvider);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('We could not delete this task.')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteSchedule(ClassSchedule schedule) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete class?'),
+        content: Text('Delete "${schedule.title}" from your classes?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(prototypeDataServiceProvider).deleteSchedule(schedule.id);
+      ref.invalidate(schedulesProvider);
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(workoutPlansProvider);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('We could not delete this class.')),
+      );
+    }
   }
 }
 
@@ -155,13 +224,34 @@ class _FocusModeView extends StatelessWidget {
     super.key,
     required this.controller,
     required this.schedulesAsync,
+    required this.onDeleteTask,
+    required this.onEditSchedule,
+    required this.onDeleteSchedule,
   });
 
   final StudyController controller;
   final AsyncValue<List<ClassSchedule>> schedulesAsync;
+  final ValueChanged<StudyTask> onDeleteTask;
+  final ValueChanged<ClassSchedule> onEditSchedule;
+  final ValueChanged<ClassSchedule> onDeleteSchedule;
 
   @override
   Widget build(BuildContext context) {
+    final schedules = schedulesAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => const <ClassSchedule>[],
+    );
+    final baseStats = controller.weeklyStats;
+    final weeklyStats = <WeeklyStat>[
+      if (baseStats.isNotEmpty) baseStats[0],
+      if (baseStats.length > 1) baseStats[1],
+      WeeklyStat(
+        icon: Icons.calendar_today_outlined,
+        value: '${schedules.length}',
+        label: 'Classes',
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -192,13 +282,35 @@ class _FocusModeView extends StatelessWidget {
                   );
                 },
           ),
+          onEditTask: (task) => AddTaskModal.show(
+            context,
+            task: task,
+            onSave:
+                ({
+                  required String title,
+                  String? description,
+                  DateTime? dueAt,
+                }) {
+                  return controller.updateTask(
+                    taskId: task.id,
+                    title: title,
+                    description: description,
+                    dueAt: dueAt,
+                  );
+                },
+          ),
+          onDeleteTask: onDeleteTask,
           isLoading: controller.isLoadingTasks,
           errorMessage: controller.taskErrorMessage,
         ),
         const SizedBox(height: 24),
-        ScheduleSection(schedulesAsync: schedulesAsync),
+        ScheduleSection(
+          schedulesAsync: schedulesAsync,
+          onEditSchedule: onEditSchedule,
+          onDeleteSchedule: onDeleteSchedule,
+        ),
         const SizedBox(height: 24),
-        WeeklyStatsCard(stats: controller.weeklyStats),
+        WeeklyStatsCard(stats: weeklyStats),
       ],
     );
   }
