@@ -67,6 +67,18 @@ void main() {
       expect(fallback.category, 'Balanced');
       expect(fallback.source, 'generated');
     });
+
+    test('derives exercise progress from saved exercise completion', () {
+      final plan = WorkoutPlan.fromMap('plan-1', <String, dynamic>{
+        'exercises': <Map<String, dynamic>>[
+          {'id': 'push-ups', 'completed': true},
+          {'id': 'squats', 'completed': false},
+        ],
+      });
+
+      expect(plan.completedExerciseCount, 1);
+      expect(plan.exerciseProgress, 0.5);
+    });
   });
 
   group('ClassSchedule', () {
@@ -105,6 +117,8 @@ void main() {
           expect(exercise.name, isNotEmpty);
           expect(exercise.instruction, isNotEmpty);
           expect(exercise.repsOrDuration, isNotEmpty);
+          expect(exercise.toPlanMap()['completed'], isFalse);
+          expect(exercise.toPlanMap()['timerSeconds'], isA<int>());
         }
       }
     });

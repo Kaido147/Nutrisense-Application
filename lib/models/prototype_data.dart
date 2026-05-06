@@ -229,6 +229,15 @@ class WorkoutPlan {
   final bool completed;
   final DateTime? completedAt;
   final DateTime? createdAt;
+
+  int get completedExerciseCount {
+    return exercises.where((exercise) => exercise['completed'] == true).length;
+  }
+
+  double get exerciseProgress {
+    if (exercises.isEmpty) return completed ? 1.0 : 0.0;
+    return completedExerciseCount / exercises.length;
+  }
 }
 
 class MealLog {

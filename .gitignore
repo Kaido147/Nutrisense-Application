@@ -44,7 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
-/assets/UI-UX/
 /assets/context-file/
+/assets/UI-UX/
+
 

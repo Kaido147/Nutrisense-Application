@@ -355,6 +355,52 @@ class PrototypeDataService {
     }, SetOptions(merge: true));
   }
 
+  Future<void> setWorkoutExerciseCompleted(
+    String planId,
+    String exerciseId,
+    bool completed,
+  ) async {
+    final user = _requireUser();
+    final planRef = _userDoc(user.uid).collection('workoutPlans').doc(planId);
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(planRef);
+      final data = snapshot.data();
+      if (data == null) {
+        throw const PrototypeDataException('Workout plan was not found.');
+      }
+
+      final exercises = _mapListValue(data['exercises']);
+      var matched = false;
+      final updatedExercises = exercises
+          .map((exercise) {
+            if (exercise['id']?.toString() != exerciseId) return exercise;
+            matched = true;
+            return <String, dynamic>{
+              ...exercise,
+              'completed': completed,
+              'completedAt': completed ? Timestamp.now() : null,
+            };
+          })
+          .toList(growable: false);
+
+      if (!matched) {
+        throw const PrototypeDataException('Exercise was not found.');
+      }
+
+      final allCompleted =
+          updatedExercises.isNotEmpty &&
+          updatedExercises.every((exercise) => exercise['completed'] == true);
+
+      transaction.set(planRef, {
+        'exercises': updatedExercises,
+        'completed': allCompleted,
+        'completedAt': allCompleted ? FieldValue.serverTimestamp() : null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    });
+  }
+
   Stream<List<MealLog>> watchMealLogs() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(const <MealLog>[]);
@@ -801,6 +847,20 @@ Map<String, dynamic> _mapValue(Object? value) {
     );
   }
   return <String, dynamic>{};
+}
+
+List<Map<String, dynamic>> _mapListValue(Object? value) {
+  if (value is List) {
+    return value
+        .whereType<Map>()
+        .map(
+          (item) => item.map(
+            (key, dynamic nestedValue) => MapEntry(key.toString(), nestedValue),
+          ),
+        )
+        .toList(growable: false);
+  }
+  return const <Map<String, dynamic>>[];
 }
 
 List<String> _stringListValue(Object? value) {

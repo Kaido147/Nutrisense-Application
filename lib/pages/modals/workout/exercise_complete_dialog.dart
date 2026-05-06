@@ -1,19 +1,26 @@
-import 'package:flutter/material.dart';
 import 'dart:ui';
 
-class ExerciseCompleteDialog extends StatelessWidget {
-  final List<bool> setCompleted;
-  final VoidCallback onContinue;
+import 'package:flutter/material.dart';
 
+class ExerciseCompleteDialog extends StatelessWidget {
   const ExerciseCompleteDialog({
     super.key,
+    required this.exerciseName,
     required this.setCompleted,
     required this.onContinue,
   });
 
+  final String exerciseName;
+  final List<bool> setCompleted;
+  final VoidCallback onContinue;
+
   @override
   Widget build(BuildContext context) {
-    const Color _navyBlue = Color(0xFF273967);
+    const navy = Color(0xFF273967);
+    final completedSets = setCompleted.where((completed) => completed).length;
+    final progress = setCompleted.isEmpty
+        ? 0
+        : ((completedSets / setCompleted.length) * 100).round();
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -29,7 +36,6 @@ class ExerciseCompleteDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 32),
-              // Trophy icon in green circle
               Container(
                 width: 80,
                 height: 80,
@@ -44,38 +50,29 @@ class ExerciseCompleteDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              // Title
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Exercise Completed!',
-                    style: TextStyle(
-                      color: _navyBlue,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('🎉', style: TextStyle(fontSize: 24)),
-                ],
+              const Text(
+                'Exercise Completed!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: navy,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
-              // Description
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  'Great job completing all ${setCompleted.length} sets of Shoulder Press!',
+                  'Great job completing all ${setCompleted.length} sets of $exerciseName.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: _navyBlue.withValues(alpha: 0.7),
+                    color: navy.withValues(alpha: 0.7),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
               const SizedBox(height: 32),
-              // Stats row with grey background
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Container(
@@ -90,78 +87,24 @@ class ExerciseCompleteDialog extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Column(
-                        children: [
-                          Text(
-                            setCompleted.length.toString(),
-                            style: TextStyle(
-                              color: _navyBlue,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Sets',
-                            style: TextStyle(
-                              color: _navyBlue.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Text(
-                            setCompleted.where((c) => c).length.toString(),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Completed',
-                            style: TextStyle(
-                              color: _navyBlue.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          const Text(
-                            '100%',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Progress',
-                            style: TextStyle(
-                              color: _navyBlue.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                      _Stat(value: '${setCompleted.length}', label: 'Sets'),
+                      _Stat(value: '$completedSets', label: 'Completed'),
+                      _Stat(
+                        value: '$progress%',
+                        label: 'Progress',
+                        valueColor: Colors.green,
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 32),
-              // Continue button
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: ElevatedButton(
                   onPressed: onContinue,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _navyBlue,
+                    backgroundColor: navy,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -186,6 +129,39 @@ class ExerciseCompleteDialog extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({
+    required this.value,
+    required this.label,
+    this.valueColor = const Color(0xFF273967),
+  });
+
+  final String value;
+  final String label;
+  final Color valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFF667085), fontSize: 12),
+        ),
+      ],
     );
   }
 }

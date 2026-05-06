@@ -27,8 +27,21 @@ class WorkoutExercise {
       'instruction': instruction,
       'tags': tags,
       'completed': false,
+      'completedAt': null,
+      'timerSeconds': _timerSecondsFor(repsOrDuration),
     };
   }
+}
+
+int _timerSecondsFor(String repsOrDuration) {
+  final value = repsOrDuration.toLowerCase();
+  final minutes = RegExp(r'(\d+)\s*min').firstMatch(value);
+  if (minutes != null) {
+    return (int.tryParse(minutes.group(1) ?? '') ?? 1) * 60;
+  }
+  final seconds = RegExp(r'(\d+)\s*sec').firstMatch(value);
+  if (seconds != null) return int.tryParse(seconds.group(1) ?? '') ?? 45;
+  return 60;
 }
 
 class WorkoutCategory {
