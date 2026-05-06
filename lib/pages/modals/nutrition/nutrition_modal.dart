@@ -15,30 +15,62 @@ class NutritionModal extends StatelessWidget {
     this.onSelectMeal,
   });
 
+  // Handles Map<dynamic, dynamic> returned by Firestore / JSON decoding.
+  static Map<String, dynamic> _safeMap(dynamic raw) {
+    if (raw == null) return {};
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));
+    return {};
+  }
+
+  // Returns a display string for calories regardless of whether the value
+  // coming from the AI or Firestore is an int, double, or String.
+  static String _parseCaloriesDisplay(
+    Map<String, dynamic> meal,
+    Map<String, dynamic> nutrition,
+  ) {
+    final raw = meal['calories'] ?? nutrition['calories'];
+    if (raw == null) return 'N/A';
+    if (raw is int) return '$raw kcal';
+    if (raw is double) return '${raw.toInt()} kcal';
+    if (raw is String) {
+      final lower = raw.toLowerCase();
+      // Already contains the unit, e.g. "450 kcal"
+      if (lower.contains('kcal') || lower.contains('cal')) return raw;
+      // Plain number string
+      final n = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), ''));
+      return n != null ? '$n kcal' : raw;
+    }
+    return 'N/A';
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final modalHeight = screenHeight * 0.75;
 
-    // Nutrition data — use meal['nutrition'] if provided, otherwise fallback
-    final nutrition =
-        (meal['nutrition'] as Map<String, dynamic>?) ??
-        {
-          'calories': '420 kcal',
-          'protein': '32g',
-          'carbs': '48g',
-          'fat': '12g',
-          'fiber': '6g',
-          'sugar': '8g',
-          'sodium': '540mg',
-          'cholesterol': '85mg',
-        };
+    // Safe nutrition map -- fixes runtime cast error from Firestore/AI maps
+    final nutrition = meal['nutrition'] != null
+        ? _safeMap(meal['nutrition'])
+        : <String, dynamic>{
+            'calories': '420 kcal',
+            'protein': '32g',
+            'carbs': '48g',
+            'fat': '12g',
+            'saturatedFat': '4g',
+            'transFat': '0g',
+            'fiber': '6g',
+            'sugar': '8g',
+            'sodium': '540mg',
+            'cholesterol': '85mg',
+            'potassium': '235mg',
+            'calcium': '260mg',
+            'iron': '8mg',
+            'vitaminD': '2mcg',
+          };
 
-    // Get calories from root level or nutrition object
-    final calorieValue = meal['calories'] as int?;
-    final caloriesDisplay = calorieValue != null
-        ? '$calorieValue kcal'
-        : (nutrition['calories'] ?? '—');
+    // Safe calories display -- fixes "String is not subtype of int?" crash
+    final caloriesDisplay = _parseCaloriesDisplay(meal, nutrition);
 
     final macros = [
       _MacroItem(
@@ -50,32 +82,65 @@ class NutritionModal extends StatelessWidget {
       ),
       _MacroItem(
         label: 'Protein',
-        value: nutrition['protein'] ?? '—',
+        value: nutrition['protein'] ?? '--',
         icon: Icons.fitness_center,
         color: _navyBlue,
         fillRatio: 0.64,
       ),
       _MacroItem(
         label: 'Carbs',
-        value: nutrition['carbs'] ?? '—',
+        value: nutrition['carbs'] ?? '--',
         icon: Icons.grain,
         color: const Color(0xFFFFB84D),
         fillRatio: 0.55,
       ),
       _MacroItem(
         label: 'Fat',
-        value: nutrition['fat'] ?? '—',
+        value: nutrition['fat'] ?? '--',
         icon: Icons.water_drop,
         color: _green,
         fillRatio: 0.28,
       ),
     ];
 
-    final extras = [
-      _ExtraItem(label: 'Fiber', value: nutrition['fiber'] ?? '—'),
-      _ExtraItem(label: 'Sugar', value: nutrition['sugar'] ?? '—'),
-      _ExtraItem(label: 'Sodium', value: nutrition['sodium'] ?? '—'),
-      _ExtraItem(label: 'Cholesterol', value: nutrition['cholesterol'] ?? '—'),
+    final nutrientGroups = [
+      _NutrientGroup(
+        label: 'FATS',
+        color: _green,
+        icon: Icons.water_drop_outlined,
+        items: [
+          _ExtraItem(
+            label: 'Saturated Fat',
+            value: nutrition['saturatedFat'] ?? '--',
+          ),
+          _ExtraItem(label: 'Trans Fat', value: nutrition['transFat'] ?? '--'),
+        ],
+      ),
+      _NutrientGroup(
+        label: 'CARBOHYDRATES',
+        color: const Color(0xFFFFB84D),
+        icon: Icons.grain_outlined,
+        items: [
+          _ExtraItem(label: 'Fiber', value: nutrition['fiber'] ?? '--'),
+          _ExtraItem(label: 'Sugar', value: nutrition['sugar'] ?? '--'),
+        ],
+      ),
+      _NutrientGroup(
+        label: 'MINERALS & OTHER',
+        color: const Color(0xFF8B5CF6),
+        icon: Icons.science_outlined,
+        items: [
+          _ExtraItem(
+            label: 'Cholesterol',
+            value: nutrition['cholesterol'] ?? '--',
+          ),
+          _ExtraItem(label: 'Sodium', value: nutrition['sodium'] ?? '--'),
+          _ExtraItem(label: 'Potassium', value: nutrition['potassium'] ?? '--'),
+          _ExtraItem(label: 'Calcium', value: nutrition['calcium'] ?? '--'),
+          _ExtraItem(label: 'Iron', value: nutrition['iron'] ?? '--'),
+          _ExtraItem(label: 'Vitamin D', value: nutrition['vitaminD'] ?? '--'),
+        ],
+      ),
     ];
 
     return Stack(
@@ -132,7 +197,8 @@ class NutritionModal extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Content
+
+                // Scrollable content
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
@@ -159,7 +225,8 @@ class NutritionModal extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Macro cards
+
+                        // Macro cards grid
                         GridView.count(
                           crossAxisCount: 2,
                           shrinkWrap: true,
@@ -171,8 +238,9 @@ class NutritionModal extends StatelessWidget {
                               .map((m) => _MacroCard(item: m))
                               .toList(),
                         ),
-                        const SizedBox(height: 20),
-                        // Divider label
+                        const SizedBox(height: 24),
+
+                        // Section label
                         const Text(
                           'OTHER NUTRIENTS',
                           style: TextStyle(
@@ -183,62 +251,19 @@ class NutritionModal extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        // Extra nutrient rows
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: const Color(0xFFEEEEEE),
-                              width: 1,
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            children: extras.asMap().entries.map((entry) {
-                              final isLast = entry.key == extras.length - 1;
-                              return Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          entry.value.label,
-                                          style: const TextStyle(
-                                            color: Color(0xFF666666),
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        Text(
-                                          entry.value.value,
-                                          style: TextStyle(
-                                            color: _navyBlue,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (!isLast)
-                                    const Divider(
-                                      height: 1,
-                                      color: Color(0xFFEEEEEE),
-                                    ),
-                                ],
-                              );
-                            }).toList(),
+
+                        // Grouped nutrient cards
+                        ...nutrientGroups.map(
+                          (group) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _NutrientGroupCard(group: group),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
+
                 // Bottom buttons
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -285,7 +310,7 @@ class NutritionModal extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           child: Text(
-                            '← Back to Meal',
+                            '<- Back to Meal',
                             style: TextStyle(
                               color: _navyBlue,
                               fontSize: 14,
@@ -306,7 +331,7 @@ class NutritionModal extends StatelessWidget {
   }
 }
 
-// ─── Private helpers ───────────────────────────────────────────────────────
+// Data models
 
 class _MacroItem {
   final String label;
@@ -327,13 +352,27 @@ class _MacroItem {
 class _ExtraItem {
   final String label;
   final String value;
-
   const _ExtraItem({required this.label, required this.value});
 }
 
+class _NutrientGroup {
+  final String label;
+  final Color color;
+  final IconData icon;
+  final List<_ExtraItem> items;
+
+  const _NutrientGroup({
+    required this.label,
+    required this.color,
+    required this.icon,
+    required this.items,
+  });
+}
+
+// Widgets
+
 class _MacroCard extends StatelessWidget {
   final _MacroItem item;
-
   const _MacroCard({required this.item});
 
   @override
@@ -380,6 +419,93 @@ class _MacroCard extends StatelessWidget {
               minHeight: 5,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NutrientGroupCard extends StatelessWidget {
+  final _NutrientGroup group;
+  const _NutrientGroupCard({required this.group});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: group.color.withValues(alpha: 0.18)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          // Group header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: group.color.withValues(alpha: 0.07),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(13),
+                topRight: Radius.circular(13),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(group.icon, size: 13, color: group.color),
+                const SizedBox(width: 6),
+                Text(
+                  group.label,
+                  style: TextStyle(
+                    color: group.color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.7,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Nutrient rows
+          ...group.items.asMap().entries.map((entry) {
+            final isLast = entry.key == group.items.length - 1;
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 11,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        entry.value.label,
+                        style: const TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        entry.value.value,
+                        style: const TextStyle(
+                          color: Color(0xFF273967),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isLast)
+                  Divider(
+                    height: 1,
+                    color: group.color.withValues(alpha: 0.12),
+                    indent: 16,
+                    endIndent: 16,
+                  ),
+              ],
+            );
+          }),
         ],
       ),
     );

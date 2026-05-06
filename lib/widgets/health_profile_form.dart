@@ -37,6 +37,7 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
   late String _dietaryPreference;
   late String _moodStatus;
   late String _wellnessStatus;
+  late double _weightGainPace;
   late final Set<String> _medicalConditions;
   late final Set<String> _allergies;
   bool _isSaving = false;
@@ -71,6 +72,22 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     'Food allergies',
   ];
 
+  /// Available pace options: kg lost/gained per week
+  static const List<_PaceOption> _paceOptions = [
+    _PaceOption(
+      value: 0.25,
+      label: '0.25 kg/week',
+      description: 'Slow & steady',
+    ),
+    _PaceOption(value: 0.5, label: '0.5 kg/week', description: 'Recommended'),
+    _PaceOption(
+      value: 0.75,
+      label: '0.75 kg/week',
+      description: 'Faster progress',
+    ),
+    _PaceOption(value: 1.0, label: '1 kg/week', description: 'Aggressive'),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -91,6 +108,7 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     _dietaryPreference = profile.dietaryPreference;
     _moodStatus = profile.moodStatus;
     _wellnessStatus = profile.wellnessStatus;
+    _weightGainPace = profile.weightGainPaceKgPerWeek ?? 0.5;
     _medicalConditions = profile.medicalConditions.toSet();
     _allergies = profile.allergies.toSet();
   }
@@ -123,6 +141,7 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
       allergies: _allergies.toList(growable: false),
       moodStatus: _moodStatus,
       wellnessStatus: _wellnessStatus,
+      weightGainPaceKgPerWeek: _weightGainPace,
       updatedAt: widget.initialProfile.updatedAt,
     );
 
@@ -234,6 +253,73 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
             ],
           ),
           const SizedBox(height: 18),
+
+          // ── Goal pace ────────────────────────────────────────────────────
+          _sectionTitle('Goal pace'),
+          const SizedBox(height: 4),
+          Text(
+            'How fast do you want to reach your target weight?',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          ),
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.6,
+            children: _paceOptions.map((option) {
+              final isSelected = _weightGainPace == option.value;
+              return GestureDetector(
+                onTap: _isSaving
+                    ? null
+                    : () => setState(() => _weightGainPace = option.value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? _navy.withValues(alpha: 0.08)
+                        : const Color(0xFFF8F8F8),
+                    border: Border.all(
+                      color: isSelected ? _navy : const Color(0xFFE2E6EF),
+                      width: isSelected ? 2 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        option.label,
+                        style: TextStyle(
+                          color: _navy,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        option.description,
+                        style: TextStyle(
+                          color: isSelected
+                              ? _navy.withValues(alpha: 0.7)
+                              : Colors.grey.shade500,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 18),
           _sectionTitle('Medical conditions'),
           Wrap(
             spacing: 8,
@@ -267,7 +353,9 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
                 child: TextField(
                   controller: _allergyController,
                   enabled: !_isSaving,
-                  decoration: _inputDecoration('Add allergy'),
+                  decoration: _inputDecoration(
+                    'Add allergy (e.g. peanuts, shellfish)',
+                  ),
                   onSubmitted: (_) => _addAllergy(),
                 ),
               ),
@@ -454,4 +542,16 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     if (value == value.roundToDouble()) return value.toStringAsFixed(0);
     return value.toStringAsFixed(1);
   }
+}
+
+/// Immutable data class for a pace option.
+class _PaceOption {
+  final double value;
+  final String label;
+  final String description;
+  const _PaceOption({
+    required this.value,
+    required this.label,
+    required this.description,
+  });
 }

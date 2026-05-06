@@ -26,6 +26,7 @@ class HealthProfileSetupPage extends ConsumerWidget {
               await service.saveHealthProfile(profile);
 
               // Calculate and save daily macros based on health profile
+              // weightGainPaceKgPerWeek is now included in profile from the form
               final profileService = ref.read(profileServiceProvider);
               await profileService.calculateAndSaveDailyMacros(profile);
 

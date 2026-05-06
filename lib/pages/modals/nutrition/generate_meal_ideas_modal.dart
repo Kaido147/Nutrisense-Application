@@ -1,14 +1,16 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nutrisense/providers/firebase_providers.dart';
 import 'meal_results_modal.dart';
 import '../../../services/meal_services.dart';
 
-class GenerateMealIdeasModal extends StatefulWidget {
+class GenerateMealIdeasModal extends ConsumerStatefulWidget {
   const GenerateMealIdeasModal({super.key});
 
   @override
-  State<GenerateMealIdeasModal> createState() => _GenerateMealIdeasModalState();
+  ConsumerState<GenerateMealIdeasModal> createState() =>
+      _GenerateMealIdeasModalState();
 
   static Future<Map<String, dynamic>?> show(BuildContext context) {
     return showModalBottomSheet<Map<String, dynamic>>(
@@ -21,40 +23,23 @@ class GenerateMealIdeasModal extends StatefulWidget {
   }
 }
 
-class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
+class _GenerateMealIdeasModalState
+    extends ConsumerState<GenerateMealIdeasModal> {
   static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
   static const Color _lightBlue = Color(0xFFE3F2FD);
 
   final TextEditingController _ingredientController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
   final FocusNode _ingredientFocus = FocusNode();
 
-  // Each item stores both ingredient name and quantity
-  final List<Map<String, String>> _fridgeItems = [];
+  // Each item stores only the ingredient name; quantity is always 1 serving
+  // in the backend.
+  final List<String> _fridgeItems = [];
 
   String _selectedMealType = 'Any';
   final Set<String> _selectedDietaryPrefs = {};
   bool _isLoading = false;
-
-  // Selected unit for the quantity field
-  String _selectedUnit = 'pcs';
-
-  // Common quantity units
-  static const List<String> _quickUnits = [
-    'pcs',
-    'whole',
-    'cup',
-    'tbsp',
-    'tsp',
-    'g',
-    'kg',
-    'ml',
-    'l',
-    'slice',
-    'pinch',
-  ];
 
   final List<String> _mealTypes = [
     'Any',
@@ -76,83 +61,15 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
     final ingredient = _ingredientController.text.trim();
     if (ingredient.isEmpty) return;
 
-    final number = _quantityController.text.trim();
-    final quantity = number.isNotEmpty ? '$number $_selectedUnit' : '';
-
     setState(() {
-      _fridgeItems.add({'ingredient': ingredient, 'quantity': quantity});
+      _fridgeItems.add(ingredient);
       _ingredientController.clear();
-      _quantityController.clear();
     });
     _ingredientFocus.requestFocus();
   }
 
   void _removeFridgeItem(int index) {
     setState(() => _fridgeItems.removeAt(index));
-  }
-
-  /// Formats an ingredient entry into a readable label, e.g. "2 cups • Chicken"
-  String _formatChipLabel(Map<String, String> item) {
-    final qty = item['quantity'] ?? '';
-    final name = item['ingredient'] ?? '';
-    return qty.isNotEmpty ? '$qty  •  $name' : name;
-  }
-
-  Future<void> _showUnitPicker() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFDDDDDD),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Select Unit',
-              style: TextStyle(
-                color: _navyBlue,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ..._quickUnits.map(
-              (unit) => ListTile(
-                title: Text(
-                  unit,
-                  style: TextStyle(
-                    color: _navyBlue,
-                    fontWeight: _selectedUnit == unit
-                        ? FontWeight.w700
-                        : FontWeight.w400,
-                  ),
-                ),
-                trailing: _selectedUnit == unit
-                    ? Icon(Icons.check_rounded, color: _green)
-                    : null,
-                onTap: () => Navigator.pop(ctx, unit),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (selected != null) {
-      setState(() => _selectedUnit = selected);
-    }
   }
 
   Future<void> _generateMealIdeas() async {
@@ -166,12 +83,9 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
     setState(() => _isLoading = true);
 
     try {
-      final ingredients = _fridgeItems
-          .map((item) => item['ingredient']!)
-          .toList();
-
+      // Backend receives plain ingredient names; 1 serving is the baseline.
       final meals = await MealService.fetchMealsByIngredients(
-        ingredients,
+        _fridgeItems,
         mealType: _selectedMealType,
         dietaryPrefs: _selectedDietaryPrefs.toList(),
       );
@@ -217,6 +131,13 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
       }
 
       if (mounted) {
+        final healthProfileAsync = ref.watch(healthProfileProvider);
+        final userAllergies = healthProfileAsync.when(
+          data: (profile) => profile?.allergies ?? <String>[],
+          loading: () => <String>[],
+          error: (_, stackTrace) => <String>[],
+        );
+
         final result = await showModalBottomSheet<Map<String, dynamic>>(
           context: context,
           isScrollControlled: true,
@@ -225,12 +146,20 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
           builder: (context) => MealResultsModal(
             meals: meals,
             onBackPressed: () => Navigator.pop(context),
-            userIngredients: _fridgeItems,
+            userIngredients: _fridgeItems
+                .map(
+                  (ingredient) => {
+                    'ingredient': ingredient,
+                    'quantity': '1 serving',
+                  },
+                )
+                .toList(),
+            userAllergies: userAllergies,
           ),
         );
 
         if (result != null && mounted) {
-          // A meal was completed, close this modal and return the meal
+          // A meal was confirmed via LogMealModal — close this modal too.
           Navigator.pop(context, result);
         }
       }
@@ -246,7 +175,6 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
   @override
   void dispose() {
     _ingredientController.dispose();
-    _quantityController.dispose();
     _ingredientFocus.dispose();
     super.dispose();
   }
@@ -322,11 +250,10 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
                     ),
                     const SizedBox(height: 8),
 
-                    // ── Ingredient + Quantity row ────────────────────────────
+                    // ── Ingredient input row ─────────────────────────────────
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Ingredient name field (flexible) — comes FIRST
                         Expanded(
                           child: TextField(
                             controller: _ingredientController,
@@ -349,87 +276,6 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
                               ),
                             ),
                             onSubmitted: (_) => _addFridgeItem(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Quantity field: number input + locked unit badge
-                        Container(
-                          width: 118,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: _lightGray,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              // Number-only input
-                              Expanded(
-                                child: TextField(
-                                  controller: _quantityController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(
-                                      RegExp(r'^\d*\.?\d*'),
-                                    ),
-                                  ],
-                                  decoration: const InputDecoration(
-                                    hintText: '0',
-                                    hintStyle: TextStyle(
-                                      color: Color(0xFFCCCCCC),
-                                      fontSize: 13,
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  onSubmitted: (_) => _addFridgeItem(),
-                                ),
-                              ),
-
-                              // Thin divider
-                              Container(
-                                width: 1,
-                                height: 24,
-                                color: const Color(0xFFDDDDDD),
-                              ),
-
-                              // Tappable locked unit selector
-                              GestureDetector(
-                                onTap: _showUnitPicker,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                  ),
-                                  height: 46,
-                                  alignment: Alignment.center,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _selectedUnit,
-                                        style: TextStyle(
-                                          color: _navyBlue,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Icon(
-                                        Icons.arrow_drop_down_rounded,
-                                        color: _navyBlue,
-                                        size: 16,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -477,7 +323,7 @@ class _GenerateMealIdeasModalState extends State<GenerateMealIdeasModal> {
                                 .entries
                                 .map(
                                   (entry) => Chip(
-                                    label: Text(_formatChipLabel(entry.value)),
+                                    label: Text(entry.value),
                                     onDeleted: () =>
                                         _removeFridgeItem(entry.key),
                                     backgroundColor: _green.withValues(

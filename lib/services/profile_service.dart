@@ -25,9 +25,7 @@ class ProfileService {
 
   Stream<UserProfile?> watchCurrentUserProfile() {
     return _auth.authStateChanges().asyncExpand((user) {
-      if (user == null) {
-        return Stream<UserProfile?>.value(null);
-      }
+      if (user == null) return Stream<UserProfile?>.value(null);
 
       return _firestore.collection('users').doc(user.uid).snapshots().map((
         snapshot,
@@ -131,7 +129,7 @@ class ProfileService {
     }
   }
 
-  /// Calculates and saves daily macro targets based on health profile
+  /// Calculates and saves daily macro targets based on health profile.
   Future<DailyMacros> calculateAndSaveDailyMacros(
     HealthProfile healthProfile,
   ) async {
@@ -142,11 +140,22 @@ class ProfileService {
 
       await _firestore.collection('users').doc(user.uid).set({
         'dailyMacros': {
+          // ── Core macros (personalised) ───────────────────────────────────
           'calories': macros.calories,
           'protein': macros.protein,
           'carbs': macros.carbs,
           'fat': macros.fat,
           'fiber': macros.fiber,
+          // ── Extended nutrients (fixed reference values) ──────────────────
+          'sugar': macros.sugar,
+          'sodium': macros.sodium,
+          'cholesterol': macros.cholesterol,
+          'saturatedFat': macros.saturatedFat,
+          'transFat': macros.transFat,
+          'potassium': macros.potassium,
+          'calcium': macros.calcium,
+          'iron': macros.iron,
+          'vitaminD': macros.vitaminD,
           'calculatedAt': FieldValue.serverTimestamp(),
         },
       }, SetOptions(merge: true));
@@ -165,23 +174,40 @@ class ProfileService {
     }
   }
 
-  /// Gets the current daily macro targets
+  /// Reads the current daily macro targets from Firestore.
   Future<DailyMacros?> getDailyMacros() async {
     final User user = _requireUser();
 
     try {
       final doc = await _firestore.collection('users').doc(user.uid).get();
       final data = doc.data();
-      final macrosData = data?['dailyMacros'] as Map<String, dynamic>?;
+      final m = data?['dailyMacros'] as Map<String, dynamic>?;
 
-      if (macrosData == null) return null;
+      if (m == null) return null;
+
+      // Firestore may return numeric fields as int, double, or num depending
+      // on how they were written. Using (x as num?)?.toInt() is safe for all.
+      int? _i(String key) => (m[key] as num?)?.toInt();
 
       return DailyMacros(
-        calories: macrosData['calories'] as int? ?? 0,
-        protein: macrosData['protein'] as int? ?? 0,
-        carbs: macrosData['carbs'] as int? ?? 0,
-        fat: macrosData['fat'] as int? ?? 0,
-        fiber: macrosData['fiber'] as int? ?? 0,
+        // ── Core macros ───────────────────────────────────────────────────
+        calories: _i('calories') ?? 0,
+        protein: _i('protein') ?? 0,
+        carbs: _i('carbs') ?? 0,
+        fat: _i('fat') ?? 0,
+        fiber: _i('fiber') ?? 0,
+        // ── Extended nutrients ────────────────────────────────────────────
+        // Fall back to canonical reference values so existing Firestore
+        // documents (written before this update) still work correctly.
+        sugar: _i('sugar') ?? 50,
+        sodium: _i('sodium') ?? 2300,
+        cholesterol: _i('cholesterol') ?? 300,
+        saturatedFat: _i('saturatedFat') ?? 20,
+        transFat: _i('transFat') ?? 2,
+        potassium: _i('potassium') ?? 3500,
+        calcium: _i('calcium') ?? 1000,
+        iron: _i('iron') ?? 18,
+        vitaminD: _i('vitaminD') ?? 20,
       );
     } on FirebaseException catch (_) {
       throw const ProfileFlowException(
@@ -201,7 +227,6 @@ class ProfileService {
         'Please log in again before updating your profile.',
       );
     }
-
     return user;
   }
 

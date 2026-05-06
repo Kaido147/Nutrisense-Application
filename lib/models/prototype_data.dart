@@ -15,6 +15,7 @@ class HealthProfile {
     required this.moodStatus,
     required this.wellnessStatus,
     required this.updatedAt,
+    required this.weightGainPaceKgPerWeek,
   });
 
   factory HealthProfile.empty() {
@@ -32,6 +33,7 @@ class HealthProfile {
       moodStatus: 'Balanced',
       wellnessStatus: 'Good',
       updatedAt: null,
+      weightGainPaceKgPerWeek: null,
     );
   }
 
@@ -52,6 +54,7 @@ class HealthProfile {
       moodStatus: _readString(source['moodStatus']) ?? 'Balanced',
       wellnessStatus: _readString(source['wellnessStatus']) ?? 'Good',
       updatedAt: _readDateTime(source['updatedAt']),
+      weightGainPaceKgPerWeek: _readDouble(source['weightGainPaceKgPerWeek']),
     );
   }
 
@@ -68,6 +71,7 @@ class HealthProfile {
   final String moodStatus;
   final String wellnessStatus;
   final DateTime? updatedAt;
+  final double? weightGainPaceKgPerWeek;
 
   bool get isComplete {
     return age != null &&
