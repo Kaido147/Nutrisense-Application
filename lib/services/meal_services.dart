@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import '../Core/constants.dart';
 
 class MealService {
+  static const int _defaultRecipeServings = 4;
+
   static const _mealBase = 'https://www.themealdb.com/api/json/v1/1';
   static const _usdaBase = 'https://api.nal.usda.gov/fdc/v1';
 
@@ -15,23 +17,18 @@ class MealService {
   static const _nidSugar = 2000;
   static const _nidSodium = 1093;
   static const _nidCholesterol = 1253;
-  static const _nidSaturatedFat = 1258; // NEW
-  static const _nidTransFat = 1257; // NEW
-  static const _nidPotassium = 1092; // NEW
-  static const _nidCalcium = 1087; // NEW
-  static const _nidIron = 1089; // NEW
-  static const _nidVitaminD = 1114; // NEW
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // PUBLIC
-  // ─────────────────────────────────────────────────────────────────────────
+  static const _nidSaturatedFat = 1258;
+  static const _nidTransFat = 1257;
+  static const _nidPotassium = 1092;
+  static const _nidCalcium = 1087;
+  static const _nidIron = 1089;
+  static const _nidVitaminD = 1114;
 
   static Future<List<Map<String, dynamic>>> fetchMealsByIngredients(
     List<String> ingredients, {
     String mealType = 'Any',
     List<String> dietaryPrefs = const [],
   }) async {
-    // ── STEP 1: Query TheMealDB once per ingredient ──────────────────────────
     final Map<String, int> idMatchCount = {};
 
     for (int i = 0; i < ingredients.length; i++) {
@@ -56,7 +53,6 @@ class MealService {
 
     if (idMatchCount.isEmpty) return [];
 
-    // ── STEP 2: Take top 10 meals by match count ─────────────────────────────
     final topIds =
         (idMatchCount.entries.toList()
               ..sort((a, b) => b.value.compareTo(a.value)))
@@ -64,13 +60,10 @@ class MealService {
             .map((e) => e.key)
             .toList();
 
-    // ── STEP 3: Fetch full detail + nutrition for each ───────────────────────
     final results = await Future.wait(topIds.map(_lookupMealWithNutrition));
 
-    // ── STEP 4: Remove nulls ─────────────────────────────────────────────────
     var filtered = results.whereType<Map<String, dynamic>>().toList();
 
-    // ── STEP 5: Filter by meal type ──────────────────────────────────────────
     if (mealType != 'Any') {
       filtered = filtered.where((meal) {
         final category = (meal['category'] as String).toLowerCase();
@@ -116,7 +109,6 @@ class MealService {
       }).toList();
     }
 
-    // ── STEP 6: Filter by dietary preferences ────────────────────────────────
     if (dietaryPrefs.isNotEmpty) {
       filtered = filtered.where((meal) {
         final category = (meal['category'] as String).toLowerCase();
@@ -134,7 +126,6 @@ class MealService {
       }).toList();
     }
 
-    // ── STEP 7: Sort by dietary preference nutrition ──────────────────────────
     if (dietaryPrefs.isNotEmpty) {
       filtered.sort((a, b) {
         final aNut = a['nutrition'] as Map<String, dynamic>? ?? {};
@@ -272,12 +263,21 @@ class MealService {
     final meal = _parseMeal(raw);
 
     final ingredients = meal['ingredients'] as List<Map<String, String>>;
-    final nutrition = await _fetchNutritionForMeal(ingredients);
-    meal['nutrition'] = nutrition;
+    final perServingNutrition = await _fetchNutritionForMeal(ingredients);
+    final totalNutrition = _calculateTotalNutrition(
+      perServingNutrition,
+      _defaultRecipeServings,
+    );
+
+    meal['nutrition'] = perServingNutrition;
+    meal['nutritionPerServing'] = perServingNutrition;
+    meal['nutritionTotal'] = totalNutrition;
+    meal['servings'] = _defaultRecipeServings;
+    meal['nutritionBasis'] = 'per 1 serving';
 
     // FIX: update the top-level calories int from the nutrition result so
     // NutritionModal and NutritionTab can both read it without guessing the type.
-    meal['calories'] = _parseCaloriesInt(nutrition['calories']);
+    meal['calories'] = _parseCaloriesInt(perServingNutrition['calories']);
 
     return meal;
   }
@@ -352,27 +352,81 @@ class MealService {
       vitaminD += n['vitaminD'] ?? 0; // NEW
     }
 
+    final perServing = 1 / _defaultRecipeServings;
+
     return {
-      'calories': '${calories.round()} kcal',
-      'protein': '${protein.round()}g',
-      'carbs': '${carbs.round()}g',
-      'fat': '${fat.round()}g',
-      'fiber': '${fiber.round()}g',
-      'sugar': '${sugar.round()}g',
-      'sodium': '${sodium.round()}mg',
-      'cholesterol': '${cholesterol.round()}mg',
-      'saturatedFat': '${saturatedFat.round()}g', // NEW
-      'transFat': '${transFat.round()}g', // NEW
-      'potassium': '${potassium.round()}mg', // NEW
-      'calcium': '${calcium.round()}mg', // NEW
-      'iron': '${iron.round()}mg', // NEW
-      'vitaminD': '${vitaminD.round()}mcg', // NEW
+      'calories': '${(calories * perServing).round()} kcal',
+      'protein': '${(protein * perServing).round()}g',
+      'carbs': '${(carbs * perServing).round()}g',
+      'fat': '${(fat * perServing).round()}g',
+      'fiber': '${(fiber * perServing).round()}g',
+      'sugar': '${(sugar * perServing).round()}g',
+      'sodium': '${(sodium * perServing).round()}mg',
+      'cholesterol': '${(cholesterol * perServing).round()}mg',
+      'saturatedFat': '${(saturatedFat * perServing).round()}g',
+      'transFat': '${(transFat * perServing).round()}g',
+      'potassium': '${(potassium * perServing).round()}mg',
+      'calcium': '${(calcium * perServing).round()}mg',
+      'iron': '${(iron * perServing).round()}mg',
+      'vitaminD': '${(vitaminD * perServing).round()}mcg',
+    };
+  }
+
+  /// Converts per-serving nutrition to total nutrition by multiplying by servings
+  static Map<String, dynamic> _calculateTotalNutrition(
+    Map<String, dynamic> perServingNutrition,
+    int servings,
+  ) {
+    String multiplyNutrient(dynamic raw, int times) {
+      final value =
+          double.tryParse(
+            raw?.toString().replaceAll(RegExp(r'[^0-9.]'), '') ?? '0',
+          ) ??
+          0;
+      final total = value * times;
+      final display = total == total.roundToDouble()
+          ? total.round().toString()
+          : total.toStringAsFixed(1);
+
+      // Extract unit from original value
+      final original = raw?.toString() ?? '';
+      if (original.contains('kcal')) return '$display kcal';
+      if (original.contains('g')) return '$display g';
+      if (original.contains('mg')) return '$display mg';
+      if (original.contains('mcg')) return '$display mcg';
+      return display;
+    }
+
+    return {
+      'calories': multiplyNutrient(perServingNutrition['calories'], servings),
+      'protein': multiplyNutrient(perServingNutrition['protein'], servings),
+      'carbs': multiplyNutrient(perServingNutrition['carbs'], servings),
+      'fat': multiplyNutrient(perServingNutrition['fat'], servings),
+      'saturatedFat': multiplyNutrient(
+        perServingNutrition['saturatedFat'],
+        servings,
+      ),
+      'transFat': multiplyNutrient(perServingNutrition['transFat'], servings),
+      'fiber': multiplyNutrient(perServingNutrition['fiber'], servings),
+      'sugar': multiplyNutrient(perServingNutrition['sugar'], servings),
+      'sodium': multiplyNutrient(perServingNutrition['sodium'], servings),
+      'cholesterol': multiplyNutrient(
+        perServingNutrition['cholesterol'],
+        servings,
+      ),
+      'potassium': multiplyNutrient(perServingNutrition['potassium'], servings),
+      'calcium': multiplyNutrient(perServingNutrition['calcium'], servings),
+      'iron': multiplyNutrient(perServingNutrition['iron'], servings),
+      'vitaminD': multiplyNutrient(perServingNutrition['vitaminD'], servings),
     };
   }
 
   static Future<Map<String, dynamic>?> fetchNutritionForFoodName(
     String foodName,
   ) async {
+    final recipeNutrition = await _fetchNutritionForRecipeName(foodName);
+    if (recipeNutrition != null) return recipeNutrition;
+
     final nutrients = await _fetchNutrientsForIngredient(foodName);
     if (nutrients == null) return null;
 
@@ -392,6 +446,45 @@ class MealService {
       'iron': '${(nutrients['iron'] ?? 0).round()}mg',
       'vitaminD': '${(nutrients['vitaminD'] ?? 0).round()}mcg',
     };
+  }
+
+  static Future<Map<String, dynamic>?> _fetchNutritionForRecipeName(
+    String mealName,
+  ) async {
+    final query = mealName.trim();
+    if (query.isEmpty) return null;
+
+    try {
+      final res = await http.get(
+        Uri.parse('$_mealBase/search.php?s=${Uri.encodeComponent(query)}'),
+      );
+      if (res.statusCode != 200) return null;
+
+      final meals = jsonDecode(res.body)['meals'] as List?;
+      if (meals == null || meals.isEmpty) return null;
+
+      final normalizedQuery = _normalizeName(query);
+      Map<String, dynamic>? selectedMatch;
+
+      for (final meal in meals) {
+        final candidate = meal as Map<String, dynamic>;
+        if (_normalizeName(candidate['strMeal']) == normalizedQuery) {
+          selectedMatch = candidate;
+          break;
+        }
+      }
+
+      selectedMatch ??= _bestRecipeNameMatch(meals, normalizedQuery);
+      if (selectedMatch == null) return null;
+
+      final mealId = selectedMatch['idMeal']?.toString();
+      if (mealId == null || mealId.isEmpty) return null;
+
+      final meal = await _lookupMealWithNutrition(mealId);
+      return meal == null ? null : meal['nutrition'] as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<Map<String, double>?> _fetchNutrientsForIngredient(
@@ -416,7 +509,7 @@ class MealService {
       final food = foods[0] as Map<String, dynamic>;
       final nutrients = food['foodNutrients'] as List? ?? [];
 
-      double? _get(int nutrientId) {
+      double? getNutrient(int nutrientId) {
         for (final n in nutrients) {
           if (n['nutrientId'] == nutrientId) {
             return (n['value'] as num?)?.toDouble();
@@ -426,20 +519,20 @@ class MealService {
       }
 
       return {
-        'calories': _get(_nidCalories) ?? 0,
-        'protein': _get(_nidProtein) ?? 0,
-        'carbs': _get(_nidCarbs) ?? 0,
-        'fat': _get(_nidFat) ?? 0,
-        'fiber': _get(_nidFiber) ?? 0,
-        'sugar': _get(_nidSugar) ?? 0,
-        'sodium': _get(_nidSodium) ?? 0,
-        'cholesterol': _get(_nidCholesterol) ?? 0,
-        'saturatedFat': _get(_nidSaturatedFat) ?? 0, // NEW
-        'transFat': _get(_nidTransFat) ?? 0, // NEW
-        'potassium': _get(_nidPotassium) ?? 0, // NEW
-        'calcium': _get(_nidCalcium) ?? 0, // NEW
-        'iron': _get(_nidIron) ?? 0, // NEW
-        'vitaminD': _get(_nidVitaminD) ?? 0, // NEW
+        'calories': getNutrient(_nidCalories) ?? 0,
+        'protein': getNutrient(_nidProtein) ?? 0,
+        'carbs': getNutrient(_nidCarbs) ?? 0,
+        'fat': getNutrient(_nidFat) ?? 0,
+        'fiber': getNutrient(_nidFiber) ?? 0,
+        'sugar': getNutrient(_nidSugar) ?? 0,
+        'sodium': getNutrient(_nidSodium) ?? 0,
+        'cholesterol': getNutrient(_nidCholesterol) ?? 0,
+        'saturatedFat': getNutrient(_nidSaturatedFat) ?? 0,
+        'transFat': getNutrient(_nidTransFat) ?? 0,
+        'potassium': getNutrient(_nidPotassium) ?? 0,
+        'calcium': getNutrient(_nidCalcium) ?? 0,
+        'iron': getNutrient(_nidIron) ?? 0,
+        'vitaminD': getNutrient(_nidVitaminD) ?? 0,
       };
     } catch (_) {
       return null;
@@ -458,6 +551,44 @@ class MealService {
       return int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
     }
     return 0;
+  }
+
+  static String _normalizeName(dynamic raw) {
+    return raw.toString().trim().toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]+'),
+      ' ',
+    );
+  }
+
+  static Map<String, dynamic>? _bestRecipeNameMatch(
+    List meals,
+    String normalizedQuery,
+  ) {
+    final queryWords = normalizedQuery
+        .split(RegExp(r'\s+'))
+        .where((word) => word.length > 2)
+        .toSet();
+    if (queryWords.isEmpty) return null;
+
+    Map<String, dynamic>? best;
+    var bestScore = 0.0;
+
+    for (final meal in meals) {
+      final candidate = meal as Map<String, dynamic>;
+      final candidateWords = _normalizeName(
+        candidate['strMeal'],
+      ).split(RegExp(r'\s+')).where((word) => word.length > 2).toSet();
+      if (candidateWords.isEmpty) continue;
+
+      final score =
+          queryWords.intersection(candidateWords).length / queryWords.length;
+      if (score > bestScore) {
+        bestScore = score;
+        best = candidate;
+      }
+    }
+
+    return bestScore >= 0.6 ? best : null;
   }
 
   static String _estimateTime(int n) => n <= 5

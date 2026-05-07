@@ -25,14 +25,13 @@ class PrototypeDataService {
   final FirebaseFirestore _firestore;
 
   Stream<HealthProfile?> watchHealthProfile() {
-    return _auth.authStateChanges().asyncExpand((user) {
-      if (user == null) return Stream<HealthProfile?>.value(null);
-      return _userDoc(
-        user.uid,
-      ).collection('healthProfile').doc('current').snapshots().map((snapshot) {
-        final data = snapshot.data();
-        return data == null ? null : HealthProfile.fromMap(data);
-      });
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(null);
+    return _userDoc(
+      user.uid,
+    ).collection('healthProfile').doc('current').snapshots().map((snapshot) {
+      final data = snapshot.data();
+      return data == null ? null : HealthProfile.fromMap(data);
     });
   }
 
@@ -713,6 +712,7 @@ class PrototypeDataService {
       'avoidedAllergies': meal['avoidedAllergies'] ?? const <String>[],
       'medicalNotes': meal['medicalNotes'] ?? const <String>[],
       'source': 'rule-based recommendation',
+      'dateKey': todayKey(),
       'loggedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -752,6 +752,7 @@ class PrototypeDataService {
           .where('dateKey', isLessThanOrEqualTo: weekEndKey)
           .get(),
       uidDoc.collection('mealLogs').get(),
+      uidDoc.collection('mealLogs').where('dateKey', isEqualTo: date).get(),
       uidDoc.collection('dailyQuests').where('dateKey', isEqualTo: date).get(),
       uidDoc.collection('wellnessLogs').doc(date).get(),
     ]);

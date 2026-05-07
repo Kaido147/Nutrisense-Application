@@ -57,7 +57,19 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
   bool _manualNutrition = false;
   bool _showMoreNutrients = false;
   bool _isSaving = false;
+
+  /// The original per-serving nutrition from a recipe meal (TheMealDB).
+  /// Never mutated — used to restore _baseNutritionPerServing when switching
+  /// back from a weight unit to a serving-style unit.
+  Map<String, dynamic>? _recipeNutritionPerServing;
+
+  /// The active nutrition base used for scaling. Cleared when the user picks a
+  /// weight unit on a recipe meal (because recipe data is per-serving, not
+  /// per-100 g — applying weight-unit math to it gives nonsense values).
+  Map<String, dynamic>? _baseNutritionPerServing;
+
   Map<String, dynamic>? _prefilledNutrition;
+  bool _hasRecipeNutrition = false;
 
   final List<String> _mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
   final List<String> _servingUnits = [
@@ -77,15 +89,41 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     'plate',
   ];
 
+  // ── Unit-aware scaling ─────────────────────────────────────────────────────
+  static const _weightUnits = {'g', 'kg', 'ml', 'l', 'oz', 'lb'};
+
+  static const _unitBaseAmount = <String, double>{
+    'g': 100,
+    'kg': 0.1,
+    'ml': 100,
+    'l': 0.1,
+    'oz': 3.527,
+    'lb': 0.220,
+  };
+
+  double _effectiveScale() {
+    final amount = double.tryParse(_servingAmount.text.trim()) ?? 1;
+    if (amount <= 0) return 1.0;
+
+    if (_weightUnits.contains(_selectedUnit)) {
+      final base = _unitBaseAmount[_selectedUnit] ?? 1;
+      return amount / base;
+    }
+
+    return amount;
+  }
+
   @override
   void initState() {
     super.initState();
     _prefillFromInitialMeal();
+    _servingAmount.addListener(_onServingAmountChanged);
   }
 
   @override
   void dispose() {
     _foodName.dispose();
+    _servingAmount.removeListener(_onServingAmountChanged);
     _servingAmount.dispose();
     _calories.dispose();
     _protein.dispose();
@@ -116,12 +154,47 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     _selectedMealType = _normalizeMealType(meal['category'] ?? meal['type']);
     _servingAmount.text = (meal['servingAmount'] ?? '1').toString();
     _selectedUnit = _normalizeUnit(meal['servingUnit'] ?? 'serving');
-    _prefilledNutrition = _safeMap(meal['nutrition']);
-    _applyNutritionToFields(_prefilledNutrition);
 
-    // If nutrition was prefilled (e.g. from meal ideas), show it but keep
-    // auto-fetch mode — user can still toggle to manual if they want.
+    _baseNutritionPerServing =
+        _safeMap(meal['nutritionPerServing']) ??
+        _safeMap(meal['recipeNutritionPerServing']) ??
+        _safeMap(meal['nutrition']);
+
+    // Keep an immutable copy so we can restore it after a unit switch.
+    _recipeNutritionPerServing = _baseNutritionPerServing;
+    _hasRecipeNutrition = _recipeNutritionPerServing != null;
+    _prefilledNutrition = _scaledPrefilledNutrition();
+    _applyNutritionToFields(_prefilledNutrition);
     _manualNutrition = false;
+  }
+
+  void _onServingAmountChanged() {
+    if (_manualNutrition || _baseNutritionPerServing == null) return;
+    setState(() {
+      _prefilledNutrition = _scaledPrefilledNutrition();
+      _applyNutritionToFields(_prefilledNutrition);
+    });
+  }
+
+  void _clearNutritionFields() {
+    for (final c in [
+      _calories,
+      _protein,
+      _carbs,
+      _fats,
+      _saturatedFat,
+      _transFat,
+      _fiber,
+      _sugar,
+      _sodium,
+      _cholesterol,
+      _potassium,
+      _calcium,
+      _iron,
+      _vitaminD,
+    ]) {
+      c.text = '';
+    }
   }
 
   String _normalizeMealType(dynamic raw) {
@@ -129,7 +202,7 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     if (value == null || value.isEmpty) return 'Breakfast';
     return _mealTypes.firstWhere(
       (type) => type.toLowerCase() == value.toLowerCase(),
-      orElse: () => 'Breakfast',
+      orElse: () => 'Lunch',
     );
   }
 
@@ -142,25 +215,44 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     );
   }
 
+  String _caloriesWithUnit(dynamic raw) {
+    final value = raw?.toString().trim() ?? '';
+    if (value.isEmpty) return '0 kcal';
+    final lower = value.toLowerCase();
+    return lower.contains('kcal') || lower.contains('cal')
+        ? value
+        : '$value kcal';
+  }
+
   Future<void> _logMeal() async {
-    if (_foodName.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a food name')));
+    final validationMessage = _validateMeal();
+    if (validationMessage != null) {
+      _showValidationNotification(validationMessage);
       return;
     }
 
     final loggedAt = TimeOfDay.now().format(context);
     setState(() => _isSaving = true);
 
+    // Use manual nutrition if toggled, otherwise use prefilled/scaled.
     Map<String, dynamic>? nutrition = _manualNutrition
         ? _nutritionFromFields()
         : _prefilledNutrition;
 
-    if (!_manualNutrition && nutrition == null) {
-      nutrition = await MealService.fetchNutritionForFoodName(
+    // No prefilled nutrition and no recipe base — fetch from USDA.
+    final shouldFetchUsda =
+        !_hasRecipeNutrition || _weightUnits.contains(_selectedUnit);
+
+    if (!_manualNutrition && nutrition == null && shouldFetchUsda) {
+      final fetched = await MealService.fetchNutritionForFoodName(
         _foodName.text.trim(),
       );
+      if (fetched != null) {
+        final scale = _effectiveScale();
+        nutrition = scale == 1.0
+            ? fetched
+            : _scaleNutritionByAmount(fetched, scale);
+      }
     }
 
     nutrition ??= _emptyNutrition();
@@ -175,19 +267,134 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
       'notes': _notes.text.trim(),
       'calories': nutrition['calories'],
       'nutrition': nutrition,
-      'nutritionBasis': _prefilledNutrition != null ? 'per 1 serving' : null,
+      'nutritionPerServing': _recipeNutritionPerServing,
+      'recipeNutritionPerServing': _recipeNutritionPerServing,
+      'ingredients': widget.initialMeal?['ingredients'] ?? const [],
+      'nutritionBasis': _baseNutritionPerServing != null
+          ? 'scaled from per 1 serving'
+          : 'per serving (1 unit)',
     };
 
     try {
       await ref.read(nutritionServiceProvider).saveMeal(meal);
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(mealLogsProvider);
       if (mounted) Navigator.pop(context, meal);
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not log meal. Please try again.')),
-      );
+      _showValidationNotification('Could not log meal. Please try again.');
     }
+  }
+
+  String? _validateMeal() {
+    final foodName = _foodName.text.trim();
+    if (foodName.isEmpty) return 'Please enter a food name.';
+    if (RegExp(r'\d').hasMatch(foodName)) {
+      return 'Food name cannot contain numbers.';
+    }
+    if (foodName.length < 2) return 'Food name is too short.';
+
+    final amountText = _servingAmount.text.trim();
+    final amount = double.tryParse(amountText);
+    if (amountText.isEmpty || amount == null) {
+      return 'Enter a valid serving amount.';
+    }
+    if (amount <= 0) return 'Serving amount must be greater than 0.';
+    if (amount > 10000) return 'Serving amount is too large.';
+
+    if (!_manualNutrition) return null;
+
+    final requiredFields = {
+      'calories': _calories,
+      'protein': _protein,
+      'carbs': _carbs,
+      'fats': _fats,
+    };
+
+    for (final entry in requiredFields.entries) {
+      final value = entry.value.text.trim();
+      if (value.isEmpty) return 'Enter ${entry.key} for manual nutrition.';
+      if (double.tryParse(value) == null) {
+        return 'Enter a valid ${entry.key} value.';
+      }
+    }
+
+    for (final entry in {
+      'saturated fat': _saturatedFat,
+      'trans fat': _transFat,
+      'fiber': _fiber,
+      'sugar': _sugar,
+      'sodium': _sodium,
+      'cholesterol': _cholesterol,
+      'potassium': _potassium,
+      'calcium': _calcium,
+      'iron': _iron,
+      'vitamin D': _vitaminD,
+    }.entries) {
+      final value = entry.value.text.trim();
+      if (value.isNotEmpty && double.tryParse(value) == null) {
+        return 'Enter a valid ${entry.key} value.';
+      }
+    }
+
+    return null;
+  }
+
+  void _showValidationNotification(String message) {
+    OverlayEntry? overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFFB45309),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Color(0xFF78350F),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      overlayEntry?.remove();
+    });
   }
 
   String _withUnit(TextEditingController controller, String unit) {
@@ -239,6 +446,63 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     if (raw is Map<String, dynamic>) return raw;
     if (raw is Map) return raw.map((key, value) => MapEntry('$key', value));
     return null;
+  }
+
+  Map<String, dynamic>? _scaledPrefilledNutrition() {
+    final base = _baseNutritionPerServing;
+    if (base == null) return null;
+
+    final scale = _effectiveScale();
+
+    return {
+      'calories': _scaleNutrient(base['calories'], scale, 'kcal'),
+      'protein': _scaleNutrient(base['protein'], scale, 'g'),
+      'carbs': _scaleNutrient(base['carbs'], scale, 'g'),
+      'fat': _scaleNutrient(base['fat'], scale, 'g'),
+      'saturatedFat': _scaleNutrient(base['saturatedFat'], scale, 'g'),
+      'transFat': _scaleNutrient(base['transFat'], scale, 'g'),
+      'fiber': _scaleNutrient(base['fiber'], scale, 'g'),
+      'sugar': _scaleNutrient(base['sugar'], scale, 'g'),
+      'sodium': _scaleNutrient(base['sodium'], scale, 'mg'),
+      'cholesterol': _scaleNutrient(base['cholesterol'], scale, 'mg'),
+      'potassium': _scaleNutrient(base['potassium'], scale, 'mg'),
+      'calcium': _scaleNutrient(base['calcium'], scale, 'mg'),
+      'iron': _scaleNutrient(base['iron'], scale, 'mg'),
+      'vitaminD': _scaleNutrient(base['vitaminD'], scale, 'mcg'),
+    };
+  }
+
+  String _scaleNutrient(dynamic raw, double scale, String unit) {
+    final value = double.tryParse(_stripNumber(raw)) ?? 0;
+    final scaled = value * scale;
+    final display = scaled == scaled.roundToDouble()
+        ? scaled.round().toString()
+        : scaled.toStringAsFixed(1);
+    return unit == 'kcal' ? '$display kcal' : '$display$unit';
+  }
+
+  Map<String, dynamic> _scaleNutritionByAmount(
+    Map<String, dynamic> nutrition,
+    double scale,
+  ) {
+    if (scale <= 0) scale = 1.0;
+
+    return {
+      'calories': _scaleNutrient(nutrition['calories'], scale, 'kcal'),
+      'protein': _scaleNutrient(nutrition['protein'], scale, 'g'),
+      'carbs': _scaleNutrient(nutrition['carbs'], scale, 'g'),
+      'fat': _scaleNutrient(nutrition['fat'], scale, 'g'),
+      'saturatedFat': _scaleNutrient(nutrition['saturatedFat'], scale, 'g'),
+      'transFat': _scaleNutrient(nutrition['transFat'], scale, 'g'),
+      'fiber': _scaleNutrient(nutrition['fiber'], scale, 'g'),
+      'sugar': _scaleNutrient(nutrition['sugar'], scale, 'g'),
+      'sodium': _scaleNutrient(nutrition['sodium'], scale, 'mg'),
+      'cholesterol': _scaleNutrient(nutrition['cholesterol'], scale, 'mg'),
+      'potassium': _scaleNutrient(nutrition['potassium'], scale, 'mg'),
+      'calcium': _scaleNutrient(nutrition['calcium'], scale, 'mg'),
+      'iron': _scaleNutrient(nutrition['iron'], scale, 'mg'),
+      'vitaminD': _scaleNutrient(nutrition['vitaminD'], scale, 'mcg'),
+    };
   }
 
   void _applyNutritionToFields(Map<String, dynamic>? nutrition) {
@@ -403,63 +667,166 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     );
   }
 
-  /// Inline dropdown for serving unit — no separate bottom sheet.
-  Widget _buildUnitDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Unit',
-          style: TextStyle(
-            color: _navyBlue,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _selectedUnit,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFFE0E4EC)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFFE0E4EC)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: _brightGreen, width: 1.4),
-            ),
-            filled: true,
-            fillColor: _lightGray,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 14,
-            ),
-            prefixIcon: const Icon(
-              Icons.straighten_outlined,
-              color: _mutedText,
-              size: 22,
-            ),
-          ),
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: _mutedText,
-          ),
-          dropdownColor: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          style: const TextStyle(color: _navyBlue, fontSize: 14),
-          isExpanded: true,
-          items: _servingUnits
-              .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
-              .toList(),
-          onChanged: (value) {
-            if (value != null) setState(() => _selectedUnit = value);
-          },
-        ),
+  void _showUnitPicker() {
+    const groups = <String, List<String>>{
+      'Serving': [
+        'serving',
+        'slice',
+        'piece',
+        'bowl',
+        'plate',
+        'cup',
+        'tbsp',
+        'tsp',
       ],
+      'Weight': ['g', 'kg', 'oz', 'lb'],
+      'Volume': ['ml', 'l'],
+    };
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 8),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDDE1EA),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(24, 4, 24, 12),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Select Unit',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: _navyBlue,
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFECEFF4)),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.only(bottom: 24),
+                    children: groups.entries.map((entry) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 16, 24, 6),
+                            child: Text(
+                              entry.key,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: _mutedText,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                          ...entry.value.map((unit) {
+                            final isSelected = _selectedUnit == unit;
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 2,
+                              ),
+                              title: Text(
+                                unit,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? _navyBlue
+                                      : const Color(0xFF374151),
+                                ),
+                              ),
+                              trailing: isSelected
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      color: _brightGreen,
+                                      size: 20,
+                                    )
+                                  : null,
+                              tileColor: isSelected
+                                  ? const Color(0xFFEAFBF1)
+                                  : Colors.transparent,
+                              onTap: () {
+                                Navigator.pop(context);
+                                if (_manualNutrition) {
+                                  setState(() => _selectedUnit = unit);
+                                  return;
+                                }
+                                setState(() {
+                                  _selectedUnit = unit;
+                                  final toWeight = _weightUnits.contains(unit);
+                                  if (toWeight &&
+                                      _recipeNutritionPerServing != null) {
+                                    _baseNutritionPerServing = null;
+                                    _prefilledNutrition = null;
+                                    _clearNutritionFields();
+                                  } else if (!toWeight &&
+                                      _recipeNutritionPerServing != null) {
+                                    _baseNutritionPerServing =
+                                        _recipeNutritionPerServing;
+                                    _prefilledNutrition =
+                                        _scaledPrefilledNutrition();
+                                    _applyNutritionToFields(
+                                      _prefilledNutrition,
+                                    );
+                                  } else if (_baseNutritionPerServing != null) {
+                                    _prefilledNutrition =
+                                        _scaledPrefilledNutrition();
+                                    _applyNutritionToFields(
+                                      _prefilledNutrition,
+                                    );
+                                  }
+                                });
+                              },
+                            );
+                          }),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildUnitDropdown() {
+    return _buildTapField(
+      label: 'Unit',
+      value: _selectedUnit,
+      icon: Icons.straighten_outlined,
+      onTap: _showUnitPicker,
     );
   }
 
@@ -473,6 +840,34 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
   }
 
   Widget _buildNutritionCard() {
+    final pendingUsda =
+        !_manualNutrition &&
+        _prefilledNutrition == null &&
+        _weightUnits.contains(_selectedUnit) &&
+        _recipeNutritionPerServing != null;
+
+    final amount = _servingAmount.text.trim().isEmpty
+        ? (_weightUnits.contains(_selectedUnit) ? '0' : '1')
+        : _servingAmount.text.trim();
+
+    final String subtitleText;
+    if (_manualNutrition) {
+      subtitleText = 'Enter nutrition manually.';
+    } else if (pendingUsda) {
+      subtitleText =
+          'Nutrition will be fetched from USDA on save ($amount$_selectedUnit).';
+    } else if (_weightUnits.contains(_selectedUnit)) {
+      final baseline = _selectedUnit == 'kg'
+          ? 'g'
+          : _selectedUnit == 'l'
+          ? 'ml'
+          : _selectedUnit;
+      subtitleText =
+          'Nutrition scaled for $amount$_selectedUnit (per 100$baseline baseline).';
+    } else {
+      subtitleText = 'Nutrition scaled for $amount $_selectedUnit.';
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -508,7 +903,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
                   setState(() {
                     _manualNutrition = value;
                     if (!value) {
-                      // Restore prefilled values when switching back to auto
                       _applyNutritionToFields(_prefilledNutrition);
                     }
                   });
@@ -518,11 +912,7 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
           ),
           const SizedBox(height: 6),
           Text(
-            _manualNutrition
-                ? 'Enter nutrition manually.'
-                : _prefilledNutrition != null
-                ? 'Nutrition is prefilled per 1 serving. Toggle to edit manually.'
-                : 'Nutrition will be fetched automatically when you log this meal.',
+            subtitleText,
             style: const TextStyle(
               color: Color(0xFF6B7280),
               fontSize: 12,
@@ -530,13 +920,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
             ),
           ),
 
-          // Read-only preview when auto mode and nutrition is already prefilled
-          if (!_manualNutrition && _prefilledNutrition != null) ...[
-            const SizedBox(height: 16),
-            _buildNutritionPreview(_prefilledNutrition!),
-          ],
-
-          // Manual entry fields
           if (_manualNutrition) ...[
             const SizedBox(height: 16),
             _buildNutrientGrid([
@@ -580,67 +963,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
           ],
         ],
       ),
-    );
-  }
-
-  /// Read-only nutrition preview shown when nutrition is prefilled but user is
-  /// in auto mode.
-  Widget _buildNutritionPreview(Map<String, dynamic> nutrition) {
-    final items = [
-      ('Calories', nutrition['calories']?.toString() ?? '—'),
-      ('Protein', nutrition['protein']?.toString() ?? '—'),
-      ('Carbs', nutrition['carbs']?.toString() ?? '—'),
-      ('Fat', nutrition['fat']?.toString() ?? '—'),
-    ];
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 8,
-      children: [
-        const SizedBox(
-          width: double.infinity,
-          child: Text(
-            'Per 1 serving',
-            style: TextStyle(
-              color: _brightGreen,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        ...items.map((item) {
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFD1F3DE)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.$1,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.$2,
-                  style: const TextStyle(
-                    color: _navyBlue,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-      ],
     );
   }
 
@@ -720,6 +1042,8 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
               : TextInputType.text,
           inputFormatters: numeric
               ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+              : label.toLowerCase().contains('name')
+              ? [FilteringTextInputFormatter.deny(RegExp(r'\d'))]
               : null,
           decoration: _inputDecoration(hint: hint, icon: icon),
         ),

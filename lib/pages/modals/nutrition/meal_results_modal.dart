@@ -8,6 +8,7 @@ class MealResultsModal extends StatefulWidget {
   final List<Map<String, dynamic>> meals;
   final VoidCallback onBackPressed;
   final List<Map<String, String>> userIngredients;
+  final String selectedMealType;
 
   /// Allergies from the user's health profile (e.g. ['peanuts', 'shellfish']).
   final List<String> userAllergies;
@@ -17,6 +18,7 @@ class MealResultsModal extends StatefulWidget {
     required this.meals,
     required this.onBackPressed,
     this.userIngredients = const [],
+    this.selectedMealType = 'Any',
     this.userAllergies = const [],
   });
 
@@ -63,10 +65,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
     );
   }
 
-  /// Opens [CookingStepsModal]. When the user taps "Done" on the last step,
-  /// [CookingStepsModal] pops with the meal map. We catch it here and open
-  /// [LogMealModal] prefilled — no Firestore write happens until the user
-  /// confirms in [LogMealModal].
   Future<void> _openCookingSteps(
     BuildContext context,
     Map<String, dynamic> meal,
@@ -78,28 +76,44 @@ class _MealResultsModalState extends State<MealResultsModal> {
       builder: (_) => CookingStepsModal(meal: meal, onBack: () {}),
     );
 
-    // User dismissed without finishing, or tapped "Back to Meal".
     if (completedMeal == null || !mounted || !context.mounted) return;
 
     await _openLogMealPrefilled(context, completedMeal);
   }
 
-  /// Opens [LogMealModal] with the meal's name and per-serving nutrition
-  /// prefilled. [LogMealModal] owns the Firestore write on confirmation.
   Future<void> _openLogMealPrefilled(
     BuildContext context,
     Map<String, dynamic> meal,
   ) async {
-    final nutrition = _safeNutritionMap(meal['nutrition']);
+    final perServingNutrition = _safeNutritionMap(
+      meal['nutritionPerServing'] ?? meal['nutrition'],
+    );
+
+    // Always use the calories string from the nutrition map so it stays
+    // consistent with what NutritionModal displays. Never use the top-level
+    // int field — the two can diverge after rounding.
+    final caloriesFromNutrition =
+        perServingNutrition['calories'] ?? meal['calories']?.toString();
+
+    final mealType = _resolvedMealType(meal);
 
     final prefill = <String, dynamic>{
       'name': meal['name'] ?? '',
-      'category': meal['category'] ?? '',
+      'category': mealType,
+      'type': mealType,
       // Default to 1 serving; user adjusts amount and unit in LogMealModal.
       'servingAmount': '1',
       'servingUnit': 'serving',
-      // Nutrition values are per serving (MealService baseline = 1 serving).
-      'nutrition': nutrition,
+      // Use the same calories string shown in NutritionModal.
+      'calories': caloriesFromNutrition,
+      'nutrition': perServingNutrition,
+      'nutritionPerServing': perServingNutrition,
+      'recipeNutritionPerServing': perServingNutrition,
+      // false → LogMealModal scales directly from nutritionPerServing without
+      // overriding nutrition['calories'] with the top-level int field.
+      'lockRecipeNutrition': false,
+      'ingredients': meal['ingredients'] ?? const [],
+      'servings': meal['servings'] ?? 1,
       'nutritionBasis': 'per 1 serving',
     };
 
@@ -108,8 +122,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
     final saved = await LogMealModal.show(context, initialMeal: prefill);
 
     if (saved != null && mounted && context.mounted) {
-      // Bubble the confirmed & saved meal all the way up through
-      // GenerateMealIdeasModal so it can close itself too.
       Navigator.pop(context, saved);
     }
   }
@@ -121,6 +133,22 @@ class _MealResultsModalState extends State<MealResultsModal> {
     if (raw is Map<String, dynamic>) return raw;
     if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));
     return {};
+  }
+
+  String _resolvedMealType(Map<String, dynamic> meal) {
+    if (widget.selectedMealType != 'Any') return widget.selectedMealType;
+
+    final category = (meal['category'] ?? meal['type'] ?? '')
+        .toString()
+        .toLowerCase();
+    if (category == 'breakfast') return 'Breakfast';
+    if (category == 'dessert' ||
+        category == 'starter' ||
+        category == 'side' ||
+        category == 'miscellaneous') {
+      return 'Snack';
+    }
+    return 'Lunch';
   }
 
   static _StatusStyle _styleFor(MatchStatus status) {
@@ -367,7 +395,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       ),
                                       const SizedBox(height: 12),
 
-                                      // Stats row — calories show per serving
+                                      // Stats row
                                       Row(
                                         children: [
                                           Icon(
@@ -420,14 +448,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                         ],
                                       ),
 
-                                      // ── Nutrition per serving strip ───────
-                                      if (nutrition != null) ...[
-                                        const SizedBox(height: 12),
-                                        _NutritionPerServingStrip(
-                                          nutrition: nutrition,
-                                        ),
-                                      ],
-
                                       const SizedBox(height: 12),
 
                                       // ── Allergy alert ─────────────────────
@@ -477,12 +497,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                               ? '$measure ${detail.recipeIngredient}'
                                               : detail.recipeIngredient;
                                           final s = _styleFor(detail.status);
-                                          final hint = detail.quantityHint;
-                                          final suffix =
-                                              (hint != null &&
-                                                  hint.mayNotBeEnough)
-                                              ? ' ⚠ need ${hint.recipeAmount.toStringAsFixed(0)} ${hint.unit}'
-                                              : '';
                                           final isAllergen = allergens.any(
                                             (a) =>
                                                 a.toLowerCase() ==
@@ -490,7 +504,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                                     .toLowerCase(),
                                           );
                                           return Chip(
-                                            label: Text('$label$suffix'),
+                                            label: Text(label),
                                             backgroundColor: isAllergen
                                                 ? _allergyOrangeBg
                                                 : s.bg,
@@ -542,27 +556,8 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                         runSpacing: 6,
                                         children: result.userStatuses.map((us) {
                                           final s = _styleFor(us.status);
-                                          final hint = us.quantityHint;
-                                          final warnSuffix =
-                                              (hint != null &&
-                                                  hint.mayNotBeEnough)
-                                              ? ' (need: ${hint.recipeAmount.toStringAsFixed(0)} ${hint.unit})'
-                                              : '';
-                                          final originalUser = widget
-                                              .userIngredients
-                                              .firstWhere(
-                                                (u) =>
-                                                    u['ingredient'] ==
-                                                    us.userIngredient,
-                                                orElse: () => {},
-                                              );
-                                          final qty =
-                                              originalUser['quantity'] ?? '';
-                                          final displayLabel = qty.isNotEmpty
-                                              ? '${us.userIngredient} · $qty$warnSuffix'
-                                              : '${us.userIngredient}$warnSuffix';
                                           return Chip(
-                                            label: Text(displayLabel),
+                                            label: Text(us.userIngredient),
                                             backgroundColor: s.bg,
                                             labelStyle: TextStyle(
                                               color: s.text,
@@ -621,8 +616,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       ),
                                       const SizedBox(height: 8),
 
-                                      // Select This Meal — opens cooking steps,
-                                      // then LogMealModal for final confirmation.
+                                      // Select This Meal
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
@@ -704,127 +698,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Nutrition per serving strip
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _NutritionPerServingStrip extends StatelessWidget {
-  const _NutritionPerServingStrip({required this.nutrition});
-
-  final Map<String, dynamic> nutrition;
-
-  String _val(String key, String suffix) {
-    final raw = nutrition[key];
-    if (raw == null) return '—';
-    final num = raw.toString().replaceAll(RegExp(r'[^0-9.]'), '');
-    return num.isEmpty ? '—' : '$num$suffix';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'NUTRITION PER SERVING:',
-          style: TextStyle(
-            color: Color(0xFF999999),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.4,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            _NutritionPill(
-              label: 'Calories',
-              value: _val('calories', ' kcal'),
-              color: const Color(0xFFFFEDD5),
-              textColor: const Color(0xFFEA580C),
-            ),
-            const SizedBox(width: 6),
-            _NutritionPill(
-              label: 'Protein',
-              value: _val('protein', 'g'),
-              color: const Color(0xFFDCFCE7),
-              textColor: const Color(0xFF16A34A),
-            ),
-            const SizedBox(width: 6),
-            _NutritionPill(
-              label: 'Carbs',
-              value: _val('carbs', 'g'),
-              color: const Color(0xFFEFF6FF),
-              textColor: const Color(0xFF2563EB),
-            ),
-            const SizedBox(width: 6),
-            _NutritionPill(
-              label: 'Fat',
-              value: _val('fat', 'g'),
-              color: const Color(0xFFFDF4FF),
-              textColor: const Color(0xFF9333EA),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _NutritionPill extends StatelessWidget {
-  const _NutritionPill({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.textColor,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-  final Color textColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: textColor.withValues(alpha: 0.7),
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Allergy alert banner
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _AllergyAlertBanner extends StatelessWidget {
   final List<String> allergens;
 
@@ -900,10 +773,6 @@ class _AllergyAlertBanner extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper classes (unchanged)
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _StatusStyle {
   final Color bg;

@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
-class NutritionModal extends StatelessWidget {
+class NutritionModal extends StatefulWidget {
   final Map<String, dynamic> meal;
   final VoidCallback onBack;
   final VoidCallback? onSelectMeal;
-
-  static const Color _navyBlue = Color(0xFF273967);
-  static const Color _green = Color(0xFF00D084);
 
   const NutritionModal({
     super.key,
@@ -14,6 +11,16 @@ class NutritionModal extends StatelessWidget {
     required this.onBack,
     this.onSelectMeal,
   });
+
+  @override
+  State<NutritionModal> createState() => _NutritionModalState();
+}
+
+class _NutritionModalState extends State<NutritionModal> {
+  static const Color _navyBlue = Color(0xFF273967);
+  static const Color _green = Color(0xFF00D084);
+
+  bool _showTotalNutrition = false;
 
   // Handles Map<dynamic, dynamic> returned by Firestore / JSON decoding.
   static Map<String, dynamic> _safeMap(dynamic raw) {
@@ -29,19 +36,75 @@ class NutritionModal extends StatelessWidget {
     Map<String, dynamic> meal,
     Map<String, dynamic> nutrition,
   ) {
-    final raw = meal['calories'] ?? nutrition['calories'];
+    final raw = nutrition['calories'] ?? meal['calories'];
     if (raw == null) return 'N/A';
     if (raw is int) return '$raw kcal';
-    if (raw is double) return '${raw.toInt()} kcal';
+    if (raw is double) {
+      final display = raw % 1 == 0
+          ? raw.toInt().toString()
+          : raw.toStringAsFixed(1);
+      return '$display kcal';
+    }
     if (raw is String) {
       final lower = raw.toLowerCase();
       // Already contains the unit, e.g. "450 kcal"
       if (lower.contains('kcal') || lower.contains('cal')) return raw;
       // Plain number string
-      final n = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), ''));
-      return n != null ? '$n kcal' : raw;
+      final n = double.tryParse(raw.replaceAll(RegExp(r'[^0-9.]'), ''));
+      if (n == null) return raw;
+      final display = n % 1 == 0 ? n.toInt().toString() : n.toStringAsFixed(1);
+      return '$display kcal';
     }
     return 'N/A';
+  }
+
+  Widget _togglePill({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? _navyBlue : const Color(0xFFF1F4F9),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: _navyBlue.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isActive ? Colors.white : const Color(0xFF94A3B8),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isActive ? Colors.white : const Color(0xFF94A3B8),
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -50,8 +113,12 @@ class NutritionModal extends StatelessWidget {
     final modalHeight = screenHeight * 0.75;
 
     // Safe nutrition map -- fixes runtime cast error from Firestore/AI maps
-    final nutrition = meal['nutrition'] != null
-        ? _safeMap(meal['nutrition'])
+    // Prefer nutritionTotal when showTotalNutrition is true, otherwise use per-serving
+    final nutrition =
+        _showTotalNutrition && widget.meal['nutritionTotal'] != null
+        ? _safeMap(widget.meal['nutritionTotal'])
+        : widget.meal['nutrition'] != null
+        ? _safeMap(widget.meal['nutrition'])
         : <String, dynamic>{
             'calories': '420 kcal',
             'protein': '32g',
@@ -70,7 +137,8 @@ class NutritionModal extends StatelessWidget {
           };
 
     // Safe calories display -- fixes "String is not subtype of int?" crash
-    final caloriesDisplay = _parseCaloriesDisplay(meal, nutrition);
+    // Use nutrition map directly to ensure it updates when toggling
+    final caloriesDisplay = _parseCaloriesDisplay(widget.meal, nutrition);
 
     final macros = [
       _MacroItem(
@@ -205,24 +273,62 @@ class NutritionModal extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Meal name chip
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _navyBlue.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            meal['name'] ?? '',
-                            style: TextStyle(
-                              color: _navyBlue,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _navyBlue.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    widget.meal['name'] ?? '',
+                                    style: TextStyle(
+                                      color: _navyBlue,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                            if (widget.meal['nutritionTotal'] != null) ...[
+                              const SizedBox(width: 12),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _togglePill(
+                                      label: 'Per Serving',
+                                      icon: Icons.restaurant_outlined,
+                                      isActive: !_showTotalNutrition,
+                                      onTap: () => setState(
+                                        () => _showTotalNutrition = false,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _togglePill(
+                                      label: 'Whole Meal',
+                                      icon: Icons.dinner_dining_outlined,
+                                      isActive: _showTotalNutrition,
+                                      onTap: () => setState(
+                                        () => _showTotalNutrition = true,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 20),
 
@@ -269,13 +375,13 @@ class NutritionModal extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                   child: Column(
                     children: [
-                      if (onSelectMeal != null)
+                      if (widget.onSelectMeal != null)
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () {
                               Navigator.pop(context);
-                              onSelectMeal!();
+                              widget.onSelectMeal!();
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _navyBlue,
@@ -294,13 +400,14 @@ class NutritionModal extends StatelessWidget {
                             ),
                           ),
                         ),
-                      if (onSelectMeal != null) const SizedBox(height: 10),
+                      if (widget.onSelectMeal != null)
+                        const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         child: TextButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            onBack();
+                            widget.onBack();
                           },
                           style: TextButton.styleFrom(
                             backgroundColor: const Color(0xFFF5F5F5),

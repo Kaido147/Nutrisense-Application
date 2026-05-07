@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 import 'meal_results_modal.dart';
@@ -59,11 +60,35 @@ class _GenerateMealIdeasModalState
 
   void _addFridgeItem() {
     final ingredient = _ingredientController.text.trim();
-    if (ingredient.isEmpty) return;
+    if (ingredient.isEmpty) {
+      _showValidationNotification('Enter an ingredient first.');
+      return;
+    }
+
+    if (RegExp(r'\d').hasMatch(ingredient)) {
+      _showValidationNotification('Ingredient names cannot contain numbers.');
+      return;
+    }
+
+    if (ingredient.length < 2) {
+      _showValidationNotification('Ingredient name is too short.');
+      return;
+    }
+
+    final alreadyAdded = _fridgeItems.any(
+      (item) => item.toLowerCase() == ingredient.toLowerCase(),
+    );
+    if (alreadyAdded) {
+      _showValidationNotification('$ingredient is already in your list.');
+      return;
+    }
 
     setState(() {
       _fridgeItems.add(ingredient);
       _ingredientController.clear();
+      // Auto-deselect any dietary prefs that now conflict
+      final conflicts = _getConflictingPrefs();
+      _selectedDietaryPrefs.removeAll(conflicts);
     });
     _ingredientFocus.requestFocus();
   }
@@ -72,11 +97,107 @@ class _GenerateMealIdeasModalState
     setState(() => _fridgeItems.removeAt(index));
   }
 
+  // Add this constant inside _GenerateMealIdeasModalState:
+  static const Map<String, List<String>> _ingredientConflicts = {
+    'Vegetarian': [
+      'chicken',
+      'beef',
+      'pork',
+      'lamb',
+      'turkey',
+      'duck',
+      'bacon',
+      'ham',
+      'sausage',
+      'tuna',
+      'salmon',
+      'shrimp',
+      'fish',
+      'crab',
+      'lobster',
+      'anchovies',
+      'meat',
+      'pepperoni',
+      'prosciutto',
+      'salami',
+    ],
+    'Vegan': [
+      'chicken',
+      'beef',
+      'pork',
+      'lamb',
+      'turkey',
+      'duck',
+      'bacon',
+      'ham',
+      'sausage',
+      'tuna',
+      'salmon',
+      'shrimp',
+      'fish',
+      'crab',
+      'lobster',
+      'anchovies',
+      'meat',
+      'pepperoni',
+      'prosciutto',
+      'salami',
+      'milk',
+      'cheese',
+      'butter',
+      'cream',
+      'yogurt',
+      'egg',
+      'eggs',
+      'honey',
+      'whey',
+      'gelatin',
+    ],
+    'Dairy-free': [
+      'milk',
+      'cheese',
+      'butter',
+      'cream',
+      'yogurt',
+      'whey',
+      'mozzarella',
+      'parmesan',
+      'cheddar',
+      'brie',
+      'ricotta',
+    ],
+    'Gluten-free': [
+      'wheat',
+      'bread',
+      'flour',
+      'pasta',
+      'barley',
+      'rye',
+      'oats',
+      'noodles',
+      'soy sauce',
+      'crackers',
+      'croutons',
+    ],
+  };
+
+  // Add this helper method:
+  Set<String> _getConflictingPrefs() {
+    final conflicts = <String>{};
+    for (final item in _fridgeItems) {
+      final lower = item.toLowerCase();
+      _ingredientConflicts.forEach((pref, conflictingIngredients) {
+        if (conflictingIngredients.any((c) => lower.contains(c))) {
+          conflicts.add(pref);
+        }
+      });
+    }
+    return conflicts;
+  }
+
   Future<void> _generateMealIdeas() async {
     if (_fridgeItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one ingredient')),
-      );
+      _showValidationNotification('Please add at least one ingredient.');
       return;
     }
 
@@ -94,39 +215,7 @@ class _GenerateMealIdeasModalState
       setState(() => _isLoading = false);
 
       if (meals.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFE53935),
-            duration: const Duration(seconds: 3),
-            content: Row(
-              children: [
-                const Icon(Icons.search_off, color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text(
-                        'No Meals Found',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Try different ingredients',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        _showNoMealsFoundNotification();
         return;
       }
 
@@ -146,6 +235,7 @@ class _GenerateMealIdeasModalState
           builder: (context) => MealResultsModal(
             meals: meals,
             onBackPressed: () => Navigator.pop(context),
+            selectedMealType: _selectedMealType,
             userIngredients: _fridgeItems
                 .map(
                   (ingredient) => {
@@ -170,6 +260,153 @@ class _GenerateMealIdeasModalState
         context,
       ).showSnackBar(SnackBar(content: Text('Something went wrong: $e')));
     }
+  }
+
+  void _showValidationNotification(String message) {
+    OverlayEntry? overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFFB45309),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Color(0xFF78350F),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      overlayEntry?.remove();
+    });
+  }
+
+  void _showNoMealsFoundNotification() {
+    OverlayEntry? overlayEntry;
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 260),
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, -12 * (1 - value)),
+                child: child,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF5F5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFFFCDD2)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.search_off_rounded,
+                      color: Color(0xFFE53935),
+                      size: 21,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'No meals found',
+                          style: TextStyle(
+                            color: _navyBlue,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'Try different ingredients or fewer filters.',
+                          style: TextStyle(
+                            color: Color(0xFF7A3B3B),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry?.remove();
+    });
   }
 
   @override
@@ -258,6 +495,9 @@ class _GenerateMealIdeasModalState
                           child: TextField(
                             controller: _ingredientController,
                             focusNode: _ingredientFocus,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.deny(RegExp(r'\d')),
+                            ],
                             decoration: InputDecoration(
                               hintText: 'e.g., chicken, broccoli...',
                               hintStyle: const TextStyle(
@@ -421,35 +661,101 @@ class _GenerateMealIdeasModalState
                       itemBuilder: (context, index) {
                         final pref = _dietaryPreferences[index];
                         final isSelected = _selectedDietaryPrefs.contains(pref);
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              if (isSelected) {
-                                _selectedDietaryPrefs.remove(pref);
-                              } else {
-                                _selectedDietaryPrefs.add(pref);
-                              }
-                            });
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isSelected ? _lightBlue : _lightGray,
-                              border: Border.all(
-                                color: isSelected
-                                    ? const Color(0xFF1976D2)
-                                    : const Color(0xFFDDDDDD),
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text(
-                                pref,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: _navyBlue,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                        final conflictingPrefs = _getConflictingPrefs();
+                        final isDisabled = conflictingPrefs.contains(pref);
+
+                        // Find which ingredient is causing the conflict (for tooltip text)
+                        final conflictingIngredient = isDisabled
+                            ? _fridgeItems.firstWhere(
+                                (item) => (_ingredientConflicts[pref] ?? [])
+                                    .any((c) => item.toLowerCase().contains(c)),
+                                orElse: () => '',
+                              )
+                            : '';
+
+                        return Tooltip(
+                          message: isDisabled
+                              ? '"$conflictingIngredient" conflicts with $pref'
+                              : '',
+                          triggerMode: TooltipTriggerMode.tap,
+                          child: GestureDetector(
+                            onTap: isDisabled
+                                ? () {
+                                    // Show inline notification instead of silently ignoring
+                                    _showValidationNotification(
+                                      '"$conflictingIngredient" in your ingredients conflicts with $pref.',
+                                    );
+                                  }
+                                : () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedDietaryPrefs.remove(pref);
+                                      } else {
+                                        _selectedDietaryPrefs.add(pref);
+                                      }
+                                    });
+                                  },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: isDisabled
+                                    ? const Color(0xFFF5F5F5)
+                                    : isSelected
+                                    ? _lightBlue
+                                    : _lightGray,
+                                border: Border.all(
+                                  color: isDisabled
+                                      ? const Color(0xFFE0E0E0)
+                                      : isSelected
+                                      ? const Color(0xFF1976D2)
+                                      : const Color(0xFFDDDDDD),
                                 ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (isDisabled)
+                                            const Padding(
+                                              padding: EdgeInsets.only(
+                                                right: 4,
+                                              ),
+                                              child: Icon(
+                                                Icons.block_rounded,
+                                                size: 12,
+                                                color: Color(0xFFBBBBBB),
+                                              ),
+                                            ),
+                                          Flexible(
+                                            child: Text(
+                                              pref,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: isDisabled
+                                                    ? const Color(0xFFBBBBBB)
+                                                    : _navyBlue,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                decoration: isDisabled
+                                                    ? TextDecoration.lineThrough
+                                                    : TextDecoration.none,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -458,7 +764,6 @@ class _GenerateMealIdeasModalState
                     ),
                     const SizedBox(height: 20),
 
-                    // ── AI info banner ───────────────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -489,7 +794,6 @@ class _GenerateMealIdeasModalState
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Generate button ──────────────────────────────────────
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
