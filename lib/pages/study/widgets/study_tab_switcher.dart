@@ -57,8 +57,6 @@ class _StudyTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -67,7 +65,7 @@ class _StudyTabButton extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor : Colors.white,
+            color: isSelected ? StudyTheme.navyBlue : Colors.white,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Row(
@@ -76,7 +74,7 @@ class _StudyTabButton extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? Colors.white : primaryColor,
+                color: isSelected ? Colors.white : StudyTheme.navyBlue,
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -84,7 +82,7 @@ class _StudyTabButton extends StatelessWidget {
                   label,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : primaryColor,
+                    color: isSelected ? Colors.white : StudyTheme.navyBlue,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),

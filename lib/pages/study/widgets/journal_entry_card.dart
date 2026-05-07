@@ -17,8 +17,6 @@ class JournalEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -51,8 +49,8 @@ class JournalEntryCard extends StatelessWidget {
                   children: [
                     Text(
                       entry.title,
-                      style: TextStyle(
-                        color: primaryColor,
+                      style: const TextStyle(
+                        color: StudyTheme.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),

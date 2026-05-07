@@ -27,7 +27,7 @@ class MealResultsModal extends StatefulWidget {
 }
 
 class _MealResultsModalState extends State<MealResultsModal> {
-  static const Color _navyBlue = Color(0xFF003366);
+  static const Color _navyBlue = Color(0xFF273967);
   static const Color _green = Color(0xFF00D084);
   static const Color _lightGray = Color(0xFFF5F5F5);
   static const Color _allergyOrange = Color(0xFFF5A875);
@@ -203,7 +203,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
     final screenHeight = MediaQuery.of(context).size.height;
     final modalHeight = screenHeight * 0.7;
 
@@ -238,16 +237,12 @@ class _MealResultsModalState extends State<MealResultsModal> {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            Icons.shopping_bag,
-                            color: primaryColor,
-                            size: 24,
-                          ),
+                          Icon(Icons.shopping_bag, color: _navyBlue, size: 24),
                           const SizedBox(width: 8),
                           Text(
                             'Generate Meal Ideas',
                             style: TextStyle(
-                              color: primaryColor,
+                              color: _navyBlue,
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                             ),
@@ -256,7 +251,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                       ),
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Icon(Icons.close, color: primaryColor, size: 24),
+                        child: Icon(Icons.close, color: _navyBlue, size: 24),
                       ),
                     ],
                   ),
@@ -291,7 +286,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                 Text(
                                   'Meal Ideas Generated!',
                                   style: TextStyle(
-                                    color: primaryColor,
+                                    color: _navyBlue,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -345,10 +340,12 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   border: Border.all(
-                                    color: isLastItem
-                                        ? primaryColor
-                                        : Color(0xFFEEEEEE),
-                                    width: isLastItem ? 2 : 1,
+                                    color: hasAllergens
+                                        ? _allergyOrange
+                                        : isLastItem
+                                        ? _navyBlue
+                                        : const Color(0xFFEEEEEE),
+                                    width: hasAllergens || isLastItem ? 2 : 1,
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -385,7 +382,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       Text(
                                         meal['name'] ?? '',
                                         style: TextStyle(
-                                          color: primaryColor,
+                                          color: _navyBlue,
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                         ),
@@ -407,13 +404,13 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                           Icon(
                                             Icons.schedule,
                                             size: 16,
-                                            color: primaryColor,
+                                            color: _navyBlue,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             meal['time'] ?? '',
                                             style: TextStyle(
-                                              color: primaryColor,
+                                              color: _navyBlue,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -422,13 +419,13 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                           Icon(
                                             Icons.local_dining,
                                             size: 16,
-                                            color: primaryColor,
+                                            color: _navyBlue,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             meal['difficulty'] ?? '',
                                             style: TextStyle(
-                                              color: primaryColor,
+                                              color: _navyBlue,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -634,7 +631,9 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                                   meal,
                                                 ),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: primaryColor,
+                                            backgroundColor: hasAllergens
+                                                ? Colors.grey.shade300
+                                                : _navyBlue,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12),
@@ -686,7 +685,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                       child: Text(
                         '← Back to Ingredients',
                         style: TextStyle(
-                          color: primaryColor,
+                          color: _navyBlue,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),

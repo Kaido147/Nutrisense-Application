@@ -200,8 +200,8 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   Widget _buildNavyHeader(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: _primaryColor,
+      decoration: const BoxDecoration(
+        color: _navyBlue,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
@@ -271,7 +271,7 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
           margin: const EdgeInsets.all(4),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? _primaryColor : Colors.transparent,
+            color: isSelected ? _navyBlue : Colors.transparent,
             borderRadius: BorderRadius.circular(25),
           ),
           alignment: Alignment.center,

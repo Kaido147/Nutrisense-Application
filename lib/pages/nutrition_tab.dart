@@ -514,7 +514,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
           Text(
             "Today's Nutrition",
             style: TextStyle(
-              color: _primaryColor,
+              color: _navyBlue,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -829,7 +829,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
         Text(
           'Meal Planner',
           style: TextStyle(
-            color: _primaryColor,
+            color: _navyBlue,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -856,7 +856,7 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                         Text(
                           'Meal Ideas Generator',
                           style: TextStyle(
-                            color: _primaryColor,
+                            color: _navyBlue,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),

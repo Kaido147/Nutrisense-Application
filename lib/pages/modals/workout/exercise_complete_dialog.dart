@@ -13,7 +13,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color primary = Theme.of(context).colorScheme.primary;
+    const Color _navyBlue = Color(0xFF273967);
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -48,10 +48,10 @@ class ExerciseCompleteDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                    Text(
+                  Text(
                     'Exercise Completed!',
                     style: TextStyle(
-                      color: primary,
+                      color: _navyBlue,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -68,7 +68,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
                   'Great job completing all ${setCompleted.length} sets of Shoulder Press!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: primary.withValues(alpha: 0.7),
+                    color: _navyBlue.withValues(alpha: 0.7),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -95,7 +95,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
                           Text(
                             setCompleted.length.toString(),
                             style: TextStyle(
-                              color: primary,
+                              color: _navyBlue,
                               fontSize: 24,
                               fontWeight: FontWeight.w700,
                             ),
@@ -103,8 +103,8 @@ class ExerciseCompleteDialog extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             'Sets',
-                              style: TextStyle(
-                              color: primary.withValues(alpha: 0.6),
+                            style: TextStyle(
+                              color: _navyBlue.withValues(alpha: 0.6),
                               fontSize: 12,
                             ),
                           ),
@@ -124,7 +124,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
                           Text(
                             'Completed',
                             style: TextStyle(
-                              color: primary.withValues(alpha: 0.6),
+                              color: _navyBlue.withValues(alpha: 0.6),
                               fontSize: 12,
                             ),
                           ),
@@ -144,7 +144,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
                           Text(
                             'Progress',
                             style: TextStyle(
-                              color: primary.withValues(alpha: 0.6),
+                              color: _navyBlue.withValues(alpha: 0.6),
                               fontSize: 12,
                             ),
                           ),
@@ -161,7 +161,7 @@ class ExerciseCompleteDialog extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onContinue,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primary,
+                    backgroundColor: _navyBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(

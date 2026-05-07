@@ -42,8 +42,6 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -55,13 +53,13 @@ class _StatTile extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: StudyTheme.softShadow,
           ),
-          child: Icon(stat.icon, color: primaryColor, size: 22),
+          child: Icon(stat.icon, color: StudyTheme.navyBlue, size: 22),
         ),
         const SizedBox(height: 12),
         Text(
           stat.value,
-          style: TextStyle(
-            color: primaryColor,
+          style: const TextStyle(
+            color: StudyTheme.textPrimary,
             fontSize: 28,
             fontWeight: FontWeight.w700,
           ),

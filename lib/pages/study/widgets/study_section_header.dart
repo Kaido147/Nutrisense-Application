@@ -18,15 +18,13 @@ class StudySectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: TextStyle(
-            color: primaryColor,
+          style: const TextStyle(
+            color: StudyTheme.textPrimary,
             fontSize: 22,
             fontWeight: FontWeight.w700,
           ),
