@@ -159,7 +159,7 @@ class _QuickActionsModalState extends State<QuickActionsModal> {
                         SizedBox(
                           width: (MediaQuery.of(context).size.width - 72) / 2,
                           child: _buildActionButton(
-                            label: 'Journal Entry',
+                            label: 'New Entry',
                             icon: Icons.menu_book_outlined,
                             color: _navyBlue,
                             onTap: () {

@@ -398,7 +398,7 @@ class ProgressCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = p.Provider.of<ThemeProvider>(context);
-    final primaryColor = themeProvider.primaryColorValue;
+    final primaryColor = themeProvider.primaryForegroundColor;
 
     return Column(
       children: [
@@ -474,7 +474,7 @@ class OverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = p.Provider.of<ThemeProvider>(context);
-    final primaryColor = themeProvider.primaryColorValue;
+    final primaryColor = themeProvider.primaryForegroundColor;
 
     return Container(
       padding: const EdgeInsets.all(18),

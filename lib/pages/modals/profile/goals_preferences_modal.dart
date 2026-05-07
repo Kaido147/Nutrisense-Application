@@ -100,7 +100,7 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = p.Provider.of<ThemeProvider>(context);
-    _primaryColor = themeProvider.primaryColorValue;
+    _primaryColor = themeProvider.primaryForegroundColor;
 
     return ProfileModalShell(
       title: 'Goals & Preferences',

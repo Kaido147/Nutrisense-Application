@@ -12,6 +12,13 @@ enum PrimaryColor {
   darkPurple,
   forestGreen,
   charcoal,
+  pinkRose,
+  coralRed,
+  sunflowerYellow,
+  skyBlue,
+  mintGreen,
+  coralOrange,
+  violet,
 }
 
 extension PrimaryColorExt on PrimaryColor {
@@ -27,6 +34,20 @@ extension PrimaryColorExt on PrimaryColor {
         return const Color(0xFF2D5F3F);
       case PrimaryColor.charcoal:
         return const Color(0xFF2C2C2C);
+      case PrimaryColor.pinkRose:
+        return const Color(0xFFFFB3D9);
+      case PrimaryColor.coralRed:
+        return const Color(0xFFD32F2F);
+      case PrimaryColor.sunflowerYellow:
+        return const Color(0xFFFFF9C4);
+      case PrimaryColor.skyBlue:
+        return const Color(0xFFB3E5FC);
+      case PrimaryColor.mintGreen:
+        return const Color(0xFFB8E6D1);
+      case PrimaryColor.coralOrange:
+        return const Color(0xFFFFCCB3);
+      case PrimaryColor.violet:
+        return const Color(0xFF7C4DFF);
     }
   }
 
@@ -42,6 +63,20 @@ extension PrimaryColorExt on PrimaryColor {
         return 'Forest Green';
       case PrimaryColor.charcoal:
         return 'Charcoal';
+      case PrimaryColor.pinkRose:
+        return 'Pink Rose';
+      case PrimaryColor.coralRed:
+        return 'Coral Red';
+      case PrimaryColor.sunflowerYellow:
+        return 'Sunflower Yellow';
+      case PrimaryColor.skyBlue:
+        return 'Sky Blue';
+      case PrimaryColor.mintGreen:
+        return 'Mint Green';
+      case PrimaryColor.coralOrange:
+        return 'Coral Orange';
+      case PrimaryColor.violet:
+        return 'Violet';
     }
   }
 }
@@ -115,6 +150,19 @@ class ThemeProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   Color get primaryColorValue => _primaryColor.color;
+
+  Color get primaryForegroundColor {
+    final color = _primaryColor.color;
+
+    if (color.computeLuminance() < 0.6) {
+      return color;
+    }
+
+    final hslColor = HSLColor.fromColor(color);
+    return hslColor
+        .withLightness((hslColor.lightness * 0.55).clamp(0.0, 1.0))
+        .toColor();
+  }
 
   ThemeMode get flutterThemeMode {
     switch (_themeMode) {

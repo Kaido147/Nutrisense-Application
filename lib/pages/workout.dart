@@ -14,6 +14,10 @@ class _WorkoutPageState extends State<WorkoutPage> {
   bool _isPressed = false;
   static const Color _lightBg = Color(0xFFF5F0EA);
   static const Color _cream = Color(0xFFF5F0E9);
+  static const Color _cardTextColor = Colors.white;
+  static const Color _cardMutedTextColor = Color(0xFFF3F4F6);
+  static const Color _bodyTextColor = Color(0xFF344054);
+  static const Color _bodyMutedTextColor = Color(0xFF667085);
 
   Color get _primaryColor => Theme.of(context).colorScheme.primary;
 
@@ -76,7 +80,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           Text(
             'Exercises',
             style: TextStyle(
-              color: _primaryColor,
+              color: _bodyTextColor,
               fontSize: 18,
               fontWeight: FontWeight.w500,
             ),
@@ -145,7 +149,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             Text(
                               exercise['name'],
                               style: TextStyle(
-                                color: _primaryColor,
+                                color: _bodyTextColor,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
                               ),
@@ -154,7 +158,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                             Text(
                               exercise['sets'],
                               style: TextStyle(
-                                color: _primaryColor.withValues(alpha: 0.6),
+                                color: _bodyMutedTextColor,
                                 fontSize: 13,
                               ),
                             ),
@@ -220,7 +224,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
               Text(
                 'Weekly Plan',
                 style: TextStyle(
-                  color: _primaryColor,
+                  color: _bodyTextColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 18,
                 ),
@@ -237,7 +241,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 child: Text(
                   'View All',
                   style: TextStyle(
-                    color: _primaryColor,
+                    color: _bodyTextColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -267,12 +271,12 @@ class _WorkoutPageState extends State<WorkoutPage> {
                 // Header with calendar icon and "This Week's Focus" (inside card)
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, color: _primaryColor, size: 20),
+                    Icon(Icons.calendar_today, color: _bodyTextColor, size: 20),
                     const SizedBox(width: 10),
                     Text(
                       'This Week\'s Focus',
                       style: TextStyle(
-                        color: _primaryColor,
+                        color: _bodyTextColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
                       ),
@@ -302,9 +306,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                         Text(
                           '${plan['day']}: ${plan['activity']}',
                           style: TextStyle(
-                            color: _primaryColor.withValues(
-                              alpha: isCompleted ? 1.0 : 1.0,
-                            ),
+                            color: _bodyTextColor,
                             fontWeight: isCompleted
                                 ? FontWeight.w400
                                 : FontWeight.w400,
@@ -332,7 +334,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
           child: Text(
             'Today\'s Routine',
             style: TextStyle(
-              color: _primaryColor,
+              color: _bodyTextColor,
               fontSize: 18,
               fontWeight: FontWeight.w500,
             ),
@@ -378,7 +380,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: _primaryColor,
+                          color: _cardTextColor,
                         ),
                       ),
                       SizedBox(height: 3),
@@ -389,7 +391,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: _primaryColor,
+                            color: _cardMutedTextColor,
                           ),
                         ),
                       ),
@@ -421,7 +423,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
                   Text(
                     '0%',
                     style: TextStyle(
-                      color: _primaryColor,
+                      color: _cardTextColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -459,11 +461,12 @@ class _WorkoutPageState extends State<WorkoutPage> {
                           ),
                           splashFactory: NoSplash.splashFactory,
                         ),
-                        child: const Text(
+                        child: Text(
                           'Continue Workout',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
+                            color: _primaryColor,
                           ),
                         ),
                       ),
@@ -533,7 +536,7 @@ class _WorkoutPageState extends State<WorkoutPage> {
     return Text(
       'Your fitness & nutrition tracker',
       style: TextStyle(
-        color: Theme.of(context).colorScheme.primary,
+        color: Colors.white.withValues(alpha: 0.82),
         fontSize: 13,
       ),
     );
