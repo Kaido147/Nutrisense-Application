@@ -23,14 +23,13 @@ class PrototypeDataService {
   final FirebaseFirestore _firestore;
 
   Stream<HealthProfile?> watchHealthProfile() {
-    return _auth.authStateChanges().asyncExpand((user) {
-      if (user == null) return Stream<HealthProfile?>.value(null);
-      return _userDoc(
-        user.uid,
-      ).collection('healthProfile').doc('current').snapshots().map((snapshot) {
-        final data = snapshot.data();
-        return data == null ? null : HealthProfile.fromMap(data);
-      });
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(null);
+    return _userDoc(
+      user.uid,
+    ).collection('healthProfile').doc('current').snapshots().map((snapshot) {
+      final data = snapshot.data();
+      return data == null ? null : HealthProfile.fromMap(data);
     });
   }
 

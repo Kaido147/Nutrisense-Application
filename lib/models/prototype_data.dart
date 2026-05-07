@@ -98,6 +98,7 @@ class HealthProfile {
       'allergies': allergies,
       'moodStatus': moodStatus,
       'wellnessStatus': wellnessStatus,
+      'weightGainPaceKgPerWeek': weightGainPaceKgPerWeek,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
