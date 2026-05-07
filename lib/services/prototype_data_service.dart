@@ -765,8 +765,9 @@ class PrototypeDataService {
     final weeklyWorkouts = results[5] as QuerySnapshot<Map<String, dynamic>>;
     final weeklySessions = results[6] as QuerySnapshot<Map<String, dynamic>>;
     final meals = results[7] as QuerySnapshot<Map<String, dynamic>>;
-    final quests = results[8] as QuerySnapshot<Map<String, dynamic>>;
-    final wellness = results[9] as DocumentSnapshot<Map<String, dynamic>>;
+    final todayMeals = results[8] as QuerySnapshot<Map<String, dynamic>>;
+    final quests = results[9] as QuerySnapshot<Map<String, dynamic>>;
+    final wellness = results[10] as DocumentSnapshot<Map<String, dynamic>>;
 
     final completedTasks = tasks.docs
         .where((doc) => doc.data()['isCompleted'] == true)
@@ -806,7 +807,7 @@ class PrototypeDataService {
       workoutExercisesTotal: workoutExercisesTotal,
       weeklyCompletedWorkoutDays: weeklyCompletedWorkoutDays,
       weeklyStudyMinutes: weeklyStudyMinutes,
-      mealsLogged: meals.docs.length,
+      mealsLogged: todayMeals.docs.length,
       completedQuests: completedQuests,
       totalQuests: quests.docs.length,
       waterGlasses: wellnessData['waterGlasses'] as int? ?? 0,
