@@ -62,6 +62,9 @@ final nutritionServiceProvider = Provider<NutritionService>((ref) {
 });
 
 final healthProfileProvider = StreamProvider<HealthProfile?>((ref) {
+  final authState = ref.watch(authStateChangesProvider);
+  final user = authState.asData?.value;
+  if (user == null) return Stream.value(null);
   return ref.watch(prototypeDataServiceProvider).watchHealthProfile();
 });
 
