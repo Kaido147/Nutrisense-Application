@@ -103,7 +103,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '12 reps',
         difficulty: 'Beginner',
         instruction: 'Keep your chest tall and sit your hips back.',
-        videoUrl: 'https://www.youtube.com/watch?v=m0GcZ24pK6k',
+        videoUrl: 'https://www.youtube.com/watch?v=WkWLXh2kih8',
       ),
       WorkoutExercise(
         id: 'push-ups',
@@ -112,6 +112,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '8-10 reps',
         difficulty: 'Beginner',
         instruction: 'Lower with control; use knees if needed.',
+        videoUrl: 'https://www.youtube.com/shorts/ba8tr1NzwXU',
       ),
       WorkoutExercise(
         id: 'plank',
@@ -120,6 +121,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '30 sec',
         difficulty: 'Beginner',
         instruction: 'Brace your core and keep a straight line.',
+        videoUrl: 'https://www.youtube.com/watch?v=Iv75ErM4wCI',
       ),
       WorkoutExercise(
         id: 'jumping-jacks',
@@ -128,6 +130,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '45 sec',
         difficulty: 'Beginner',
         instruction: 'Move lightly and keep a steady rhythm.',
+        videoUrl: 'https://www.youtube.com/shorts/S8V_iXijSwc',
       ),
     ],
   ),
@@ -143,6 +146,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '8-10 reps',
         difficulty: 'Beginner',
         instruction: 'Keep hands under shoulders and elbows controlled.',
+        videoUrl: 'https://www.youtube.com/shorts/ba8tr1NzwXU',
       ),
       WorkoutExercise(
         id: 'shoulder-taps',
@@ -151,6 +155,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 each side',
         difficulty: 'Beginner',
         instruction: 'Avoid rocking your hips while tapping shoulders.',
+        videoUrl: 'https://www.youtube.com/shorts/Ki-H6D3gvco',
       ),
       WorkoutExercise(
         id: 'arm-circles',
@@ -159,6 +164,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '45 sec',
         difficulty: 'Beginner',
         instruction: 'Make controlled circles forward and backward.',
+        videoUrl: 'https://www.youtube.com/watch?v=5R2aFtejVlE',
       ),
       WorkoutExercise(
         id: 'tricep-dips',
@@ -167,6 +173,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 reps',
         difficulty: 'Beginner',
         instruction: 'Use a stable chair and lower slowly.',
+        videoUrl: 'https://www.youtube.com/shorts/jDafIn0WMUw',
       ),
     ],
   ),
@@ -182,6 +189,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '12 reps',
         difficulty: 'Beginner',
         instruction: 'Push through your heels and stand tall.',
+        videoUrl: 'https://www.youtube.com/watch?v=DlS-GAF8Edg',
       ),
       WorkoutExercise(
         id: 'lunges',
@@ -190,6 +198,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 each leg',
         difficulty: 'Beginner',
         instruction: 'Step far enough to keep the front knee stable.',
+        videoUrl: 'https://www.youtube.com/shorts/zriYMBKtgbI',
       ),
       WorkoutExercise(
         id: 'glute-bridges',
@@ -198,6 +207,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '15 reps',
         difficulty: 'Beginner',
         instruction: 'Squeeze glutes at the top without arching your back.',
+        videoUrl: 'https://www.youtube.com/watch?v=oO4Aj_4qydM',
       ),
       WorkoutExercise(
         id: 'calf-raises',
@@ -206,6 +216,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '15 reps',
         difficulty: 'Beginner',
         instruction: 'Rise slowly and pause at the top.',
+        videoUrl: 'https://www.youtube.com/watch?v=qPd73snQfUs',
       ),
     ],
   ),
@@ -221,6 +232,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '30 sec',
         difficulty: 'Beginner',
         instruction: 'Keep ribs down and breathe steadily.',
+        videoUrl: 'https://www.youtube.com/watch?v=Iv75ErM4wCI',
       ),
       WorkoutExercise(
         id: 'crunches',
@@ -229,6 +241,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '12 reps',
         difficulty: 'Beginner',
         instruction: 'Lift shoulders gently without pulling your neck.',
+        videoUrl: 'https://www.youtube.com/watch?v=OlzHNUVL4Qo',
       ),
       WorkoutExercise(
         id: 'leg-raises',
@@ -237,6 +250,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 reps',
         difficulty: 'Beginner',
         instruction: 'Lower legs slowly and keep your back supported.',
+        videoUrl: 'https://www.youtube.com/shorts/fbGDQGHxvHk',
       ),
       WorkoutExercise(
         id: 'mountain-climbers-core',
@@ -245,6 +259,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '30 sec',
         difficulty: 'Beginner',
         instruction: 'Drive knees forward while keeping shoulders stacked.',
+        videoUrl: 'https://www.youtube.com/watch?v=NO7edUquFqs',
       ),
     ],
   ),
@@ -260,6 +275,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '45 sec',
         difficulty: 'Beginner',
         instruction: 'Land softly and keep your pace comfortable.',
+        videoUrl: 'https://www.youtube.com/shorts/S8V_iXijSwc',
       ),
       WorkoutExercise(
         id: 'high-knees',
@@ -268,6 +284,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '40 sec',
         difficulty: 'Beginner',
         instruction: 'Lift knees toward hip height while pumping arms.',
+        videoUrl: 'https://www.youtube.com/shorts/WrKc4YsgAEA',
       ),
       WorkoutExercise(
         id: 'burpees',
@@ -276,6 +293,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '6 reps',
         difficulty: 'Intermediate',
         instruction: 'Step back instead of jumping if needed.',
+        videoUrl: 'https://www.youtube.com/watch?v=qLBImHhCXSw',
       ),
       WorkoutExercise(
         id: 'jog-in-place',
@@ -284,6 +302,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '60 sec',
         difficulty: 'Beginner',
         instruction: 'Stay light on your feet and breathe evenly.',
+        videoUrl: 'https://www.youtube.com/watch?v=xmkYBO85leM',
       ),
     ],
   ),
@@ -299,6 +318,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '30 sec each side',
         difficulty: 'Beginner',
         instruction: 'Move gently and avoid pulling hard.',
+        videoUrl: 'https://www.youtube.com/watch?v=H5h54Q0wpps',
       ),
       WorkoutExercise(
         id: 'hamstring-stretch',
@@ -307,6 +327,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '45 sec each leg',
         difficulty: 'Beginner',
         instruction: 'Hinge at the hips and keep the stretch mild.',
+        videoUrl: 'https://www.youtube.com/watch?v=LVY692zJK0A',
       ),
       WorkoutExercise(
         id: 'shoulder-stretch',
@@ -315,6 +336,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '30 sec each side',
         difficulty: 'Beginner',
         instruction: 'Relax your shoulder away from your ear.',
+        videoUrl: 'https://www.youtube.com/watch?v=GTGMeddgkOo',
       ),
       WorkoutExercise(
         id: 'childs-pose',
@@ -323,6 +345,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '45 sec',
         difficulty: 'Beginner',
         instruction: 'Reach forward and breathe into your back.',
+        videoUrl: 'https://www.youtube.com/shorts/vlbKaGclSfA',
       ),
     ],
   ),
@@ -338,6 +361,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 reps',
         difficulty: 'Beginner',
         instruction: 'Stand tall and press away from a wall.',
+        videoUrl: 'https://www.youtube.com/watch?v=YB0egDzsu18',
       ),
       WorkoutExercise(
         id: 'sit-to-stand',
@@ -346,6 +370,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 reps',
         difficulty: 'Beginner',
         instruction: 'Stand from a chair without using momentum.',
+        videoUrl: 'https://www.youtube.com/watch?v=yVgHPEbqsmI',
       ),
       WorkoutExercise(
         id: 'march-in-place',
@@ -354,6 +379,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '45 sec',
         difficulty: 'Beginner',
         instruction: 'Keep posture tall and arms relaxed.',
+        videoUrl: 'https://www.youtube.com/shorts/pMn4s44crG4',
       ),
       WorkoutExercise(
         id: 'easy-plank',
@@ -362,6 +388,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '20 sec',
         difficulty: 'Beginner',
         instruction: 'Brace gently and keep shoulders over elbows.',
+        videoUrl: 'https://www.youtube.com/watch?v=jJfA5t_ohss',
       ),
     ],
   ),
@@ -377,6 +404,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 min',
         difficulty: 'Beginner',
         instruction: 'Walk briskly while still able to speak.',
+        videoUrl: 'https://www.youtube.com/watch?v=CyAlsgB8M3g',
       ),
       WorkoutExercise(
         id: 'step-jacks',
@@ -385,6 +413,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '45 sec',
         difficulty: 'Beginner',
         instruction: 'Step side to side instead of jumping.',
+        videoUrl: 'https://www.youtube.com/watch?v=uft6Ke3xFEY',
       ),
       WorkoutExercise(
         id: 'reverse-lunges',
@@ -393,6 +422,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '8 each leg',
         difficulty: 'Beginner',
         instruction: 'Step backward and keep your front foot planted.',
+        videoUrl: 'https://www.youtube.com/shorts/eQlWTpTX-rs',
       ),
       WorkoutExercise(
         id: 'mountain-climbers-weight',
@@ -401,6 +431,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '30 sec',
         difficulty: 'Beginner',
         instruction: 'Move at a pace you can control.',
+        videoUrl: 'https://www.youtube.com/watch?v=NO7edUquFqs',
       ),
     ],
   ),
@@ -416,6 +447,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '10 reps',
         difficulty: 'Beginner',
         instruction: 'Lower for three counts, then stand.',
+        videoUrl: 'https://www.youtube.com/shorts/FD3UyKROJSk',
       ),
       WorkoutExercise(
         id: 'incline-push-ups',
@@ -424,6 +456,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '8 reps',
         difficulty: 'Beginner',
         instruction: 'Use a desk or bench to make push-ups easier.',
+        videoUrl: 'https://www.youtube.com/watch?v=cfns5VDVVvk',
       ),
       WorkoutExercise(
         id: 'single-leg-bridge',
@@ -432,6 +465,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '8 each side',
         difficulty: 'Intermediate',
         instruction: 'Keep hips level as you lift.',
+        videoUrl: 'https://www.youtube.com/watch?v=egs6m4J8u8c',
       ),
       WorkoutExercise(
         id: 'dead-bug',
@@ -440,6 +474,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '8 each side',
         difficulty: 'Beginner',
         instruction: 'Move opposite arm and leg while keeping your back down.',
+        videoUrl: 'https://www.youtube.com/watch?v=xtTIb6dC-vI',
       ),
     ],
   ),
