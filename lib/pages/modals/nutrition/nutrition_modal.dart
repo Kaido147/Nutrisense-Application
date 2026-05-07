@@ -522,9 +522,7 @@ class _MacroCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: item.fillRatio,
               backgroundColor: item.color.withValues(alpha: 0.15),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF273967),
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(item.color),
               minHeight: 5,
             ),
           ),

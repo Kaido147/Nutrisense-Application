@@ -70,7 +70,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
 
   Map<String, dynamic>? _prefilledNutrition;
   bool _hasRecipeNutrition = false;
-  bool _lockRecipeNutrition = false;
 
   final List<String> _mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
   final List<String> _servingUnits = [
@@ -94,17 +93,14 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
   static const _weightUnits = {'g', 'kg', 'ml', 'l', 'oz', 'lb'};
 
   static const _unitBaseAmount = <String, double>{
-    'g': 100, // USDA nutrition is per 100 g
-    'kg': 0.1, // 100 g = 0.1 kg
-    'ml': 100, // per 100 ml
-    'l': 0.1, // 100 ml = 0.1 l
-    'oz': 3.527, // 100 g ≈ 3.527 oz
-    'lb': 0.220, // 100 g ≈ 0.220 lb
+    'g': 100,
+    'kg': 0.1,
+    'ml': 100,
+    'l': 0.1,
+    'oz': 3.527,
+    'lb': 0.220,
   };
 
-  /// Returns the effective scale factor for the current amount + unit combo.
-  /// Weight units: scale = amount / baseAmount  (e.g. 200 g → 200/100 = 2×)
-  /// Serving-style units: scale = amount directly (e.g. 2 servings → 2×)
   double _effectiveScale() {
     final amount = double.tryParse(_servingAmount.text.trim()) ?? 1;
     if (amount <= 0) return 1.0;
@@ -158,18 +154,12 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     _selectedMealType = _normalizeMealType(meal['category'] ?? meal['type']);
     _servingAmount.text = (meal['servingAmount'] ?? '1').toString();
     _selectedUnit = _normalizeUnit(meal['servingUnit'] ?? 'serving');
-    _lockRecipeNutrition = meal['lockRecipeNutrition'] == true;
+
     _baseNutritionPerServing =
         _safeMap(meal['nutritionPerServing']) ??
         _safeMap(meal['recipeNutritionPerServing']) ??
         _safeMap(meal['nutrition']);
-    if (_lockRecipeNutrition &&
-        _baseNutritionPerServing != null &&
-        meal['calories'] != null) {
-      _baseNutritionPerServing = Map<String, dynamic>.from(
-        _baseNutritionPerServing!,
-      )..['calories'] = _caloriesWithUnit(meal['calories']);
-    }
+
     // Keep an immutable copy so we can restore it after a unit switch.
     _recipeNutritionPerServing = _baseNutritionPerServing;
     _hasRecipeNutrition = _recipeNutritionPerServing != null;
@@ -186,9 +176,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     });
   }
 
-  /// Blanks every nutrition display field.
-  /// Called when switching a recipe meal to a weight unit — the recipe base
-  /// is incompatible with per-100 g scaling, so we wait for a fresh USDA fetch.
   void _clearNutritionFields() {
     for (final c in [
       _calories,
@@ -247,30 +234,12 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     final loggedAt = TimeOfDay.now().format(context);
     setState(() => _isSaving = true);
 
+    // Use manual nutrition if toggled, otherwise use prefilled/scaled.
     Map<String, dynamic>? nutrition = _manualNutrition
         ? _nutritionFromFields()
         : _prefilledNutrition;
 
-    if (!_manualNutrition &&
-        _lockRecipeNutrition &&
-        !_weightUnits.contains(_selectedUnit)) {
-      nutrition = Map<String, dynamic>.from(
-        _recipeNutritionPerServing ?? nutrition ?? const <String, dynamic>{},
-      );
-      final lockedCalories = widget.initialMeal?['calories'];
-      if (lockedCalories != null) {
-        nutrition['calories'] = _caloriesWithUnit(lockedCalories);
-      }
-    }
-
-    // No prefilled nutrition — fetch from USDA and apply unit-aware scaling.
-    if (!_manualNutrition &&
-        nutrition == null &&
-        _hasRecipeNutrition &&
-        !_weightUnits.contains(_selectedUnit)) {
-      nutrition = _recipeNutritionPerServing;
-    }
-
+    // No prefilled nutrition and no recipe base — fetch from USDA.
     final shouldFetchUsda =
         !_hasRecipeNutrition || _weightUnits.contains(_selectedUnit);
 
@@ -871,8 +840,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
   }
 
   Widget _buildNutritionCard() {
-    // True when the user picked a weight unit on a recipe meal and we cleared
-    // the base — a fresh USDA fetch will happen when they tap Log Meal.
     final pendingUsda =
         !_manualNutrition &&
         _prefilledNutrition == null &&
@@ -953,7 +920,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
             ),
           ),
 
-          // Manual entry fields
           if (_manualNutrition) ...[
             const SizedBox(height: 16),
             _buildNutrientGrid([

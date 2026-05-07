@@ -86,12 +86,113 @@ class _GenerateMealIdeasModalState
     setState(() {
       _fridgeItems.add(ingredient);
       _ingredientController.clear();
+      // Auto-deselect any dietary prefs that now conflict
+      final conflicts = _getConflictingPrefs();
+      _selectedDietaryPrefs.removeAll(conflicts);
     });
     _ingredientFocus.requestFocus();
   }
 
   void _removeFridgeItem(int index) {
     setState(() => _fridgeItems.removeAt(index));
+  }
+
+  // Add this constant inside _GenerateMealIdeasModalState:
+  static const Map<String, List<String>> _ingredientConflicts = {
+    'Vegetarian': [
+      'chicken',
+      'beef',
+      'pork',
+      'lamb',
+      'turkey',
+      'duck',
+      'bacon',
+      'ham',
+      'sausage',
+      'tuna',
+      'salmon',
+      'shrimp',
+      'fish',
+      'crab',
+      'lobster',
+      'anchovies',
+      'meat',
+      'pepperoni',
+      'prosciutto',
+      'salami',
+    ],
+    'Vegan': [
+      'chicken',
+      'beef',
+      'pork',
+      'lamb',
+      'turkey',
+      'duck',
+      'bacon',
+      'ham',
+      'sausage',
+      'tuna',
+      'salmon',
+      'shrimp',
+      'fish',
+      'crab',
+      'lobster',
+      'anchovies',
+      'meat',
+      'pepperoni',
+      'prosciutto',
+      'salami',
+      'milk',
+      'cheese',
+      'butter',
+      'cream',
+      'yogurt',
+      'egg',
+      'eggs',
+      'honey',
+      'whey',
+      'gelatin',
+    ],
+    'Dairy-free': [
+      'milk',
+      'cheese',
+      'butter',
+      'cream',
+      'yogurt',
+      'whey',
+      'mozzarella',
+      'parmesan',
+      'cheddar',
+      'brie',
+      'ricotta',
+    ],
+    'Gluten-free': [
+      'wheat',
+      'bread',
+      'flour',
+      'pasta',
+      'barley',
+      'rye',
+      'oats',
+      'noodles',
+      'soy sauce',
+      'crackers',
+      'croutons',
+    ],
+  };
+
+  // Add this helper method:
+  Set<String> _getConflictingPrefs() {
+    final conflicts = <String>{};
+    for (final item in _fridgeItems) {
+      final lower = item.toLowerCase();
+      _ingredientConflicts.forEach((pref, conflictingIngredients) {
+        if (conflictingIngredients.any((c) => lower.contains(c))) {
+          conflicts.add(pref);
+        }
+      });
+    }
+    return conflicts;
   }
 
   Future<void> _generateMealIdeas() async {
@@ -560,35 +661,101 @@ class _GenerateMealIdeasModalState
                       itemBuilder: (context, index) {
                         final pref = _dietaryPreferences[index];
                         final isSelected = _selectedDietaryPrefs.contains(pref);
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              if (isSelected) {
-                                _selectedDietaryPrefs.remove(pref);
-                              } else {
-                                _selectedDietaryPrefs.add(pref);
-                              }
-                            });
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isSelected ? _lightBlue : _lightGray,
-                              border: Border.all(
-                                color: isSelected
-                                    ? const Color(0xFF1976D2)
-                                    : const Color(0xFFDDDDDD),
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text(
-                                pref,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: _navyBlue,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                        final conflictingPrefs = _getConflictingPrefs();
+                        final isDisabled = conflictingPrefs.contains(pref);
+
+                        // Find which ingredient is causing the conflict (for tooltip text)
+                        final conflictingIngredient = isDisabled
+                            ? _fridgeItems.firstWhere(
+                                (item) => (_ingredientConflicts[pref] ?? [])
+                                    .any((c) => item.toLowerCase().contains(c)),
+                                orElse: () => '',
+                              )
+                            : '';
+
+                        return Tooltip(
+                          message: isDisabled
+                              ? '"$conflictingIngredient" conflicts with $pref'
+                              : '',
+                          triggerMode: TooltipTriggerMode.tap,
+                          child: GestureDetector(
+                            onTap: isDisabled
+                                ? () {
+                                    // Show inline notification instead of silently ignoring
+                                    _showValidationNotification(
+                                      '"$conflictingIngredient" in your ingredients conflicts with $pref.',
+                                    );
+                                  }
+                                : () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedDietaryPrefs.remove(pref);
+                                      } else {
+                                        _selectedDietaryPrefs.add(pref);
+                                      }
+                                    });
+                                  },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: isDisabled
+                                    ? const Color(0xFFF5F5F5)
+                                    : isSelected
+                                    ? _lightBlue
+                                    : _lightGray,
+                                border: Border.all(
+                                  color: isDisabled
+                                      ? const Color(0xFFE0E0E0)
+                                      : isSelected
+                                      ? const Color(0xFF1976D2)
+                                      : const Color(0xFFDDDDDD),
                                 ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (isDisabled)
+                                            const Padding(
+                                              padding: EdgeInsets.only(
+                                                right: 4,
+                                              ),
+                                              child: Icon(
+                                                Icons.block_rounded,
+                                                size: 12,
+                                                color: Color(0xFFBBBBBB),
+                                              ),
+                                            ),
+                                          Flexible(
+                                            child: Text(
+                                              pref,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: isDisabled
+                                                    ? const Color(0xFFBBBBBB)
+                                                    : _navyBlue,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                decoration: isDisabled
+                                                    ? TextDecoration.lineThrough
+                                                    : TextDecoration.none,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

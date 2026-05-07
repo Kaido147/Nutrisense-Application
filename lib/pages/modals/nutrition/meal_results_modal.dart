@@ -65,10 +65,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
     );
   }
 
-  /// Opens [CookingStepsModal]. When the user taps "Done" on the last step,
-  /// [CookingStepsModal] pops with the meal map. We catch it here and open
-  /// [LogMealModal] prefilled — no Firestore write happens until the user
-  /// confirms in [LogMealModal].
   Future<void> _openCookingSteps(
     BuildContext context,
     Map<String, dynamic> meal,
@@ -80,24 +76,25 @@ class _MealResultsModalState extends State<MealResultsModal> {
       builder: (_) => CookingStepsModal(meal: meal, onBack: () {}),
     );
 
-    // User dismissed without finishing, or tapped "Back to Meal".
     if (completedMeal == null || !mounted || !context.mounted) return;
 
     await _openLogMealPrefilled(context, completedMeal);
   }
 
-  /// Opens [LogMealModal] with the meal's name and per-serving nutrition
-  /// prefilled. [LogMealModal] owns the Firestore write on confirmation.
   Future<void> _openLogMealPrefilled(
     BuildContext context,
     Map<String, dynamic> meal,
   ) async {
-    // Use the same nutrition map shown on the meal result card so the value
-    // the user chooses is the value that gets logged.
-    final perServingNutrition =
-        meal['nutrition'] ?? meal['nutritionPerServing'];
-    final nutrition = _safeNutritionMap(perServingNutrition);
-    final displayedCalories = nutrition['calories'] ?? meal['calories'];
+    final perServingNutrition = _safeNutritionMap(
+      meal['nutritionPerServing'] ?? meal['nutrition'],
+    );
+
+    // Always use the calories string from the nutrition map so it stays
+    // consistent with what NutritionModal displays. Never use the top-level
+    // int field — the two can diverge after rounding.
+    final caloriesFromNutrition =
+        perServingNutrition['calories'] ?? meal['calories']?.toString();
+
     final mealType = _resolvedMealType(meal);
 
     final prefill = <String, dynamic>{
@@ -107,12 +104,14 @@ class _MealResultsModalState extends State<MealResultsModal> {
       // Default to 1 serving; user adjusts amount and unit in LogMealModal.
       'servingAmount': '1',
       'servingUnit': 'serving',
-      // Nutrition values are per serving (MealService baseline = 1 serving).
-      'calories': displayedCalories,
-      'nutrition': nutrition,
-      'nutritionPerServing': nutrition,
-      'recipeNutritionPerServing': nutrition,
-      'lockRecipeNutrition': true,
+      // Use the same calories string shown in NutritionModal.
+      'calories': caloriesFromNutrition,
+      'nutrition': perServingNutrition,
+      'nutritionPerServing': perServingNutrition,
+      'recipeNutritionPerServing': perServingNutrition,
+      // false → LogMealModal scales directly from nutritionPerServing without
+      // overriding nutrition['calories'] with the top-level int field.
+      'lockRecipeNutrition': false,
       'ingredients': meal['ingredients'] ?? const [],
       'servings': meal['servings'] ?? 1,
       'nutritionBasis': 'per 1 serving',
@@ -123,8 +122,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
     final saved = await LogMealModal.show(context, initialMeal: prefill);
 
     if (saved != null && mounted && context.mounted) {
-      // Bubble the confirmed & saved meal all the way up through
-      // GenerateMealIdeasModal so it can close itself too.
       Navigator.pop(context, saved);
     }
   }
@@ -398,7 +395,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       ),
                                       const SizedBox(height: 12),
 
-                                      // Stats row — calories show per serving
+                                      // Stats row
                                       Row(
                                         children: [
                                           Icon(
@@ -619,8 +616,7 @@ class _MealResultsModalState extends State<MealResultsModal> {
                                       ),
                                       const SizedBox(height: 8),
 
-                                      // Select This Meal — opens cooking steps,
-                                      // then LogMealModal for final confirmation.
+                                      // Select This Meal
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
