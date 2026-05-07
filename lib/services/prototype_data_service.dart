@@ -769,6 +769,11 @@ class PrototypeDataService {
     final quests = results[9] as QuerySnapshot<Map<String, dynamic>>;
     final wellness = results[10] as DocumentSnapshot<Map<String, dynamic>>;
 
+    // Count only meals logged through the nutrition service (source: 'nutrition log')
+    final mealsLoggedCount = todayMeals.docs
+        .where((doc) => doc.data()['source'] == 'nutrition log')
+        .length;
+
     final completedTasks = tasks.docs
         .where((doc) => doc.data()['isCompleted'] == true)
         .length;
@@ -807,7 +812,7 @@ class PrototypeDataService {
       workoutExercisesTotal: workoutExercisesTotal,
       weeklyCompletedWorkoutDays: weeklyCompletedWorkoutDays,
       weeklyStudyMinutes: weeklyStudyMinutes,
-      mealsLogged: todayMeals.docs.length,
+      mealsLogged: mealsLoggedCount,
       completedQuests: completedQuests,
       totalQuests: quests.docs.length,
       waterGlasses: wellnessData['waterGlasses'] as int? ?? 0,
