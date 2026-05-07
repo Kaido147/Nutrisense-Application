@@ -46,6 +46,14 @@ class _StudyPageState extends ConsumerState<StudyPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<List<DailyQuest>>>(todayQuestsProvider, (
+      previous,
+      next,
+    ) {
+      if (previous == null || !mounted) return;
+      _controller.reloadTasks();
+    });
+
     final schedulesAsync = ref.watch(schedulesProvider);
 
     return AnimatedBuilder(

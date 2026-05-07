@@ -67,23 +67,23 @@ class _MainNavigationState extends State<MainNavigation> {
               left: 0,
               right: 0,
               child: Center(
-                child: GestureDetector(
-                  onTap: () => QuickActionsModal.show(context),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: _goldTan,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                child: Semantics(
+                  label: 'Quick Actions',
+                  button: true,
+                  child: Material(
+                    color: _goldTan,
+                    shape: const CircleBorder(),
+                    elevation: 4,
+                    shadowColor: Colors.black.withValues(alpha: 0.3),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => QuickActionsModal.show(context),
+                      child: const SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Icon(Icons.add, color: _navyBlue, size: 28),
+                      ),
                     ),
-                    child: const Icon(Icons.add, color: _navyBlue, size: 28),
                   ),
                 ),
               ),

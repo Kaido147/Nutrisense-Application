@@ -49,6 +49,7 @@ dependencies:
   webview_flutter_wkwebview: ^3.25.1
   url_launcher: ^6.3.2
   http: ^1.6.0
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   flutter_test:
@@ -106,3 +107,4 @@ flutter:
   # Add asset configuration for the assets/imgs/ directory.
   assets:
     - assets/imgs/
+    - assets/sounds/

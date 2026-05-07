@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nutrisense/services/timer_completion_sound.dart';
 
 import 'study_models.dart';
 import 'study_repository.dart';
@@ -76,10 +77,12 @@ class StudyController extends ChangeNotifier {
     final int totalMinutesThisWeek = _state.sessionHistory
         .where((record) => !_isBeforeCurrentWeek(record.date))
         .fold<int>(0, (sum, record) => sum + record.duration.inMinutes);
+    final DateTime startOfWeek = _startOfWeek(DateTime.now());
     final int tasksDone = _state.tasks.where((task) {
-      final dueAt = task.dueAt;
+      final completedDate = task.completedAt ?? task.updatedAt;
       return task.isCompleted &&
-          (dueAt == null || !dueAt.isBefore(_startOfWeek(DateTime.now())));
+          completedDate != null &&
+          !completedDate.isBefore(startOfWeek);
     }).length;
 
     return [
@@ -174,9 +177,7 @@ class StudyController extends ChangeNotifier {
         final int boundedSeconds = persistence.remainingSeconds
             .clamp(0, selectedPreset.duration.inSeconds)
             .toInt();
-        restoredHistory = persistence.sessionHistory.isEmpty
-            ? _seedData.sessionHistory
-            : persistence.sessionHistory;
+        restoredHistory = persistence.sessionHistory;
         Duration restoredRemaining = Duration(seconds: boundedSeconds);
         shouldRun = persistence.isRunning && restoredRemaining > Duration.zero;
 
@@ -213,6 +214,12 @@ class StudyController extends ChangeNotifier {
           isRunning: shouldRun,
         );
       }
+
+      final firestoreHistory = await _repository.loadSessionHistory();
+      if (_isDisposed) {
+        return;
+      }
+      restoredHistory = _mergeSessionHistory(restoredHistory, firestoreHistory);
 
       _state = StudyState(
         focusTimer: nextTimerState,
@@ -313,11 +320,16 @@ class StudyController extends ChangeNotifier {
     }
 
     final bool nextCompleted = !currentTask.isCompleted;
+    final DateTime? completedAt = nextCompleted ? DateTime.now() : null;
     final List<StudyTask> previousTasks = _state.tasks;
     final List<StudyTask> updatedTasks = previousTasks
         .map(
           (task) => task.id == taskId
-              ? task.copyWith(isCompleted: nextCompleted)
+              ? task.copyWith(
+                  isCompleted: nextCompleted,
+                  updatedAt: DateTime.now(),
+                  completedAt: completedAt,
+                )
               : task,
         )
         .toList(growable: false);
@@ -437,16 +449,16 @@ class StudyController extends ChangeNotifier {
     _stopTicker();
 
     final FocusTimerState timerState = _state.focusTimer;
-    final List<StudySessionRecord> nextHistory =
+    final StudySessionRecord? completedRecord =
         timerState.selectedPreset.isBreak
+        ? null
+        : StudySessionRecord(
+            date: DateTime.now(),
+            duration: timerState.selectedDuration,
+          );
+    final List<StudySessionRecord> nextHistory = completedRecord == null
         ? _state.sessionHistory
-        : [
-            ..._state.sessionHistory,
-            StudySessionRecord(
-              date: DateTime.now(),
-              duration: timerState.selectedDuration,
-            ),
-          ];
+        : [..._state.sessionHistory, completedRecord];
 
     _state = _state.copyWith(
       focusTimer: timerState.copyWith(
@@ -456,6 +468,12 @@ class StudyController extends ChangeNotifier {
       sessionHistory: nextHistory,
     );
     notifyListeners();
+    unawaited(TimerCompletionSound.play());
+    if (completedRecord != null) {
+      unawaited(
+        _repository.addSessionRecord(completedRecord).catchError((_) {}),
+      );
+    }
     unawaited(_persistState());
   }
 
@@ -495,6 +513,20 @@ class StudyController extends ChangeNotifier {
     }
 
     return hours.toStringAsFixed(1);
+  }
+
+  List<StudySessionRecord> _mergeSessionHistory(
+    List<StudySessionRecord> first,
+    List<StudySessionRecord> second,
+  ) {
+    final Map<String, StudySessionRecord> byKey = {};
+    for (final record in [...first, ...second]) {
+      final date = record.date;
+      byKey['${date.year}-${date.month}-${date.day}-${date.hour}-${date.minute}-${date.second}_${record.duration.inSeconds}'] =
+          record;
+    }
+    return byKey.values.toList(growable: false)
+      ..sort((a, b) => b.date.compareTo(a.date));
   }
 
   Future<void> _persistState() {

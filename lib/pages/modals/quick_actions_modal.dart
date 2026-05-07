@@ -210,6 +210,7 @@ class _QuickActionsModalState extends ConsumerState<QuickActionsModal> {
               dueAt: dueAt,
             );
             ref.invalidate(dashboardStatsProvider);
+            ref.invalidate(todayQuestsProvider);
           },
     );
   }

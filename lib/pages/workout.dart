@@ -16,6 +16,7 @@ class WorkoutPage extends ConsumerStatefulWidget {
 
 class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   int _selectedTab = 0;
+  bool _isUpdatingExercise = false;
 
   static const Color _navy = Color(0xFF273967);
   static const Color _cream = Color(0xFFF5F0EA);
@@ -196,10 +197,16 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
     WorkoutPlan plan,
     Map<String, dynamic> exercise,
   ) async {
+    if (_isUpdatingExercise) return;
+
     final completed = await showExerciseModal(context, exercise: exercise);
     if (completed != true) return;
+    if (!mounted) return;
     final exerciseId = exercise['id']?.toString();
     if (exerciseId == null || exerciseId.isEmpty) return;
+    if (_isUpdatingExercise) return;
+
+    setState(() => _isUpdatingExercise = true);
 
     final allCompleted = plan.exercises.every((item) {
       if (item['id']?.toString() == exerciseId) return true;
@@ -240,6 +247,8 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
       debugPrint('Failed to update exercise progress: $error');
       debugPrintStack(stackTrace: stackTrace);
       _showSnack('We could not update exercise progress.');
+    } finally {
+      if (mounted) setState(() => _isUpdatingExercise = false);
     }
   }
 
@@ -1150,24 +1159,6 @@ class _WorkoutActivityHistorySheet extends StatelessWidget {
                         controller: scrollController,
                         padding: const EdgeInsets.fromLTRB(24, 10, 24, 32),
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 13,
-                            ),
-                            decoration: _surfaceDecoration(radius: 999),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.search, color: Color(0xFF75777F)),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Search workouts...',
-                                  style: TextStyle(color: Color(0xFF75777F)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 18),
                           ...activities.map(
                             (activity) =>
                                 _WorkoutActivityTile(activity: activity),

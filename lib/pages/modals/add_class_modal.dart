@@ -320,6 +320,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: _courseCode,
+                        enabled: !_isSaving,
                         style: _inputTextStyle,
                         decoration: InputDecoration(
                           hintText: 'e.g., PSYCH 101',
@@ -352,29 +353,34 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                       ),
                       const SizedBox(height: 8),
                       GestureDetector(
-                        onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            builder: (context) => Container(
-                              color: Colors.white,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: _days.map((day) {
-                                  return ListTile(
-                                    title: Text(day),
-                                    onTap: () {
-                                      setState(() => _selectedDay = day);
-                                      Navigator.pop(context);
-                                    },
-                                    trailing: _selectedDay == day
-                                        ? Icon(Icons.check, color: _navyBlue)
-                                        : null,
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: _isSaving
+                            ? null
+                            : () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (context) => Container(
+                                    color: Colors.white,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: _days.map((day) {
+                                        return ListTile(
+                                          title: Text(day),
+                                          onTap: () {
+                                            setState(() => _selectedDay = day);
+                                            Navigator.pop(context);
+                                          },
+                                          trailing: _selectedDay == day
+                                              ? Icon(
+                                                  Icons.check,
+                                                  color: _navyBlue,
+                                                )
+                                              : null,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                );
+                              },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -548,6 +554,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: _location,
+                        enabled: !_isSaving,
                         style: _inputTextStyle,
                         decoration: InputDecoration(
                           hintText: 'e.g., Building A, Room 201',

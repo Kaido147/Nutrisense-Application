@@ -21,17 +21,28 @@ class EditHealthProfileModal extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final birthDate = ref
+        .watch(currentUserProfileProvider)
+        .asData
+        ?.value
+        ?.birthDate;
+
     return ProfileModalShell(
       title: 'Edit Health Profile',
       footer: const SizedBox.shrink(),
       child: HealthProfileForm(
         initialProfile: healthProfile,
         submitLabel: 'Save Health Profile',
+        birthDate: birthDate,
         onSubmit: (profile) async {
           await ref
               .read(prototypeDataServiceProvider)
               .saveHealthProfile(profile);
+          await ref
+              .read(profileServiceProvider)
+              .calculateAndSaveDailyMacros(profile);
           ref.invalidate(healthProfileProvider);
+          ref.invalidate(dailyMacrosProvider);
           ref.invalidate(todayQuestsProvider);
           ref.invalidate(dashboardStatsProvider);
           if (!context.mounted) return;

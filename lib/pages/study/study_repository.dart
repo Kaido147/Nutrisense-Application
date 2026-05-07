@@ -63,8 +63,8 @@ class StudyRepository {
       tasks: const <StudyTask>[],
       scheduleItems: buildScheduleItems(),
       journalEntries: buildJournalEntries(),
-      sessionHistory: buildStudySessionHistory(),
-      completedTasksBeforeToday: weeklyCompletedTasksBeforeToday,
+      sessionHistory: const <StudySessionRecord>[],
+      completedTasksBeforeToday: 0,
     );
   }
 
@@ -120,6 +120,45 @@ class StudyRepository {
       _sessionHistoryKey,
       sessionHistory.map((record) => record.encode()).toList(growable: false),
     );
+  }
+
+  Future<List<StudySessionRecord>> loadSessionHistory() async {
+    final User user = _requireUser();
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('studySessions')
+        .orderBy('completedAt', descending: true)
+        .limit(120)
+        .get();
+
+    return snapshot.docs
+        .map((doc) {
+          final data = doc.data();
+          final completedAt = _readTimestamp(data['completedAt']);
+          final durationMinutes = _readInt(data['durationMinutes']) ?? 0;
+          return StudySessionRecord(
+            date: completedAt ?? DateTime.now(),
+            duration: Duration(minutes: durationMinutes),
+          );
+        })
+        .toList(growable: false);
+  }
+
+  Future<void> addSessionRecord(StudySessionRecord record) async {
+    final User user = _requireUser();
+    final DateTime date = record.date;
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('studySessions')
+        .add({
+          'dateKey': _dateKey(date),
+          'durationMinutes': record.duration.inMinutes,
+          'completedAt': Timestamp.fromDate(date),
+          'createdAt': FieldValue.serverTimestamp(),
+          'source': 'focusTimer',
+        });
   }
 
   Future<List<StudyTask>> loadTasks() async {
@@ -213,8 +252,36 @@ class StudyRepository {
         .doc(taskId)
         .set({
           'isCompleted': isCompleted,
+          'completedAt': isCompleted ? FieldValue.serverTimestamp() : null,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
+  }
+
+  DateTime? _readTimestamp(Object? value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+
+    return null;
+  }
+
+  int? _readInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  String _dateKey(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 
   User _requireUser() {

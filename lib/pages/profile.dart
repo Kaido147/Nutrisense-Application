@@ -30,17 +30,14 @@ class ProfilePage extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
+              final navigator = Navigator.of(pageContext);
 
               try {
                 await ref.read(authServiceProvider).logout();
 
                 if (!pageContext.mounted) return;
 
-                Navigator.pushNamedAndRemoveUntil(
-                  pageContext,
-                  '/login',
-                  (route) => false,
-                );
+                navigator.pushNamedAndRemoveUntil('/login', (route) => false);
               } on AuthFlowException catch (error) {
                 if (!pageContext.mounted) return;
 

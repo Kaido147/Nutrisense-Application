@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';
+import 'package:nutrisense/services/timer_completion_sound.dart';
 
 class RestTimerDialog extends StatefulWidget {
   final VoidCallback onSkipRest;
@@ -44,6 +45,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
       if (_seconds <= 0) {
         timer.cancel();
         _timer = null;
+        unawaited(TimerCompletionSound.play());
         widget.onSkipRest();
       }
     });
@@ -51,7 +53,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    const Color _navyBlue = Color(0xFF273967);
+    const Color navyBlue = Color(0xFF273967);
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -82,7 +84,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
               Text(
                 'Rest Time',
                 style: TextStyle(
-                  color: _navyBlue,
+                  color: navyBlue,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
@@ -92,7 +94,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
               Text(
                 'Take a breather before your next set',
                 style: TextStyle(
-                  color: _navyBlue.withValues(alpha: 0.6),
+                  color: navyBlue.withValues(alpha: 0.6),
                   fontSize: 13,
                 ),
               ),
@@ -121,7 +123,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                         Text(
                           _seconds.toString(),
                           style: TextStyle(
-                            color: _navyBlue,
+                            color: navyBlue,
                             fontSize: 48,
                             fontWeight: FontWeight.w700,
                           ),
@@ -129,7 +131,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                         Text(
                           'seconds',
                           style: TextStyle(
-                            color: _navyBlue.withValues(alpha: 0.6),
+                            color: navyBlue.withValues(alpha: 0.6),
                             fontSize: 14,
                           ),
                         ),
@@ -151,7 +153,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                         widget.onSkipRest();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _navyBlue,
+                        backgroundColor: navyBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -180,7 +182,7 @@ class _RestTimerDialogState extends State<RestTimerDialog> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: _navyBlue,
+                          color: navyBlue,
                         ),
                       ),
                     ),

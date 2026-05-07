@@ -16,6 +16,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isSubmitting = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -89,6 +90,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -99,200 +101,226 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
         child: SafeArea(
-          child: Stack(
-            children: [
-              // TOP LOGO
-              Positioned(
-                top: 20,
-                right: 20,
-                child: Row(
-                  children: [
-                    Image.asset('assets/imgs/Nutrisense.png', height: 40),
-                    const SizedBox(width: 8),
-                    const Text(
-                      "NUTRISENSE",
-                      style: TextStyle(
-                        color: Color(0xFFD6B97B),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // CENTER CARD
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Form(
-                    key: _formKey,
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight > 48
+                        ? constraints.maxHeight - 48
+                        : 0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/imgs/Nutrisense.png',
+                              height: 40,
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              "NUTRISENSE",
+                              style: TextStyle(
+                                color: Color(0xFFD6B97B),
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // TITLE
-                          const Text(
-                            "Let's Sign you in",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: 72),
+                      Form(
+                        key: _formKey,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
                             ),
                           ),
-
-                          const SizedBox(height: 8),
-
-                          const Text(
-                            "Welcome back!\nyou've been missed!",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // EMAIL FIELD
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            style: const TextStyle(color: Colors.white),
-                            validator: _validateEmail,
-                            decoration: InputDecoration(
-                              hintText: "Email Address",
-                              hintStyle: const TextStyle(color: Colors.white54),
-                              prefixIcon: const Icon(
-                                Icons.email,
-                                color: Colors.white54,
-                              ),
-                              errorStyle: const TextStyle(
-                                color: Colors.white70,
-                              ),
-                              enabledBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(color: Colors.white38),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // PASSWORD FIELD
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            style: const TextStyle(color: Colors.white),
-                            validator: _validatePassword,
-                            decoration: const InputDecoration(
-                              hintText: "Password",
-                              hintStyle: TextStyle(color: Colors.white54),
-                              prefixIcon: Icon(
-                                Icons.lock,
-                                color: Colors.white54,
-                              ),
-                              suffixIcon: Icon(
-                                Icons.visibility,
-                                color: Colors.white54,
-                              ),
-                              errorStyle: TextStyle(color: Colors.white70),
-                              enabledBorder: UnderlineInputBorder(
-                                borderSide: BorderSide(color: Colors.white38),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          // FORGOT PASSWORD
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {},
-                              child: const Text(
-                                "Forgot password?",
-                                style: TextStyle(color: Colors.white60),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          // LOGIN BUTTON
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey[300],
-                                foregroundColor: Colors.black,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                              ),
-                              onPressed: _isSubmitting ? null : _submit,
-                              child: _isSubmitting
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Text("Log In"),
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // REGISTER TEXT
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
+                              // TITLE
                               const Text(
-                                "Don't have an account? ",
-                                style: TextStyle(color: Colors.white60),
+                                "Let's Sign you in",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const RegisterPage(),
+
+                              const SizedBox(height: 8),
+
+                              const Text(
+                                "Welcome back!\nyou've been missed!",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // EMAIL FIELD
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                style: const TextStyle(color: Colors.white),
+                                validator: _validateEmail,
+                                decoration: InputDecoration(
+                                  hintText: "Email Address",
+                                  hintStyle: const TextStyle(
+                                    color: Colors.white54,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.email,
+                                    color: Colors.white54,
+                                  ),
+                                  errorStyle: const TextStyle(
+                                    color: Colors.white70,
+                                  ),
+                                  enabledBorder: const UnderlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.white38,
                                     ),
-                                  );
-                                },
-                                child: const Text(
-                                  "Register",
-                                  style: TextStyle(
-                                    color: Color(0xFFD6B97B),
-                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
+
+                              const SizedBox(height: 16),
+
+                              // PASSWORD FIELD
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                style: const TextStyle(color: Colors.white),
+                                validator: _validatePassword,
+                                decoration: InputDecoration(
+                                  hintText: "Password",
+                                  hintStyle: const TextStyle(color: Colors.white54),
+                                  prefixIcon: const Icon(
+                                    Icons.lock,
+                                    color: Colors.white54,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  errorStyle: const TextStyle(color: Colors.white70),
+                                  enabledBorder: const UnderlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.white38,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // FORGOT PASSWORD
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () {},
+                                  child: const Text(
+                                    "Forgot password?",
+                                    style: TextStyle(color: Colors.white60),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // LOGIN BUTTON
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey[300],
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                  ),
+                                  onPressed: _isSubmitting ? null : _submit,
+                                  child: _isSubmitting
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Text("Log In"),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // REGISTER TEXT
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    "Don't have an account? ",
+                                    style: TextStyle(color: Colors.white60),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const RegisterPage(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                      "Register",
+                                      style: TextStyle(
+                                        color: Color(0xFFD6B97B),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),

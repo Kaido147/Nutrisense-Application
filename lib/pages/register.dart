@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/login.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 import 'package:nutrisense/services/auth_service.dart';
+
+/// Only allows letters, spaces, hyphens, and apostrophes — blocks digits.
+class _NameTextInputFormatter extends TextInputFormatter {
+  // Matches any character that is NOT a Unicode letter, space, hyphen, or
+  // apostrophe.
+  static final RegExp _blocked = RegExp(r"[^a-zA-Z\s\-\u0027]");
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final filtered = newValue.text.replaceAll(_blocked, '');
+    if (filtered == newValue.text) {
+      return newValue;
+    }
+    return TextEditingValue(
+      text: filtered,
+      selection: TextSelection.collapsed(offset: filtered.length),
+    );
+  }
+}
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -37,7 +60,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     super.dispose();
   }
 
-  String? _validateRequired(String? value, String fieldName) {
+  // ── Validators ──────────────────────────────────────────────────────────
+
+  /// Regex that matches valid name characters: letters, spaces, hyphens,
+  /// apostrophes.
+  static final RegExp _nameRegex = RegExp(r"^[a-zA-Z\s\-']+$");
+
+  String? _validateName(String? value, String fieldName) {
     final trimmed = (value ?? '').trim();
     if (trimmed.isEmpty) {
       return '$fieldName is required.';
@@ -45,6 +74,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     if (trimmed.length < 2) {
       return '$fieldName is too short.';
+    }
+
+    if (!_nameRegex.hasMatch(trimmed)) {
+      return '$fieldName must contain letters only.';
     }
 
     return null;
@@ -56,9 +89,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
 
     final today = DateTime.now();
-    final latestAllowed = DateTime(today.year - 10, today.month, today.day);
+    final latestAllowed = DateTime(today.year - 13, today.month, today.day);
     if (_selectedBirthDate!.isAfter(latestAllowed)) {
-      return 'You must be at least 10 years old.';
+      return 'You must be at least 13 years old.';
     }
 
     return null;
@@ -103,12 +136,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return null;
   }
 
+  // ── Actions ─────────────────────────────────────────────────────────────
+
   Future<void> _selectDate(BuildContext context) async {
+    final now = DateTime.now();
+    final latestAllowed = DateTime(now.year - 13, now.month, now.day);
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
       firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+      lastDate: latestAllowed,
     );
     if (picked != null) {
       setState(() {
@@ -186,9 +223,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
   }
 
+  // ── Build ───────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -199,342 +239,369 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
         ),
         child: SafeArea(
-          child: Stack(
-            children: [
-              //  TOP LOGO
-              Positioned(
-                top: 20,
-                right: 20,
-                child: Row(
-                  children: [
-                    Image.asset('assets/imgs/Nutrisense.png', height: 40),
-                    const SizedBox(width: 8),
-                    const Text(
-                      "NUTRISENSE",
-                      style: TextStyle(
-                        color: Color(0xFFD6B97B),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              //  CARD
-              Center(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Form(
-                      key: _formKey,
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight > 48
+                        ? constraints.maxHeight - 48
+                        : 0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      //  TOP LOGO
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // TITLE
+                            Image.asset(
+                              'assets/imgs/Nutrisense.png',
+                              height: 40,
+                            ),
+                            const SizedBox(width: 8),
                             const Text(
-                              "Sign up to create account",
-                              textAlign: TextAlign.center,
+                              "NUTRISENSE",
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
+                                color: Color(0xFFD6B97B),
                                 fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
                               ),
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _firstNameController,
-                                    autovalidateMode:
-                                        AutovalidateMode.onUserInteraction,
-                                    style: const TextStyle(color: Colors.white),
-                                    validator: (value) =>
-                                        _validateRequired(value, 'First name'),
-                                    decoration: const InputDecoration(
-                                      hintText: "First Name",
-                                      hintStyle: TextStyle(
-                                        color: Colors.white54,
-                                      ),
-                                      errorStyle: TextStyle(
-                                        color: Colors.white70,
-                                      ),
-                                      enabledBorder: UnderlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: Colors.white38,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _lastNameController,
-                                    autovalidateMode:
-                                        AutovalidateMode.onUserInteraction,
-                                    style: const TextStyle(color: Colors.white),
-                                    validator: (value) =>
-                                        _validateRequired(value, 'Last name'),
-                                    decoration: const InputDecoration(
-                                      hintText: "Last Name",
-                                      hintStyle: TextStyle(
-                                        color: Colors.white54,
-                                      ),
-                                      errorStyle: TextStyle(
-                                        color: Colors.white70,
-                                      ),
-                                      enabledBorder: UnderlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: Colors.white38,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // DATE
-                            TextFormField(
-                              controller: _dateController,
-                              readOnly: true,
-                              onTap: () => _selectDate(context),
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                              validator: _validateBirthDate,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                hintText: "mm/dd/yyyy",
-                                hintStyle: TextStyle(color: Colors.white54),
-                                errorStyle: TextStyle(color: Colors.white70),
-                                suffixIcon: Icon(
-                                  Icons.calendar_today,
-                                  color: Colors.white54,
-                                ),
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white38),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // EMAIL
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                              style: const TextStyle(color: Colors.white),
-                              validator: _validateEmail,
-                              decoration: const InputDecoration(
-                                hintText: "Email Address",
-                                hintStyle: TextStyle(color: Colors.white54),
-                                prefixIcon: Icon(
-                                  Icons.email,
-                                  color: Colors.white54,
-                                ),
-                                errorStyle: TextStyle(color: Colors.white70),
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white38),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // PASSWORD
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: obscurePassword,
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                              style: const TextStyle(color: Colors.white),
-                              validator: _validatePassword,
-                              decoration: InputDecoration(
-                                hintText: "Password",
-                                hintStyle: const TextStyle(
-                                  color: Colors.white54,
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.lock,
-                                  color: Colors.white54,
-                                ),
-                                errorStyle: const TextStyle(
-                                  color: Colors.white70,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    obscurePassword
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                    color: Colors.white54,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      obscurePassword = !obscurePassword;
-                                    });
-                                  },
-                                ),
-                                enabledBorder: const UnderlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white38),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // CONFIRM PASSWORD
-                            TextFormField(
-                              controller: _confirmPasswordController,
-                              obscureText: obscureConfirm,
-                              autovalidateMode:
-                                  AutovalidateMode.onUserInteraction,
-                              style: const TextStyle(color: Colors.white),
-                              validator: _validateConfirmPassword,
-                              decoration: InputDecoration(
-                                hintText: "Confirm Password",
-                                hintStyle: const TextStyle(
-                                  color: Colors.white54,
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.lock,
-                                  color: Colors.white54,
-                                ),
-                                errorStyle: const TextStyle(
-                                  color: Colors.white70,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    obscureConfirm
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                    color: Colors.white54,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      obscureConfirm = !obscureConfirm;
-                                    });
-                                  },
-                                ),
-                                enabledBorder: const UnderlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white38),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // CHECKBOX
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Checkbox(
-                                  value: isChecked,
-                                  onChanged: _isSubmitting
-                                      ? null
-                                      : (value) {
-                                          setState(() {
-                                            isChecked = value ?? false;
-                                          });
-                                        },
-                                  activeColor: const Color(0xFFD6B97B),
-                                ),
-                                const Expanded(
-                                  child: Text(
-                                    "I accept and agree to comply with Nutrisense Terms and Conditions and Privacy Policy",
-                                    style: TextStyle(
-                                      color: Colors.white60,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // SIGN UP BUTTON
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey[300],
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                                onPressed: _isSubmitting || !isChecked
-                                    ? null
-                                    : _submit,
-                                child: _isSubmitting
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Text("Sign Up"),
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // SIGN IN LINK
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text(
-                                  "Already have an account? ",
-                                  style: TextStyle(color: Colors.white60),
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const LoginPage(),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text(
-                                    "Sign In",
-                                    style: TextStyle(
-                                      color: Color(0xFFD6B97B),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),
                       ),
-                    ),
+
+                      const SizedBox(height: 24),
+
+                      //  CARD
+                      Form(
+                        key: _formKey,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // TITLE
+                              const Text(
+                                "Sign up to create account",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _firstNameController,
+                                      autovalidateMode:
+                                          AutovalidateMode.onUserInteraction,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                      inputFormatters: [
+                                        _NameTextInputFormatter(),
+                                      ],
+                                      validator: (value) =>
+                                          _validateName(value, 'First name'),
+                                      decoration: const InputDecoration(
+                                        hintText: "First Name",
+                                        hintStyle: TextStyle(
+                                          color: Colors.white54,
+                                        ),
+                                        errorStyle: TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                        enabledBorder: UnderlineInputBorder(
+                                          borderSide: BorderSide(
+                                            color: Colors.white38,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _lastNameController,
+                                      autovalidateMode:
+                                          AutovalidateMode.onUserInteraction,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                      inputFormatters: [
+                                        _NameTextInputFormatter(),
+                                      ],
+                                      validator: (value) =>
+                                          _validateName(value, 'Last name'),
+                                      decoration: const InputDecoration(
+                                        hintText: "Last Name",
+                                        hintStyle: TextStyle(
+                                          color: Colors.white54,
+                                        ),
+                                        errorStyle: TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                        enabledBorder: UnderlineInputBorder(
+                                          borderSide: BorderSide(
+                                            color: Colors.white38,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // DATE
+                              TextFormField(
+                                controller: _dateController,
+                                readOnly: true,
+                                onTap: () => _selectDate(context),
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                validator: _validateBirthDate,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: const InputDecoration(
+                                  hintText: "mm/dd/yyyy",
+                                  hintStyle: TextStyle(color: Colors.white54),
+                                  errorStyle: TextStyle(color: Colors.white70),
+                                  suffixIcon: Icon(
+                                    Icons.calendar_today,
+                                    color: Colors.white54,
+                                  ),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.white38),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // EMAIL
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                style: const TextStyle(color: Colors.white),
+                                validator: _validateEmail,
+                                decoration: const InputDecoration(
+                                  hintText: "Email Address",
+                                  hintStyle: TextStyle(color: Colors.white54),
+                                  prefixIcon: Icon(
+                                    Icons.email,
+                                    color: Colors.white54,
+                                  ),
+                                  errorStyle: TextStyle(color: Colors.white70),
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.white38),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // PASSWORD
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: obscurePassword,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                style: const TextStyle(color: Colors.white),
+                                validator: _validatePassword,
+                                decoration: InputDecoration(
+                                  hintText: "Password",
+                                  hintStyle: const TextStyle(
+                                    color: Colors.white54,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.lock,
+                                    color: Colors.white54,
+                                  ),
+                                  errorStyle: const TextStyle(
+                                    color: Colors.white70,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      obscurePassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        obscurePassword = !obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  enabledBorder: const UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.white38),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // CONFIRM PASSWORD
+                              TextFormField(
+                                controller: _confirmPasswordController,
+                                obscureText: obscureConfirm,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                style: const TextStyle(color: Colors.white),
+                                validator: _validateConfirmPassword,
+                                decoration: InputDecoration(
+                                  hintText: "Confirm Password",
+                                  hintStyle: const TextStyle(
+                                    color: Colors.white54,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.lock,
+                                    color: Colors.white54,
+                                  ),
+                                  errorStyle: const TextStyle(
+                                    color: Colors.white70,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      obscureConfirm
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        obscureConfirm = !obscureConfirm;
+                                      });
+                                    },
+                                  ),
+                                  enabledBorder: const UnderlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.white38),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // CHECKBOX
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Checkbox(
+                                    value: isChecked,
+                                    onChanged: _isSubmitting
+                                        ? null
+                                        : (value) {
+                                            setState(() {
+                                              isChecked = value ?? false;
+                                            });
+                                          },
+                                    activeColor: const Color(0xFFD6B97B),
+                                  ),
+                                  const Expanded(
+                                    child: Text(
+                                      "I accept and agree to comply with Nutrisense Terms and Conditions and Privacy Policy",
+                                      style: TextStyle(
+                                        color: Colors.white60,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // SIGN UP BUTTON
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey[300],
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                  ),
+                                  onPressed: _isSubmitting || !isChecked
+                                      ? null
+                                      : _submit,
+                                  child: _isSubmitting
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Text("Sign Up"),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // SIGN IN LINK
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    "Already have an account? ",
+                                    style: TextStyle(color: Colors.white60),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const LoginPage(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                      "Sign In",
+                                      style: TextStyle(
+                                        color: Color(0xFFD6B97B),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
