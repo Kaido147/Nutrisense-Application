@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/workout_catalog.dart';
+import 'package:nutrisense/pages/study/study_repository.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 
 import 'add_class_modal.dart';
@@ -146,7 +147,7 @@ class _QuickActionsModalState extends ConsumerState<QuickActionsModal> {
                     icon: Icons.check_circle_outline,
                     color: _brightPurple,
                     onTap: () {
-                      AddTaskModal.show(context);
+                      _showAddTaskModal();
                     },
                   ),
                 ),
@@ -191,6 +192,25 @@ class _QuickActionsModalState extends ConsumerState<QuickActionsModal> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showAddTaskModal() {
+    return AddTaskModal.show(
+      context,
+      onSave:
+          ({
+            required String title,
+            String? description,
+            DateTime? dueAt,
+          }) async {
+            await StudyRepository().addTask(
+              title: title,
+              description: description,
+              dueAt: dueAt,
+            );
+            ref.invalidate(dashboardStatsProvider);
+          },
     );
   }
 
@@ -454,7 +474,13 @@ class _QuickActionsModalState extends ConsumerState<QuickActionsModal> {
                           color: _navyBlue,
                         ),
                       ),
-                      title: Text(exercise.name),
+                      title: Text(
+                        exercise.name,
+                        style: const TextStyle(
+                          color: _navyBlue,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       subtitle: Text(
                         '${exercise.sets} sets • ${exercise.repsOrDuration}',
                       ),
@@ -566,7 +592,9 @@ class _QuickActionsModalState extends ConsumerState<QuickActionsModal> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Workout logged.')));
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Failed to log workout from Quick Actions: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('We could not log this workout.')),
@@ -661,12 +689,36 @@ class _ModalTextField extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          cursorColor: const Color(0xFF1E2A4A),
+          style: const TextStyle(
+            color: Color(0xFF1E2A4A),
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: icon == null ? null : Icon(icon),
+            hintStyle: const TextStyle(
+              color: Color(0xFF7A8190),
+              fontWeight: FontWeight.w600,
+            ),
+            prefixIcon: icon == null
+                ? null
+                : Icon(icon, color: const Color(0xFF6B7280)),
             filled: true,
             fillColor: const Color(0xFFF5F5F5),
             border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: const BorderSide(color: Color(0xFFD4B896)),
+            ),
+            disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(999),
               borderSide: BorderSide.none,
             ),
@@ -697,11 +749,24 @@ class _CategoryDropdown extends StatelessWidget {
         DropdownButtonFormField<WorkoutCategory>(
           initialValue: category,
           isExpanded: true,
+          dropdownColor: Colors.white,
+          iconEnabledColor: const Color(0xFF1E2A4A),
+          style: const TextStyle(
+            color: Color(0xFF1E2A4A),
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
           items: workoutCatalog
               .map(
                 (category) => DropdownMenuItem(
                   value: category,
-                  child: Text(category.name),
+                  child: Text(
+                    category.name,
+                    style: const TextStyle(
+                      color: Color(0xFF1E2A4A),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               )
               .toList(),
@@ -712,6 +777,18 @@ class _CategoryDropdown extends StatelessWidget {
             filled: true,
             fillColor: const Color(0xFFF5F5F5),
             border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: const BorderSide(color: Color(0xFFD4B896)),
+            ),
+            disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(999),
               borderSide: BorderSide.none,
             ),

@@ -31,9 +31,13 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
       orElse: () => const <WorkoutPlan>[],
     );
     final activities = activitiesAsync.maybeWhen(
-      data: (value) => value,
+      data: (value) {
+        return [...value]..sort((a, b) => b.sortDate.compareTo(a.sortDate));
+      },
       orElse: () => const <WorkoutActivity>[],
     );
+    final activitiesLoadFailed = activitiesAsync.hasError;
+    final activitiesLoading = activitiesAsync.isLoading;
     final healthProfile = healthProfileAsync.maybeWhen(
       data: (value) => value,
       orElse: () => null,
@@ -57,10 +61,16 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
                 plans: plans,
                 currentPlan: currentPlan,
                 activities: activities,
+                activitiesLoadFailed: activitiesLoadFailed,
+                activitiesLoading: activitiesLoading,
                 onCategorySelected: (category) =>
                     _openManualBuilder(healthProfile, schedules, category),
                 onGenerate: () => _generateDraft(healthProfile, schedules),
-                onViewAllActivities: () => _openActivityHistory(activities),
+                onViewAllActivities: () => _openActivityHistory(
+                  activities,
+                  hasError: activitiesLoadFailed,
+                  isLoading: activitiesLoading,
+                ),
                 onOpenPlan: _openPlanDetail,
                 onStartExercise: _startExercise,
               ),
@@ -114,13 +124,20 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
     if (saved == true) _showSnack('Generated workout saved.');
   }
 
-  Future<void> _openActivityHistory(List<WorkoutActivity> activities) {
+  Future<void> _openActivityHistory(
+    List<WorkoutActivity> activities, {
+    required bool hasError,
+    required bool isLoading,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          _WorkoutActivityHistorySheet(activities: activities),
+      builder: (context) => _WorkoutActivityHistorySheet(
+        activities: activities,
+        hasError: hasError,
+        isLoading: isLoading,
+      ),
     );
   }
 
@@ -200,7 +217,9 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
       } else {
         _showSnack('${exercise['name'] ?? 'Exercise'} completed.');
       }
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Failed to update exercise progress: $error');
+      debugPrintStack(stackTrace: stackTrace);
       _showSnack('We could not update exercise progress.');
     }
   }
@@ -334,6 +353,8 @@ class _WorkoutContent extends StatelessWidget {
     required this.plans,
     required this.currentPlan,
     required this.activities,
+    required this.activitiesLoadFailed,
+    required this.activitiesLoading,
     required this.onCategorySelected,
     required this.onGenerate,
     required this.onViewAllActivities,
@@ -344,6 +365,8 @@ class _WorkoutContent extends StatelessWidget {
   final List<WorkoutPlan> plans;
   final WorkoutPlan? currentPlan;
   final List<WorkoutActivity> activities;
+  final bool activitiesLoadFailed;
+  final bool activitiesLoading;
   final ValueChanged<WorkoutCategory> onCategorySelected;
   final VoidCallback onGenerate;
   final VoidCallback onViewAllActivities;
@@ -379,6 +402,8 @@ class _WorkoutContent extends StatelessWidget {
           const _SectionHeader(title: 'Workout Library'),
           const SizedBox(height: 14),
           _CategoryGrid(onCategorySelected: onCategorySelected),
+          const SizedBox(height: 24),
+          _GenerateWorkoutCard(onGenerate: onGenerate),
           const SizedBox(height: 30),
           _SectionHeader(
             title: 'Current Plan',
@@ -397,6 +422,8 @@ class _WorkoutContent extends StatelessWidget {
           const SizedBox(height: 30),
           _RecentActivitySection(
             activities: activities,
+            hasError: activitiesLoadFailed,
+            isLoading: activitiesLoading,
             onViewAll: onViewAllActivities,
           ),
         ],
@@ -725,6 +752,52 @@ class _LibraryCategoryCard extends StatelessWidget {
   }
 }
 
+class _GenerateWorkoutCard extends StatelessWidget {
+  const _GenerateWorkoutCard({required this.onGenerate});
+
+  final VoidCallback onGenerate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: _surfaceDecoration(radius: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Create Custom Routine',
+            style: TextStyle(
+              color: _WorkoutColors.navy,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Answer a few questions and generate a focused routine.',
+            style: TextStyle(color: Color(0xFF667085), height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onGenerate,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Quick Generate'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFDDC96),
+              foregroundColor: const Color(0xFF59440C),
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SavedExercisesList extends StatelessWidget {
   const _SavedExercisesList({
     required this.plan,
@@ -848,10 +921,14 @@ class _SavedExerciseTile extends StatelessWidget {
 class _RecentActivitySection extends StatelessWidget {
   const _RecentActivitySection({
     required this.activities,
+    required this.hasError,
+    required this.isLoading,
     required this.onViewAll,
   });
 
   final List<WorkoutActivity> activities;
+  final bool hasError;
+  final bool isLoading;
   final VoidCallback onViewAll;
 
   @override
@@ -868,7 +945,14 @@ class _RecentActivitySection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        if (visible.isEmpty)
+        if (hasError)
+          const _EmptyCard(
+            message:
+                'We could not load recent workout activity right now. Please try again shortly.',
+          )
+        else if (isLoading)
+          const _ActivityLoadingCard()
+        else if (visible.isEmpty)
           const _EmptyCard(
             message:
                 'No workout activity yet. Log a workout or complete a plan to see it here.',
@@ -895,7 +979,7 @@ class _WorkoutActivityTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         padding: EdgeInsets.all(compact ? 14 : 16),
-        decoration: _surfaceDecoration(radius: compact ? 4 : 18),
+        decoration: _surfaceDecoration(radius: 18),
         child: Row(
           children: [
             Container(
@@ -980,9 +1064,15 @@ class _WorkoutActivityTile extends StatelessWidget {
 }
 
 class _WorkoutActivityHistorySheet extends StatelessWidget {
-  const _WorkoutActivityHistorySheet({required this.activities});
+  const _WorkoutActivityHistorySheet({
+    required this.activities,
+    required this.hasError,
+    required this.isLoading,
+  });
 
   final List<WorkoutActivity> activities;
+  final bool hasError;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -1021,7 +1111,21 @@ class _WorkoutActivityHistorySheet extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: activities.isEmpty
+                child: hasError
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: _EmptyCard(
+                          message:
+                              'We could not load workout activity right now. Please try again shortly.',
+                        ),
+                      )
+                    : isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: _WorkoutColors.navy,
+                        ),
+                      )
+                    : activities.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.all(24),
                         child: _EmptyCard(
@@ -2411,6 +2515,39 @@ class _EmptyCard extends StatelessWidget {
       child: Text(
         message,
         style: const TextStyle(color: Color(0xFF667085), height: 1.4),
+      ),
+    );
+  }
+}
+
+class _ActivityLoadingCard extends StatelessWidget {
+  const _ActivityLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: _surfaceDecoration(radius: 18),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: _WorkoutColors.navy,
+            ),
+          ),
+          SizedBox(width: 12),
+          Text(
+            'Loading recent activity...',
+            style: TextStyle(
+              color: Color(0xFF667085),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

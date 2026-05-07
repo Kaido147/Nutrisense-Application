@@ -42,6 +42,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
   static const Color _navyBlue = Color(0xFF1E2A4A);
   static const Color _lightGray = Color(0xFFF5F5F5);
   static const Color _goldTan = Color(0xFFD4B896);
+  static const Color _mutedText = Color(0xFF6B7280);
+  static const Color _hintText = Color(0xFF7A8190);
 
   final TextEditingController _taskTitle = TextEditingController();
   final TextEditingController _description = TextEditingController();
@@ -193,14 +195,16 @@ class _AddTaskModalState extends State<AddTaskModal> {
       }
 
       Navigator.pop(context);
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save study task: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('We could not save this task.')),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -291,6 +295,13 @@ class _AddTaskModalState extends State<AddTaskModal> {
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _taskTitle,
+                              enabled: !_isSaving,
+                              cursorColor: _navyBlue,
+                              style: const TextStyle(
+                                color: _navyBlue,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
                               validator: (value) {
                                 if ((value ?? '').trim().isEmpty) {
                                   return 'Please enter a task title';
@@ -301,14 +312,39 @@ class _AddTaskModalState extends State<AddTaskModal> {
                               decoration: InputDecoration(
                                 hintText: 'e.g., Complete Math Assignment',
                                 hintStyle: const TextStyle(
-                                  color: Color(0xFFCCCCCC),
+                                  color: _hintText,
                                   fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
                                 prefixIcon: const Icon(
                                   Icons.check_circle_outline,
-                                  color: Color(0xFFCCCCCC),
+                                  color: _mutedText,
                                 ),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: _goldTan),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                                disabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none,
                                 ),
@@ -332,21 +368,41 @@ class _AddTaskModalState extends State<AddTaskModal> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: _description,
+                              enabled: !_isSaving,
                               maxLines: 3,
+                              cursorColor: _navyBlue,
+                              style: const TextStyle(
+                                color: _navyBlue,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'Add details about this task...',
                                 hintStyle: const TextStyle(
-                                  color: Color(0xFFCCCCCC),
+                                  color: _hintText,
                                   fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
                                 prefixIcon: const Padding(
                                   padding: EdgeInsets.only(top: 12),
                                   child: Icon(
                                     Icons.menu_outlined,
-                                    color: Color(0xFFCCCCCC),
+                                    color: _mutedText,
                                   ),
                                 ),
                                 border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: _goldTan),
+                                ),
+                                disabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none,
                                 ),
@@ -414,9 +470,12 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                       horizontal: 4,
                                     ),
                                     child: GestureDetector(
-                                      onTap: () => setState(
-                                        () => _selectedPriority = priority,
-                                      ),
+                                      onTap: _isSaving
+                                          ? null
+                                          : () => setState(
+                                              () =>
+                                                  _selectedPriority = priority,
+                                            ),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 12,
@@ -444,7 +503,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                               Icons.flag_outlined,
                                               color: isSelected
                                                   ? priorityColor
-                                                  : const Color(0xFFCCCCCC),
+                                                  : _mutedText,
                                               size: 22,
                                             ),
                                             const SizedBox(height: 2),
@@ -485,7 +544,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                       ),
                                       const SizedBox(height: 8),
                                       GestureDetector(
-                                        onTap: _selectDate,
+                                        onTap: _isSaving ? null : _selectDate,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 16,
@@ -501,7 +560,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                             children: [
                                               const Icon(
                                                 Icons.calendar_today_outlined,
-                                                color: Color(0xFFCCCCCC),
+                                                color: _mutedText,
                                                 size: 20,
                                               ),
                                               const SizedBox(width: 8),
@@ -511,8 +570,14 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                                       ? 'mm/dd/yy'
                                                       : _dueDate.text,
                                                   style: TextStyle(
-                                                    color: _navyBlue,
+                                                    color: _dueDate.text.isEmpty
+                                                        ? _hintText
+                                                        : _navyBlue,
                                                     fontSize: 14,
+                                                    fontWeight:
+                                                        _dueDate.text.isEmpty
+                                                        ? FontWeight.w500
+                                                        : FontWeight.w700,
                                                   ),
                                                 ),
                                               ),
@@ -539,7 +604,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                       ),
                                       const SizedBox(height: 8),
                                       GestureDetector(
-                                        onTap: _selectTime,
+                                        onTap: _isSaving ? null : _selectTime,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 16,
@@ -555,7 +620,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                             children: [
                                               const Icon(
                                                 Icons.schedule_outlined,
-                                                color: Color(0xFFCCCCCC),
+                                                color: _mutedText,
                                                 size: 20,
                                               ),
                                               const SizedBox(width: 8),
@@ -565,8 +630,14 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                                       ? '--:-- --'
                                                       : _dueTime.text,
                                                   style: TextStyle(
-                                                    color: _navyBlue,
+                                                    color: _dueTime.text.isEmpty
+                                                        ? _hintText
+                                                        : _navyBlue,
                                                     fontSize: 14,
+                                                    fontWeight:
+                                                        _dueTime.text.isEmpty
+                                                        ? FontWeight.w500
+                                                        : FontWeight.w700,
                                                   ),
                                                 ),
                                               ),
@@ -597,7 +668,9 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                       horizontal: 4,
                                     ),
                                     child: GestureDetector(
-                                      onTap: () => _setQuickDate(date),
+                                      onTap: _isSaving
+                                          ? null
+                                          : () => _setQuickDate(date),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 10,
