@@ -597,7 +597,6 @@ class _GenerateMealIdeasModalState
                     ),
                     const SizedBox(height: 20),
 
-                    // ── AI info banner ───────────────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -628,7 +627,6 @@ class _GenerateMealIdeasModalState
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Generate button ──────────────────────────────────────
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

@@ -17,23 +17,18 @@ class MealService {
   static const _nidSugar = 2000;
   static const _nidSodium = 1093;
   static const _nidCholesterol = 1253;
-  static const _nidSaturatedFat = 1258; // NEW
-  static const _nidTransFat = 1257; // NEW
-  static const _nidPotassium = 1092; // NEW
-  static const _nidCalcium = 1087; // NEW
-  static const _nidIron = 1089; // NEW
-  static const _nidVitaminD = 1114; // NEW
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // PUBLIC
-  // ─────────────────────────────────────────────────────────────────────────
+  static const _nidSaturatedFat = 1258;
+  static const _nidTransFat = 1257;
+  static const _nidPotassium = 1092;
+  static const _nidCalcium = 1087;
+  static const _nidIron = 1089;
+  static const _nidVitaminD = 1114;
 
   static Future<List<Map<String, dynamic>>> fetchMealsByIngredients(
     List<String> ingredients, {
     String mealType = 'Any',
     List<String> dietaryPrefs = const [],
   }) async {
-    // ── STEP 1: Query TheMealDB once per ingredient ──────────────────────────
     final Map<String, int> idMatchCount = {};
 
     for (int i = 0; i < ingredients.length; i++) {
@@ -58,7 +53,6 @@ class MealService {
 
     if (idMatchCount.isEmpty) return [];
 
-    // ── STEP 2: Take top 10 meals by match count ─────────────────────────────
     final topIds =
         (idMatchCount.entries.toList()
               ..sort((a, b) => b.value.compareTo(a.value)))
@@ -66,13 +60,10 @@ class MealService {
             .map((e) => e.key)
             .toList();
 
-    // ── STEP 3: Fetch full detail + nutrition for each ───────────────────────
     final results = await Future.wait(topIds.map(_lookupMealWithNutrition));
 
-    // ── STEP 4: Remove nulls ─────────────────────────────────────────────────
     var filtered = results.whereType<Map<String, dynamic>>().toList();
 
-    // ── STEP 5: Filter by meal type ──────────────────────────────────────────
     if (mealType != 'Any') {
       filtered = filtered.where((meal) {
         final category = (meal['category'] as String).toLowerCase();
@@ -118,7 +109,6 @@ class MealService {
       }).toList();
     }
 
-    // ── STEP 6: Filter by dietary preferences ────────────────────────────────
     if (dietaryPrefs.isNotEmpty) {
       filtered = filtered.where((meal) {
         final category = (meal['category'] as String).toLowerCase();
@@ -136,7 +126,6 @@ class MealService {
       }).toList();
     }
 
-    // ── STEP 7: Sort by dietary preference nutrition ──────────────────────────
     if (dietaryPrefs.isNotEmpty) {
       filtered.sort((a, b) {
         final aNut = a['nutrition'] as Map<String, dynamic>? ?? {};

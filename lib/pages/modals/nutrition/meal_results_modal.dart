@@ -702,10 +702,6 @@ class _MealResultsModalState extends State<MealResultsModal> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Allergy alert banner
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _AllergyAlertBanner extends StatelessWidget {
   final List<String> allergens;
 
@@ -781,10 +777,6 @@ class _AllergyAlertBanner extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper classes
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _StatusStyle {
   final Color bg;
