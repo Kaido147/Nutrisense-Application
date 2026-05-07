@@ -314,11 +314,17 @@ class PrototypeDataService {
     required String category,
     required HealthProfile healthProfile,
     required List<ClassSchedule> schedules,
+    int? durationMinutes,
+    String? intensity,
+    String? fitnessGoal,
+    String? activityLevel,
   }) {
     final selectedCategory = workoutCategoryByName(category);
     final freeMinutes = _largestFreeBlockMinutes(schedules);
-    final duration = _durationForFreeBlock(freeMinutes);
-    final intensity = _intensityFor(healthProfile);
+    final duration = durationMinutes ?? _durationForFreeBlock(freeMinutes);
+    final resolvedIntensity = intensity ?? _intensityFor(healthProfile);
+    final resolvedGoal = fitnessGoal ?? healthProfile.fitnessGoal;
+    final resolvedActivity = activityLevel ?? healthProfile.activityLevel;
     final exercises = _generatedExercisesFor(
       category: selectedCategory,
       healthProfile: healthProfile,
@@ -328,14 +334,14 @@ class PrototypeDataService {
     return WorkoutPlanDraft(
       title: _workoutTitleFor(
         category: selectedCategory.name,
-        goal: healthProfile.fitnessGoal,
+        goal: resolvedGoal,
       ),
       category: selectedCategory.name,
       source: 'generated',
       durationMinutes: duration,
-      intensity: intensity,
-      fitnessGoal: healthProfile.fitnessGoal,
-      activityLevel: healthProfile.activityLevel,
+      intensity: resolvedIntensity,
+      fitnessGoal: resolvedGoal,
+      activityLevel: resolvedActivity,
       exercises: exercises,
     );
   }
@@ -631,8 +637,13 @@ class PrototypeDataService {
   Future<DashboardStats> loadDashboardStats() async {
     final user = _requireUser();
     final uidDoc = _userDoc(user.uid);
+    final now = DateTime.now();
     final date = todayKey();
     final today = weekdayName();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weekStartKey = todayKey(weekStart);
+    final weekEndKey = todayKey(weekEnd);
 
     final results = await Future.wait([
       uidDoc.collection('schedules').where('dayOfWeek', isEqualTo: today).get(),
@@ -646,6 +657,17 @@ class PrototypeDataService {
           .where('dateKey', isEqualTo: date)
           .where('completed', isEqualTo: true)
           .get(),
+      uidDoc.collection('workoutPlans').where('dateKey', isEqualTo: date).get(),
+      uidDoc
+          .collection('workoutPlans')
+          .where('dateKey', isGreaterThanOrEqualTo: weekStartKey)
+          .where('dateKey', isLessThanOrEqualTo: weekEndKey)
+          .get(),
+      uidDoc
+          .collection('studySessions')
+          .where('dateKey', isGreaterThanOrEqualTo: weekStartKey)
+          .where('dateKey', isLessThanOrEqualTo: weekEndKey)
+          .get(),
       uidDoc.collection('mealLogs').get(),
       uidDoc.collection('dailyQuests').where('dateKey', isEqualTo: date).get(),
       uidDoc.collection('wellnessLogs').doc(date).get(),
@@ -655,9 +677,12 @@ class PrototypeDataService {
     final tasks = results[1] as QuerySnapshot<Map<String, dynamic>>;
     final sessions = results[2] as QuerySnapshot<Map<String, dynamic>>;
     final workouts = results[3] as QuerySnapshot<Map<String, dynamic>>;
-    final meals = results[4] as QuerySnapshot<Map<String, dynamic>>;
-    final quests = results[5] as QuerySnapshot<Map<String, dynamic>>;
-    final wellness = results[6] as DocumentSnapshot<Map<String, dynamic>>;
+    final todayWorkouts = results[4] as QuerySnapshot<Map<String, dynamic>>;
+    final weeklyWorkouts = results[5] as QuerySnapshot<Map<String, dynamic>>;
+    final weeklySessions = results[6] as QuerySnapshot<Map<String, dynamic>>;
+    final meals = results[7] as QuerySnapshot<Map<String, dynamic>>;
+    final quests = results[8] as QuerySnapshot<Map<String, dynamic>>;
+    final wellness = results[9] as DocumentSnapshot<Map<String, dynamic>>;
 
     final completedTasks = tasks.docs
         .where((doc) => doc.data()['isCompleted'] == true)
@@ -670,6 +695,22 @@ class PrototypeDataService {
         .where((doc) => doc.data()['completed'] == true)
         .length;
     final wellnessData = wellness.data() ?? <String, dynamic>{};
+    final activeWorkout = _latestWorkoutDoc(todayWorkouts.docs);
+    final activeExercises = _mapListValue(activeWorkout?.data()['exercises']);
+    final workoutExercisesDone = activeExercises
+        .where((exercise) => exercise['completed'] == true)
+        .length;
+    final workoutExercisesTotal = activeExercises.length;
+    final weeklyCompletedWorkoutDays = weeklyWorkouts.docs
+        .where((doc) => doc.data()['completed'] == true)
+        .map((doc) => doc.data()['dateKey']?.toString() ?? '')
+        .where((dateKey) => dateKey.isNotEmpty)
+        .toSet()
+        .length;
+    final weeklyStudyMinutes = weeklySessions.docs.fold<int>(
+      0,
+      (total, doc) => total + (doc.data()['durationMinutes'] as int? ?? 0),
+    );
 
     return DashboardStats(
       todayClasses: schedules.docs.length,
@@ -677,6 +718,10 @@ class PrototypeDataService {
       completedStudyTasks: completedTasks,
       studyMinutes: studyMinutes,
       completedWorkouts: workouts.docs.length,
+      workoutExercisesDone: workoutExercisesDone,
+      workoutExercisesTotal: workoutExercisesTotal,
+      weeklyCompletedWorkoutDays: weeklyCompletedWorkoutDays,
+      weeklyStudyMinutes: weeklyStudyMinutes,
       mealsLogged: meals.docs.length,
       completedQuests: completedQuests,
       totalQuests: quests.docs.length,
@@ -696,6 +741,25 @@ class PrototypeDataService {
     }
     return user;
   }
+}
+
+QueryDocumentSnapshot<Map<String, dynamic>>? _latestWorkoutDoc(
+  List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+) {
+  if (docs.isEmpty) return null;
+  final sorted = docs.toList()
+    ..sort((a, b) {
+      return _timestampMillis(
+        b.data()['createdAt'],
+      ).compareTo(_timestampMillis(a.data()['createdAt']));
+    });
+  return sorted.first;
+}
+
+int _timestampMillis(Object? value) {
+  if (value is Timestamp) return value.millisecondsSinceEpoch;
+  if (value is DateTime) return value.millisecondsSinceEpoch;
+  return 0;
 }
 
 String _scheduleColorFor(String dayOfWeek) {

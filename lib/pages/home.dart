@@ -202,7 +202,11 @@ class _ProgressCard extends StatelessWidget {
         : (studyMinutes / 60).toStringAsFixed(studyMinutes >= 60 ? 1 : 0);
     final studyUnit = studyTasks > 0 ? 'tasks' : 'hrs';
 
-    final workoutDone = (stats?.completedWorkouts ?? 0) > 0;
+    final workoutDone = stats?.workoutExercisesDone ?? 0;
+    final workoutTotal = stats?.workoutExercisesTotal ?? 0;
+    final workoutProgress = workoutTotal == 0
+        ? 0.0
+        : workoutDone / workoutTotal;
     final totalQuests = stats?.totalQuests ?? 0;
     final completedQuests = stats?.completedQuests ?? 0;
 
@@ -246,10 +250,12 @@ class _ProgressCard extends StatelessWidget {
               ),
               Expanded(
                 child: ProgressCircle(
-                  valueLabel: workoutDone ? 'Done' : '0',
-                  unit: workoutDone ? '' : 'plan',
+                  valueLabel: workoutTotal == 0
+                      ? '0'
+                      : '$workoutDone/$workoutTotal',
+                  unit: workoutTotal == 0 ? 'plan' : 'done',
                   label: 'Workout',
-                  progress: workoutDone ? 1.0 : 0.0,
+                  progress: workoutProgress,
                   color: _HomePageState.gold,
                 ),
               ),

@@ -7,6 +7,7 @@ class WorkoutExercise {
     required this.difficulty,
     required this.instruction,
     this.tags = const <String>[],
+    this.videoUrl = _defaultExerciseVideoUrl,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class WorkoutExercise {
   final String difficulty;
   final String instruction;
   final List<String> tags;
+  final String videoUrl;
 
   Map<String, dynamic> toPlanMap() {
     return {
@@ -26,12 +28,16 @@ class WorkoutExercise {
       'difficulty': difficulty,
       'instruction': instruction,
       'tags': tags,
+      'videoUrl': videoUrl,
       'completed': false,
       'completedAt': null,
       'timerSeconds': _timerSecondsFor(repsOrDuration),
     };
   }
 }
+
+const String _defaultExerciseVideoUrl =
+    'https://www.youtube.com/watch?v=m0GcZ24pK6k';
 
 int _timerSecondsFor(String repsOrDuration) {
   final value = repsOrDuration.toLowerCase();
@@ -97,6 +103,7 @@ const workoutCatalog = <WorkoutCategory>[
         repsOrDuration: '12 reps',
         difficulty: 'Beginner',
         instruction: 'Keep your chest tall and sit your hips back.',
+        videoUrl: 'https://www.youtube.com/watch?v=m0GcZ24pK6k',
       ),
       WorkoutExercise(
         id: 'push-ups',

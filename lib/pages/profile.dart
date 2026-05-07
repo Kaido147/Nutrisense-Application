@@ -88,7 +88,7 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
-class _ProfileContent extends StatelessWidget {
+class _ProfileContent extends ConsumerWidget {
   const _ProfileContent({
     required this.profile,
     required this.healthProfile,
@@ -107,8 +107,11 @@ class _ProfileContent extends StatelessWidget {
   static const Color _cardColor = Colors.white;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final themeProvider = p.Provider.of<ThemeProvider>(context);
+    final stats = ref
+        .watch(dashboardStatsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
 
     return Scaffold(
       backgroundColor: _backgroundColor,
@@ -121,7 +124,7 @@ class _ProfileContent extends StatelessWidget {
               offset: const Offset(0, -32),
               child: Column(
                 children: [
-                  _buildGoalProgressCard(),
+                  _buildGoalProgressCard(stats),
                   const SizedBox(height: 18),
                   _buildHealthProfileCard(context),
                   const SizedBox(height: 18),
@@ -189,7 +192,26 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-  Widget _buildGoalProgressCard() {
+  Widget _buildGoalProgressCard(DashboardStats? stats) {
+    final studyTargetHours = profile.effectiveStudyWeeklyHours;
+    final studyActualMinutes = stats?.weeklyStudyMinutes ?? 0;
+    final studyActualHours = studyActualMinutes / 60;
+    final studyProgress = studyTargetHours == null || studyTargetHours <= 0
+        ? 0.0
+        : studyActualHours / studyTargetHours;
+    final studyValue = studyTargetHours == null
+        ? 'Not set'
+        : '${_formatCompactNumber(studyActualHours)}h/${studyTargetHours}h';
+
+    final workoutTargetDays = profile.effectiveWorkoutDaysPerWeek;
+    final workoutActualDays = stats?.weeklyCompletedWorkoutDays ?? 0;
+    final workoutProgress = workoutTargetDays == null || workoutTargetDays <= 0
+        ? 0.0
+        : workoutActualDays / workoutTargetDays;
+    final workoutValue = workoutTargetDays == null
+        ? 'Not set'
+        : '$workoutActualDays/$workoutTargetDays days';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.fromLTRB(26, 26, 26, 22),
@@ -219,16 +241,16 @@ class _ProfileContent extends StatelessWidget {
           _buildProgressRow(
             icon: LucideIcons.target,
             title: 'Weekly Study Goal',
-            value: profile.studySummaryValue,
-            progress: profile.studySummaryProgress,
+            value: studyValue,
+            progress: studyProgress,
             color: _navyBlue,
           ),
           const SizedBox(height: 24),
           _buildProgressRow(
             icon: Icons.trending_up_rounded,
             title: 'Workout Streak',
-            value: profile.workoutSummaryValue,
-            progress: profile.workoutSummaryProgress,
+            value: workoutValue,
+            progress: workoutProgress,
             color: _goldTan,
           ),
         ],
@@ -670,6 +692,13 @@ class _ProfileContent extends StatelessWidget {
   }
 
   String _formatNumber(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(1);
+  }
+
+  String _formatCompactNumber(double value) {
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
     }

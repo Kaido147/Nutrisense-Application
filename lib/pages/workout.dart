@@ -16,10 +16,6 @@ class WorkoutPage extends ConsumerStatefulWidget {
 
 class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   int _selectedTab = 0;
-  WorkoutCategory _selectedCategory = workoutCatalog.first;
-  WorkoutPlanDraft? _generatedDraft;
-  bool _isGenerating = false;
-  bool _isSavingGenerated = false;
 
   static const Color _navy = Color(0xFF273967);
   static const Color _cream = Color(0xFFF5F0EA);
@@ -55,15 +51,9 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
               _WorkoutContent(
                 plans: plans,
                 currentPlan: currentPlan,
-                selectedCategory: _selectedCategory,
-                generatedDraft: _generatedDraft,
-                isGenerating: _isGenerating,
-                isSavingGenerated: _isSavingGenerated,
-                onCategorySelected: _selectCategory,
+                onCategorySelected: (category) =>
+                    _openManualBuilder(healthProfile, schedules, category),
                 onGenerate: () => _generateDraft(healthProfile, schedules),
-                onSaveGenerated: () => _saveGeneratedDraft(schedules),
-                onOpenManualBuilder: () =>
-                    _openManualBuilder(healthProfile, schedules),
                 onOpenPlan: _openPlanDetail,
                 onStartExercise: _startExercise,
               ),
@@ -75,56 +65,7 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
     );
   }
 
-  void _selectCategory(WorkoutCategory category) {
-    setState(() {
-      _selectedCategory = category;
-      _generatedDraft = null;
-    });
-  }
-
   Future<void> _generateDraft(
-    HealthProfile? healthProfile,
-    List<ClassSchedule> schedules,
-  ) async {
-    if (healthProfile == null) {
-      _showSnack('Complete your health profile first.');
-      return;
-    }
-    setState(() => _isGenerating = true);
-    try {
-      final draft = ref
-          .read(prototypeDataServiceProvider)
-          .buildGeneratedWorkoutDraft(
-            category: _selectedCategory.name,
-            healthProfile: healthProfile,
-            schedules: schedules,
-          );
-      setState(() => _generatedDraft = draft);
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
-    }
-  }
-
-  Future<void> _saveGeneratedDraft(List<ClassSchedule> schedules) async {
-    final draft = _generatedDraft;
-    if (draft == null) return;
-    setState(() => _isSavingGenerated = true);
-    try {
-      await ref
-          .read(prototypeDataServiceProvider)
-          .saveWorkoutDraft(draft, schedules: schedules);
-      ref.invalidate(workoutPlansProvider);
-      ref.invalidate(dashboardStatsProvider);
-      setState(() => _generatedDraft = null);
-      _showSnack('Generated workout saved.');
-    } catch (_) {
-      _showSnack('We could not save the generated workout.');
-    } finally {
-      if (mounted) setState(() => _isSavingGenerated = false);
-    }
-  }
-
-  Future<void> _openManualBuilder(
     HealthProfile? healthProfile,
     List<ClassSchedule> schedules,
   ) async {
@@ -132,11 +73,55 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      builder: (context) => _QuickGenerateSheet(
+        healthProfile: healthProfile ?? HealthProfile.empty(),
+        schedules: schedules,
+        onBuildDraft:
+            ({
+              required String goal,
+              required int durationMinutes,
+              required WorkoutCategory category,
+              required String intensity,
+            }) {
+              return ref
+                  .read(prototypeDataServiceProvider)
+                  .buildGeneratedWorkoutDraft(
+                    category: category.name,
+                    healthProfile: healthProfile ?? HealthProfile.empty(),
+                    schedules: schedules,
+                    durationMinutes: durationMinutes,
+                    intensity: intensity,
+                    fitnessGoal: goal,
+                    activityLevel: intensity,
+                  );
+            },
+        onSave: (draft) async {
+          await ref
+              .read(prototypeDataServiceProvider)
+              .saveWorkoutDraft(draft, schedules: schedules);
+          ref.invalidate(workoutPlansProvider);
+          ref.invalidate(dashboardStatsProvider);
+        },
+      ),
+    );
+    if (saved == true) _showSnack('Generated workout saved.');
+  }
+
+  Future<void> _openManualBuilder(
+    HealthProfile? healthProfile,
+    List<ClassSchedule> schedules,
+    WorkoutCategory? initialCategory,
+  ) async {
+    final category = initialCategory ?? workoutCatalog.first;
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => _ManualWorkoutBuilderSheet(
-        initialCategory: _selectedCategory,
+        initialCategory: category,
         healthProfile: healthProfile,
         schedules: schedules,
-        onCategoryChanged: _selectCategory,
+        onCategoryChanged: (_) {},
         onSave: (category, exercises) async {
           await ref
               .read(prototypeDataServiceProvider)
@@ -331,28 +316,16 @@ class _WorkoutContent extends StatelessWidget {
   const _WorkoutContent({
     required this.plans,
     required this.currentPlan,
-    required this.selectedCategory,
-    required this.generatedDraft,
-    required this.isGenerating,
-    required this.isSavingGenerated,
     required this.onCategorySelected,
     required this.onGenerate,
-    required this.onSaveGenerated,
-    required this.onOpenManualBuilder,
     required this.onOpenPlan,
     required this.onStartExercise,
   });
 
   final List<WorkoutPlan> plans;
   final WorkoutPlan? currentPlan;
-  final WorkoutCategory selectedCategory;
-  final WorkoutPlanDraft? generatedDraft;
-  final bool isGenerating;
-  final bool isSavingGenerated;
   final ValueChanged<WorkoutCategory> onCategorySelected;
   final VoidCallback onGenerate;
-  final VoidCallback onSaveGenerated;
-  final VoidCallback onOpenManualBuilder;
   final ValueChanged<WorkoutPlan?> onOpenPlan;
   final void Function(WorkoutPlan plan, Map<String, dynamic> exercise)
   onStartExercise;
@@ -378,35 +351,15 @@ class _WorkoutContent extends StatelessWidget {
           _DailyFocusCard(
             plan: currentPlan,
             onPressed: currentPlan == null
-                ? onOpenManualBuilder
+                ? onGenerate
                 : () => onOpenPlan(currentPlan),
           ),
           const SizedBox(height: 30),
           const _SectionHeader(title: 'Workout Library'),
           const SizedBox(height: 14),
-          _CategoryGrid(
-            selectedCategory: selectedCategory,
-            onCategorySelected: onCategorySelected,
-          ),
+          _CategoryGrid(onCategorySelected: onCategorySelected),
           const SizedBox(height: 24),
-          _CategoryPreview(
-            category: selectedCategory,
-            onOpenManualBuilder: onOpenManualBuilder,
-          ),
-          const SizedBox(height: 24),
-          _BuilderActions(
-            isGenerating: isGenerating,
-            onGenerate: onGenerate,
-            onOpenManualBuilder: onOpenManualBuilder,
-          ),
-          if (generatedDraft != null) ...[
-            const SizedBox(height: 16),
-            _GeneratedDraftCard(
-              draft: generatedDraft!,
-              isSaving: isSavingGenerated,
-              onSave: onSaveGenerated,
-            ),
-          ],
+          _BuilderActions(onGenerate: onGenerate),
           const SizedBox(height: 30),
           _SectionHeader(
             title: 'Current Plan',
@@ -654,12 +607,8 @@ class _DailyFocusCard extends StatelessWidget {
 }
 
 class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({
-    required this.selectedCategory,
-    required this.onCategorySelected,
-  });
+  const _CategoryGrid({required this.onCategorySelected});
 
-  final WorkoutCategory selectedCategory;
   final ValueChanged<WorkoutCategory> onCategorySelected;
 
   @override
@@ -673,13 +622,12 @@ class _CategoryGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 14,
         crossAxisSpacing: 14,
-        childAspectRatio: 1.35,
+        mainAxisExtent: 124,
       ),
       itemBuilder: (context, index) {
         final category = visible[index];
         return _LibraryCategoryCard(
           category: category,
-          selected: selectedCategory.id == category.id,
           icon: _iconForCategory(category),
           onTap: () => onCategorySelected(category),
         );
@@ -691,20 +639,18 @@ class _CategoryGrid extends StatelessWidget {
 class _LibraryCategoryCard extends StatelessWidget {
   const _LibraryCategoryCard({
     required this.category,
-    required this.selected,
     required this.icon,
     required this.onTap,
   });
 
   final WorkoutCategory category;
-  final bool selected;
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? _WorkoutColors.navy : Colors.white,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -713,7 +659,7 @@ class _LibraryCategoryCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            boxShadow: selected ? null : _softShadow,
+            boxShadow: _softShadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -722,23 +668,18 @@ class _LibraryCategoryCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : const Color(0xFFE3E2E2),
+                  color: const Color(0xFFE3E2E2),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  icon,
-                  color: selected ? Colors.white : _WorkoutColors.navy,
-                ),
+                child: Icon(icon, color: _WorkoutColors.navy),
               ),
               const Spacer(),
               Text(
                 category.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: selected ? Colors.white : _WorkoutColors.text,
+                style: const TextStyle(
+                  color: _WorkoutColors.text,
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
                 ),
@@ -746,10 +687,8 @@ class _LibraryCategoryCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '${category.exercises.length} workouts',
-                style: TextStyle(
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.72)
-                      : const Color(0xFF667085),
+                style: const TextStyle(
+                  color: Color(0xFF667085),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -762,98 +701,10 @@ class _LibraryCategoryCard extends StatelessWidget {
   }
 }
 
-class _CategoryPreview extends StatelessWidget {
-  const _CategoryPreview({
-    required this.category,
-    required this.onOpenManualBuilder,
-  });
-
-  final WorkoutCategory category;
-  final VoidCallback onOpenManualBuilder;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: _surfaceDecoration(radius: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  category.name,
-                  style: const TextStyle(
-                    color: _WorkoutColors.navy,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: onOpenManualBuilder,
-                icon: const Icon(Icons.add_circle_outline, size: 18),
-                label: const Text('Build'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            category.description,
-            style: const TextStyle(color: Color(0xFF667085), height: 1.4),
-          ),
-          const SizedBox(height: 14),
-          ...category.exercises
-              .take(3)
-              .map(
-                (exercise) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: _WorkoutColors.gold,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          exercise.name,
-                          style: const TextStyle(
-                            color: _WorkoutColors.text,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${exercise.sets} x ${exercise.repsOrDuration}',
-                        style: const TextStyle(
-                          color: Color(0xFF667085),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BuilderActions extends StatelessWidget {
-  const _BuilderActions({
-    required this.isGenerating,
-    required this.onGenerate,
-    required this.onOpenManualBuilder,
-  });
+  const _BuilderActions({required this.onGenerate});
 
-  final bool isGenerating;
   final VoidCallback onGenerate;
-  final VoidCallback onOpenManualBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -873,133 +724,18 @@ class _BuilderActions extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Use your profile for a quick plan or select exercises manually.',
+            'Answer a few questions and generate a focused routine.',
             style: TextStyle(color: Color(0xFF667085), height: 1.4),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: isGenerating ? null : onGenerate,
-                  icon: isGenerating
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.auto_awesome),
-                  label: const Text('Quick Generate'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFDDC96),
-                    foregroundColor: const Color(0xFF59440C),
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onOpenManualBuilder,
-                  icon: const Icon(Icons.tune),
-                  label: const Text('Manual Builder'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _WorkoutColors.navy,
-                    minimumSize: const Size.fromHeight(48),
-                    side: const BorderSide(color: _WorkoutColors.navy),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GeneratedDraftCard extends StatelessWidget {
-  const _GeneratedDraftCard({
-    required this.draft,
-    required this.isSaving,
-    required this.onSave,
-  });
-
-  final WorkoutPlanDraft draft;
-  final bool isSaving;
-  final VoidCallback onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: _surfaceDecoration(
-        radius: 22,
-        borderColor: const Color(0xFFFDDC96),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: _WorkoutColors.gold),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  draft.title,
-                  style: const TextStyle(
-                    color: _WorkoutColors.navy,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 17,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${draft.category}  •  ${draft.durationMinutes} min  •  ${draft.intensity}',
-            style: const TextStyle(
-              color: Color(0xFF667085),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: draft.exercises
-                .map(
-                  (exercise) => Chip(
-                    label: Text(exercise.name),
-                    backgroundColor: const Color(0xFFF5F3F3),
-                    side: BorderSide.none,
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 14),
           ElevatedButton.icon(
-            onPressed: isSaving ? null : onSave,
-            icon: isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check),
-            label: const Text('Save Generated Workout'),
+            onPressed: onGenerate,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Quick Generate'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _WorkoutColors.navy,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
+              backgroundColor: const Color(0xFFFDDC96),
+              foregroundColor: const Color(0xFF59440C),
+              minimumSize: const Size.fromHeight(50),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
               ),
@@ -1027,7 +763,7 @@ class _SavedExercisesList extends StatelessWidget {
     if (workoutPlan == null || workoutPlan.exercises.isEmpty) {
       return const _EmptyCard(
         message:
-            'No saved workout yet. Generate a routine or use the manual builder.',
+            'No saved workout yet. Generate a routine or choose a library category.',
       );
     }
     return Column(
@@ -1126,6 +862,420 @@ class _SavedExerciseTile extends StatelessWidget {
               const Icon(Icons.check_circle, color: Colors.green),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _QuickGenerateSheet extends StatefulWidget {
+  const _QuickGenerateSheet({
+    required this.healthProfile,
+    required this.schedules,
+    required this.onBuildDraft,
+    required this.onSave,
+  });
+
+  final HealthProfile healthProfile;
+  final List<ClassSchedule> schedules;
+  final WorkoutPlanDraft Function({
+    required String goal,
+    required int durationMinutes,
+    required WorkoutCategory category,
+    required String intensity,
+  })
+  onBuildDraft;
+  final Future<void> Function(WorkoutPlanDraft draft) onSave;
+
+  @override
+  State<_QuickGenerateSheet> createState() => _QuickGenerateSheetState();
+}
+
+class _QuickGenerateSheetState extends State<_QuickGenerateSheet> {
+  int _step = 0;
+  String _goal = 'General fitness';
+  int _durationMinutes = 30;
+  WorkoutCategory _category = workoutCategoryByName('Full Body');
+  String _intensity = 'Moderate';
+  WorkoutPlanDraft? _draft;
+  bool _isSaving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final draft = _draft;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.82,
+      minChildSize: 0.55,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: _WorkoutColors.background,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 18, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        draft == null ? 'Quick Generate' : 'Review Routine',
+                        style: const TextStyle(
+                          color: _WorkoutColors.navy,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      icon: const Icon(Icons.close),
+                      color: _WorkoutColors.navy,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 110),
+                  children: [
+                    if (draft == null) ...[
+                      _QuestionProgress(step: _step),
+                      const SizedBox(height: 22),
+                      _questionBody(),
+                    ] else
+                      _GeneratedWorkoutPreview(draft: draft),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                decoration: BoxDecoration(
+                  color: _WorkoutColors.background,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 24,
+                      offset: const Offset(0, -8),
+                    ),
+                  ],
+                ),
+                child: draft == null
+                    ? Row(
+                        children: [
+                          if (_step > 0) ...[
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => setState(() => _step -= 1),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _WorkoutColors.navy,
+                                  minimumSize: const Size.fromHeight(52),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                                child: const Text('Back'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _next,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _WorkoutColors.navy,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size.fromHeight(52),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              child: Text(_step == 3 ? 'Generate' : 'Next'),
+                            ),
+                          ),
+                        ],
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: _isSaving ? null : _save,
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.save),
+                        label: const Text('Save Workout'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _WorkoutColors.navy,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _questionBody() {
+    return switch (_step) {
+      0 => _QuestionBlock<String>(
+        title: 'What is your goal?',
+        value: _goal,
+        options: const <String>[
+          'Lose weight',
+          'Build strength',
+          'General fitness',
+          'Improve flexibility',
+        ],
+        labelFor: (value) => value,
+        onChanged: (value) => setState(() => _goal = value),
+      ),
+      1 => _QuestionBlock<int>(
+        title: 'How long?',
+        value: _durationMinutes,
+        options: const <int>[15, 30, 45],
+        labelFor: (value) => '$value min',
+        onChanged: (value) => setState(() => _durationMinutes = value),
+      ),
+      2 => _QuestionBlock<WorkoutCategory>(
+        title: 'Where should we focus?',
+        value: _category,
+        options: <WorkoutCategory>[
+          workoutCategoryByName('Full Body'),
+          workoutCategoryByName('Upper Body'),
+          workoutCategoryByName('Lower Body'),
+          workoutCategoryByName('Core'),
+          workoutCategoryByName('Cardio'),
+        ],
+        labelFor: (value) => value.name,
+        onChanged: (value) => setState(() => _category = value),
+      ),
+      _ => _QuestionBlock<String>(
+        title: 'Intensity level?',
+        value: _intensity,
+        options: const <String>['Light', 'Moderate', 'High'],
+        labelFor: (value) => value,
+        onChanged: (value) => setState(() => _intensity = value),
+      ),
+    };
+  }
+
+  void _next() {
+    if (_step < 3) {
+      setState(() => _step += 1);
+      return;
+    }
+    setState(() {
+      _draft = widget.onBuildDraft(
+        goal: _goal,
+        durationMinutes: _durationMinutes,
+        category: _category,
+        intensity: _intensity,
+      );
+    });
+  }
+
+  Future<void> _save() async {
+    final draft = _draft;
+    if (draft == null) return;
+    setState(() => _isSaving = true);
+    try {
+      await widget.onSave(draft);
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('We could not save this workout.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+}
+
+class _QuestionProgress extends StatelessWidget {
+  const _QuestionProgress({required this.step});
+
+  final int step;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(4, (index) {
+        return Expanded(
+          child: Container(
+            height: 6,
+            margin: EdgeInsets.only(right: index == 3 ? 0 : 8),
+            decoration: BoxDecoration(
+              color: index <= step
+                  ? _WorkoutColors.navy
+                  : const Color(0xFFE3E2E2),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _QuestionBlock<T> extends StatelessWidget {
+  const _QuestionBlock({
+    required this.title,
+    required this.value,
+    required this.options,
+    required this.labelFor,
+    required this.onChanged,
+  });
+
+  final String title;
+  final T value;
+  final List<T> options;
+  final String Function(T value) labelFor;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: _WorkoutColors.navy,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...options.map((option) {
+          final selected = option == value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Material(
+              color: selected ? _WorkoutColors.navy : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                onTap: () => onChanged(option),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 18,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: selected ? null : _softShadow,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          labelFor(option),
+                          style: TextStyle(
+                            color: selected
+                                ? Colors.white
+                                : _WorkoutColors.text,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        selected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF75777F),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _GeneratedWorkoutPreview extends StatelessWidget {
+  const _GeneratedWorkoutPreview({required this.draft});
+
+  final WorkoutPlanDraft draft;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: _surfaceDecoration(radius: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome, color: _WorkoutColors.gold, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            draft.title,
+            style: const TextStyle(
+              color: _WorkoutColors.navy,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${draft.category}  •  ${draft.durationMinutes} min  •  ${draft.intensity}',
+            style: const TextStyle(
+              color: Color(0xFF667085),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 18),
+          ...draft.exercises.map(
+            (exercise) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Color(0xFFF5F3F3),
+                    child: Icon(
+                      Icons.fitness_center,
+                      color: _WorkoutColors.navy,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      exercise.name,
+                      style: const TextStyle(
+                        color: _WorkoutColors.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${exercise.sets} x ${exercise.repsOrDuration}',
+                    style: const TextStyle(color: Color(0xFF667085)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

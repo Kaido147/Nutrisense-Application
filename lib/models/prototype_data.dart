@@ -429,6 +429,10 @@ class DashboardStats {
     required this.completedStudyTasks,
     required this.studyMinutes,
     required this.completedWorkouts,
+    required this.workoutExercisesDone,
+    required this.workoutExercisesTotal,
+    required this.weeklyCompletedWorkoutDays,
+    required this.weeklyStudyMinutes,
     required this.mealsLogged,
     required this.completedQuests,
     required this.totalQuests,
@@ -441,6 +445,10 @@ class DashboardStats {
   final int completedStudyTasks;
   final int studyMinutes;
   final int completedWorkouts;
+  final int workoutExercisesDone;
+  final int workoutExercisesTotal;
+  final int weeklyCompletedWorkoutDays;
+  final int weeklyStudyMinutes;
   final int mealsLogged;
   final int completedQuests;
   final int totalQuests;

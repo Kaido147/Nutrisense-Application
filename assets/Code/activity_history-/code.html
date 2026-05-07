@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Activity History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#e9e8e7",
+            "secondary-fixed-dim": "#e2c37f",
+            "on-tertiary-container": "#94928e",
+            "tertiary-fixed": "#e6e2dd",
+            "background": "#fbf9f9",
+            "on-secondary-container": "#775f26",
+            "tertiary-fixed-dim": "#c9c6c1",
+            "tertiary-container": "#2c2b28",
+            "on-tertiary": "#ffffff",
+            "outline-variant": "#c5c6cf",
+            "error": "#ba1a1a",
+            "surface-container": "#efeded",
+            "on-primary-fixed-variant": "#364768",
+            "on-tertiary-fixed-variant": "#484743",
+            "primary-container": "#1a2b4b",
+            "on-background": "#1b1c1c",
+            "on-tertiary-fixed": "#1c1c19",
+            "surface-container-low": "#f5f3f3",
+            "primary-fixed": "#d8e2ff",
+            "on-secondary-fixed-variant": "#59440c",
+            "on-secondary": "#ffffff",
+            "on-error-container": "#93000a",
+            "on-surface-variant": "#44474e",
+            "surface-tint": "#4e5e81",
+            "surface": "#fbf9f9",
+            "on-primary": "#ffffff",
+            "surface-container-highest": "#e3e2e2",
+            "surface-dim": "#dbdad9",
+            "surface-bright": "#fbf9f9",
+            "inverse-on-surface": "#f2f0f0",
+            "outline": "#75777f",
+            "primary-fixed-dim": "#b6c6ef",
+            "error-container": "#ffdad6",
+            "surface-container-lowest": "#ffffff",
+            "secondary-fixed": "#ffdf9b",
+            "on-surface": "#1b1c1c",
+            "secondary": "#735b22",
+            "surface-variant": "#e3e2e2",
+            "inverse-primary": "#b6c6ef",
+            "on-primary-container": "#8293b8",
+            "on-primary-fixed": "#081b3a",
+            "secondary-container": "#fddc96",
+            "inverse-surface": "#303031",
+            "primary": "#031635",
+            "on-error": "#ffffff",
+            "tertiary": "#171714",
+            "on-secondary-fixed": "#251a00"
+          },
+          "borderRadius": {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "stack-gap": "12px",
+            "gutter": "16px",
+            "container-padding": "24px",
+            "section-gap": "32px"
+          },
+          "fontFamily": {
+            "headline-xl": ["Plus Jakarta Sans"],
+            "headline-lg": ["Plus Jakarta Sans"],
+            "label-md": ["Plus Jakarta Sans"],
+            "label-sm": ["Plus Jakarta Sans"],
+            "headline-md": ["Plus Jakarta Sans"],
+            "body-md": ["Plus Jakarta Sans"],
+            "body-lg": ["Plus Jakarta Sans"]
+          },
+          "fontSize": {
+            "headline-xl": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+            "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+            "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "body-lg": ["18px", { "lineHeight": "26px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background antialiased pb-32">
+<!-- TopAppBar -->
+<header class="docked full-width top-0 bg-surface dark:bg-surface-dim flex justify-between items-center w-full px-container-padding py-4 max-w-7xl mx-auto z-40 relative">
+<div class="flex items-center gap-4">
+<img alt="User profile photo" class="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/ADBb0uhHVoHfI6CNjFJW_vbwQ-gIYjvJ0C7NKVEHYMRmoCnwE_LIKIqnqEWGvZwKgqXZEOrZLifwzPh2jE8T33N9EraN_gYDE-pOb8JPpfF2iekfqF0cWVwdKl4xXgGO7YkdcqEAjElyV8EK8bq2VJBNDbfX9W2c20-IBXhVIU-Aclb1ob3KkEGaUL7Pod-8c5dQWi2whcZ43DFUdru_v_CPh-Pcx5XJh3onnm9W9kPKrbqazVTbp7Noi4SC"/>
+<h1 class="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed-dim">Wellness Hub</h1>
+</div>
+<button class="hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors rounded-full p-2">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="notifications">notifications</span>
+</button>
+</header>
+<main class="px-container-padding max-w-7xl mx-auto mt-4">
+<!-- Header & Search -->
+<div class="mb-section-gap">
+<h2 class="font-headline-xl text-headline-xl text-primary mb-4">Activity History</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-4 pl-12 pr-4 font-body-md text-body-md text-on-surface focus:ring-2 focus:ring-primary-container transition-shadow" placeholder="Search workouts..." type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-surface-container-highest rounded-full text-primary hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+</button>
+</div>
+</div>
+<!-- This Week -->
+<section class="mb-section-gap">
+<h3 class="font-headline-md text-headline-md text-primary mb-stack-gap">This Week</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-gap">
+<!-- Workout Card 1 -->
+<div class="bg-surface-container-lowest rounded-[24px] p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex items-center gap-4">
+<div class="w-16 h-16 rounded-[16px] bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary" data-icon="directions_run" data-weight="fill" style="font-variation-settings: 'FILL' 1;">directions_run</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-label-md text-primary mb-1">Morning Run</h4>
+<p class="font-label-sm text-label-sm text-outline mb-2">Cardio • Today, 7:00 AM</p>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span>45m</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="local_fire_department">local_fire_department</span>
+<span>320 kcal</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Workout Card 2 -->
+<div class="bg-surface-container-lowest rounded-[24px] p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex items-center gap-4">
+<div class="w-16 h-16 rounded-[16px] bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="self_improvement" data-weight="fill" style="font-variation-settings: 'FILL' 1;">self_improvement</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-label-md text-primary mb-1">Vinyasa Flow</h4>
+<p class="font-label-sm text-label-sm text-outline mb-2">Yoga • Yesterday, 6:30 PM</p>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span>60m</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="local_fire_department">local_fire_department</span>
+<span>180 kcal</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Last Week -->
+<section class="mb-section-gap">
+<h3 class="font-headline-md text-headline-md text-primary mb-stack-gap">Last Week</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-gap">
+<!-- Workout Card 3 -->
+<div class="bg-surface-container-lowest rounded-[24px] p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex items-center gap-4">
+<div class="w-16 h-16 rounded-[16px] bg-surface-container-high flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface" data-icon="fitness_center" data-weight="fill" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-label-md text-primary mb-1">Upper Body Strength</h4>
+<p class="font-label-sm text-label-sm text-outline mb-2">Strength • Fri, 5:15 PM</p>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span>50m</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="local_fire_department">local_fire_department</span>
+<span>280 kcal</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Workout Card 4 -->
+<div class="bg-surface-container-lowest rounded-[24px] p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex items-center gap-4">
+<div class="w-16 h-16 rounded-[16px] bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary" data-icon="directions_bike" data-weight="fill" style="font-variation-settings: 'FILL' 1;">directions_bike</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-label-md text-primary mb-1">Evening Cycling</h4>
+<p class="font-label-sm text-label-sm text-outline mb-2">Cardio • Wed, 6:00 PM</p>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span>45m</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="local_fire_department">local_fire_department</span>
+<span>410 kcal</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Older History (Featured Image Grid) -->
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe pt-2 bg-surface dark:bg-surface-dim shadow-[0px_-4px_20px_rgba(0,0,0,0.05)] md:hidden rounded-t-lg">
+<!-- Home -->
+<button class="flex flex-col items-center justify-center text-outline dark:text-outline-variant px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</button>
+<!-- Explore -->
+<button class="flex flex-col items-center justify-center text-outline dark:text-outline-variant px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-label-sm text-label-sm mt-1">Explore</span>
+</button>
+<!-- Progress (Active) -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim bg-primary-container/5 rounded-xl px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out">
+<span class="material-symbols-outlined fill" data-icon="monitoring" data-weight="fill" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+<span class="font-label-sm text-label-sm mt-1">Progress</span>
+</button>
+<!-- Profile -->
+<button class="flex flex-col items-center justify-center text-outline dark:text-outline-variant px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profile</span>
+</button>
+</nav>
+<!-- Desktop Nav (Hidden on mobile, just for layout completeness if screen grows) -->
+<nav class="hidden md:flex justify-center items-center gap-8 py-4 bg-surface dark:bg-surface-dim border-t border-surface-variant fixed bottom-0 w-full z-40 shadow-[0px_-4px_20px_rgba(0,0,0,0.05)] border-none">
+<button class="flex items-center gap-2 text-outline dark:text-outline-variant hover:text-secondary-fixed-dim transition-all px-4 py-2">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</button>
+<button class="flex items-center gap-2 text-outline dark:text-outline-variant hover:text-secondary-fixed-dim transition-all px-4 py-2">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</button>
+<button class="flex items-center gap-2 text-secondary dark:text-secondary-fixed-dim bg-primary-container/5 rounded-xl px-4 py-2 transition-all">
+<span class="material-symbols-outlined fill" data-icon="monitoring" data-weight="fill" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+<span class="font-label-md text-label-md">Progress</span>
+</button>
+<button class="flex items-center gap-2 text-outline dark:text-outline-variant hover:text-secondary-fixed-dim transition-all px-4 py-2">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</button>
+</nav>
+</body></html>

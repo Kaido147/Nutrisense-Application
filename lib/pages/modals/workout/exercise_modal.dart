@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 import 'exercise_complete_dialog.dart';
 
@@ -35,6 +39,7 @@ class _ExerciseModalState extends State<_ExerciseModal> {
   late final String _name;
   late final String _target;
   late final String _instruction;
+  late final String _videoUrl;
   late final int _setCount;
   late final int _initialSeconds;
   late final List<bool> _setCompleted;
@@ -52,6 +57,9 @@ class _ExerciseModalState extends State<_ExerciseModal> {
     _instruction =
         widget.exercise['instruction']?.toString() ??
         'Move with control and keep a comfortable pace.';
+    _videoUrl =
+        widget.exercise['videoUrl']?.toString() ??
+        'https://www.youtube.com/watch?v=m0GcZ24pK6k';
     _setCount = _readPositiveInt(widget.exercise['sets']) ?? 1;
     _initialSeconds = _readPositiveInt(widget.exercise['timerSeconds']) ?? 60;
     _secondsLeft = _initialSeconds;
@@ -216,8 +224,7 @@ class _ExerciseModalState extends State<_ExerciseModal> {
                     _ExerciseMediaCard(
                       name: _name,
                       icon: _iconForExercise(_name),
-                      isRunning: _isRunning,
-                      onToggle: _toggleTimer,
+                      videoUrl: _videoUrl,
                     ),
                     const SizedBox(height: 22),
                     Row(
@@ -329,86 +336,160 @@ class _ExerciseModalState extends State<_ExerciseModal> {
   }
 }
 
-class _ExerciseMediaCard extends StatelessWidget {
+class _ExerciseMediaCard extends StatefulWidget {
   const _ExerciseMediaCard({
     required this.name,
     required this.icon,
-    required this.isRunning,
-    required this.onToggle,
+    required this.videoUrl,
   });
 
   final String name;
   final IconData icon;
-  final bool isRunning;
-  final VoidCallback onToggle;
+  final String videoUrl;
+
+  @override
+  State<_ExerciseMediaCard> createState() => _ExerciseMediaCardState();
+}
+
+class _ExerciseMediaCardState extends State<_ExerciseMediaCard> {
+  late final WebViewController _controller;
+  bool _showVideo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    late final PlatformWebViewControllerCreationParams params;
+    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+      params = WebKitWebViewControllerCreationParams(
+        allowsInlineMediaPlayback: true,
+        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+      );
+    } else {
+      params = const PlatformWebViewControllerCreationParams();
+    }
+
+    final controller = WebViewController.fromPlatformCreationParams(params);
+    if (controller.platform is AndroidWebViewController) {
+      unawaited(
+        (controller.platform as AndroidWebViewController)
+            .setMediaPlaybackRequiresUserGesture(false),
+      );
+    }
+
+    _controller = controller
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.transparent)
+      ..loadRequest(
+        Uri.parse(_youtubeEmbedUrl(widget.videoUrl)),
+        headers: const <String, String>{'Referer': _youtubeReferrer},
+      );
+  }
+
+  Future<void> _openOnYouTube() async {
+    final launched = await launchUrl(
+      Uri.parse(_youtubeWatchUrl(widget.videoUrl)),
+      mode: LaunchMode.externalApplication,
+    );
+    if (launched || !mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('We could not open YouTube.')));
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 4 / 3,
-      child: Container(
-        decoration: BoxDecoration(
-          color: _ExerciseModalState._navy,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: _shadow,
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -34,
-              bottom: -34,
-              child: Icon(
-                icon,
-                size: 190,
-                color: Colors.white.withValues(alpha: 0.08),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 220),
+          child: AspectRatio(
+            aspectRatio: 4 / 3,
+            child: Container(
+              decoration: BoxDecoration(
+                color: _ExerciseModalState._navy,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: _shadow,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(22),
+              clipBehavior: Clip.antiAlias,
+              child: _showVideo
+                  ? WebViewWidget(controller: _controller)
+                  : Stack(
+                      children: [
+                        Positioned(
+                          right: -34,
+                          bottom: -34,
+                          child: Icon(
+                            widget.icon,
+                            size: 190,
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: Icon(
+                                  widget.icon,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                widget.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  height: 1.05,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Center(
+                          child: IconButton.filled(
+                            onPressed: () => setState(() => _showVideo = true),
+                            icon: const Icon(Icons.play_arrow, size: 36),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.92,
+                              ),
+                              foregroundColor: _ExerciseModalState._navy,
+                              fixedSize: const Size(68, 68),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Icon(icon, color: Colors.white, size: 32),
-                  ),
-                  const Spacer(),
-                  Text(
-                    name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      height: 1.05,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
             ),
-            Center(
-              child: IconButton.filled(
-                onPressed: onToggle,
-                icon: Icon(
-                  isRunning ? Icons.pause : Icons.play_arrow,
-                  size: 36,
-                ),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.92),
-                  foregroundColor: _ExerciseModalState._navy,
-                  fixedSize: const Size(68, 68),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: _openOnYouTube,
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('Watch on YouTube'),
+            style: TextButton.styleFrom(
+              foregroundColor: _ExerciseModalState._navy,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -738,6 +819,45 @@ String _formatSeconds(int seconds) {
   final minutes = seconds ~/ 60;
   final remainingSeconds = seconds % 60;
   return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
+}
+
+const String _youtubeOrigin = 'https://com.example.nutrisense';
+const String _youtubeReferrer = '$_youtubeOrigin/';
+
+String _youtubeVideoId(String url) {
+  final uri = Uri.tryParse(url);
+  if (uri == null) return 'm0GcZ24pK6k';
+
+  String? videoId;
+  if (uri.host.contains('youtu.be') && uri.pathSegments.isNotEmpty) {
+    videoId = uri.pathSegments.first;
+  } else if (uri.host.contains('youtube.com')) {
+    if (uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'embed') {
+      videoId = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+    } else if (uri.pathSegments.isNotEmpty &&
+        uri.pathSegments.first == 'shorts') {
+      videoId = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+    } else {
+      videoId = uri.queryParameters['v'];
+    }
+  }
+
+  if (videoId == null || videoId.isEmpty) return 'm0GcZ24pK6k';
+  return videoId;
+}
+
+String _youtubeEmbedUrl(String url) {
+  final videoId = _youtubeVideoId(url);
+  return Uri.https('www.youtube.com', '/embed/$videoId', {
+    'playsinline': '1',
+    'rel': '0',
+    'origin': _youtubeOrigin,
+  }).toString();
+}
+
+String _youtubeWatchUrl(String url) {
+  final videoId = _youtubeVideoId(url);
+  return Uri.https('www.youtube.com', '/watch', {'v': videoId}).toString();
 }
 
 int? _readPositiveInt(Object? value) {
