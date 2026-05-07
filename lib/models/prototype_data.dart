@@ -244,6 +244,77 @@ class WorkoutPlan {
   }
 }
 
+class WorkoutActivity {
+  const WorkoutActivity({
+    required this.id,
+    required this.title,
+    required this.type,
+    required this.dateKey,
+    required this.durationMinutes,
+    required this.intensity,
+    required this.calories,
+    required this.notes,
+    required this.source,
+    required this.completedAt,
+    required this.createdAt,
+  });
+
+  factory WorkoutActivity.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    return WorkoutActivity.fromMap(snapshot.id, snapshot.data());
+  }
+
+  factory WorkoutActivity.fromMap(String id, Map<String, dynamic>? data) {
+    final source = data ?? <String, dynamic>{};
+    return WorkoutActivity(
+      id: id,
+      title: _readString(source['title']) ?? 'Workout',
+      type: _readString(source['type']) ?? 'General',
+      dateKey: _readString(source['dateKey']) ?? todayKey(),
+      durationMinutes: _readInt(source['durationMinutes']) ?? 0,
+      intensity: _readString(source['intensity']) ?? 'Moderate',
+      calories: _readInt(source['calories']),
+      notes: _readString(source['notes']),
+      source: _readString(source['source']) ?? 'manual',
+      completedAt: _readDateTime(source['completedAt']),
+      createdAt: _readDateTime(source['createdAt']),
+    );
+  }
+
+  factory WorkoutActivity.fromWorkoutPlan(WorkoutPlan plan) {
+    return WorkoutActivity(
+      id: 'plan_${plan.id}',
+      title: plan.title,
+      type: plan.category,
+      dateKey: plan.dateKey,
+      durationMinutes: plan.durationMinutes,
+      intensity: plan.intensity,
+      calories: _estimatedWorkoutCalories(plan.durationMinutes, plan.intensity),
+      notes: null,
+      source: plan.source,
+      completedAt: plan.completedAt,
+      createdAt: plan.createdAt,
+    );
+  }
+
+  final String id;
+  final String title;
+  final String type;
+  final String dateKey;
+  final int durationMinutes;
+  final String intensity;
+  final int? calories;
+  final String? notes;
+  final String source;
+  final DateTime? completedAt;
+  final DateTime? createdAt;
+
+  DateTime get sortDate {
+    return completedAt ?? _dateFromKey(dateKey) ?? createdAt ?? DateTime(1970);
+  }
+}
+
 class MealLog {
   const MealLog({
     required this.id,
@@ -459,6 +530,25 @@ class DashboardStats {
 String todayKey([DateTime? date]) {
   final now = date ?? DateTime.now();
   return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+}
+
+DateTime? _dateFromKey(String dateKey) {
+  final parts = dateKey.split('-');
+  if (parts.length != 3) return null;
+  final year = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  final day = int.tryParse(parts[2]);
+  if (year == null || month == null || day == null) return null;
+  return DateTime(year, month, day);
+}
+
+int _estimatedWorkoutCalories(int durationMinutes, String intensity) {
+  final factor = switch (intensity.toLowerCase()) {
+    'high' || 'intense' => 8,
+    'light' => 4,
+    _ => 6,
+  };
+  return (durationMinutes * factor).clamp(0, 999);
 }
 
 String weekdayName([DateTime? date]) {

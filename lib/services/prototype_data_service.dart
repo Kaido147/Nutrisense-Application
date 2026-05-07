@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nutrisense/models/prototype_data.dart';
@@ -295,6 +297,87 @@ class PrototypeDataService {
               .map(WorkoutPlan.fromFirestore)
               .toList(growable: false),
         );
+  }
+
+  Stream<List<WorkoutActivity>> watchWorkoutActivities() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(const <WorkoutActivity>[]);
+
+    final controller = StreamController<List<WorkoutActivity>>();
+    var manualActivities = const <WorkoutActivity>[];
+    var completedPlans = const <WorkoutActivity>[];
+    var isClosed = false;
+
+    void emit() {
+      if (isClosed) return;
+      final merged = <WorkoutActivity>[...manualActivities, ...completedPlans]
+        ..sort((a, b) => b.sortDate.compareTo(a.sortDate));
+      controller.add(merged.take(30).toList(growable: false));
+    }
+
+    final manualSub = _userDoc(user.uid)
+        .collection('workoutActivities')
+        .orderBy('createdAt', descending: true)
+        .limit(30)
+        .snapshots()
+        .listen((snapshot) {
+          manualActivities = snapshot.docs
+              .map(WorkoutActivity.fromFirestore)
+              .toList(growable: false);
+          emit();
+        }, onError: controller.addError);
+
+    final planSub = _userDoc(user.uid)
+        .collection('workoutPlans')
+        .where('completed', isEqualTo: true)
+        .limit(30)
+        .snapshots()
+        .listen((snapshot) {
+          completedPlans = snapshot.docs
+              .map(WorkoutPlan.fromFirestore)
+              .map(WorkoutActivity.fromWorkoutPlan)
+              .toList(growable: false);
+          emit();
+        }, onError: controller.addError);
+
+    controller.onCancel = () async {
+      isClosed = true;
+      await manualSub.cancel();
+      await planSub.cancel();
+    };
+
+    return controller.stream;
+  }
+
+  Future<void> logWorkoutActivity({
+    required String title,
+    required String type,
+    required String dateKey,
+    required int durationMinutes,
+    required String intensity,
+    int? calories,
+    String? notes,
+  }) async {
+    final user = _requireUser();
+    if (title.trim().isEmpty) {
+      throw const PrototypeDataException('Workout name is required.');
+    }
+    if (durationMinutes <= 0) {
+      throw const PrototypeDataException('Duration must be greater than 0.');
+    }
+
+    await _userDoc(user.uid).collection('workoutActivities').add({
+      'title': title.trim(),
+      'type': type,
+      'dateKey': dateKey,
+      'durationMinutes': durationMinutes,
+      'intensity': intensity,
+      'calories': calories,
+      'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
+      'source': 'manual',
+      'completedAt': Timestamp.fromDate(_dateFromKey(dateKey)),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> generateWorkoutPlan({
@@ -986,6 +1069,12 @@ int? _intValue(Object? value) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
   return null;
+}
+
+DateTime _dateFromKey(String dateKey) {
+  final parsed = DateTime.tryParse(dateKey);
+  if (parsed != null) return parsed;
+  return DateTime.now();
 }
 
 const _recipeCatalog = <Map<String, dynamic>>[

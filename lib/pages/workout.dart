@@ -23,11 +23,16 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   @override
   Widget build(BuildContext context) {
     final plansAsync = ref.watch(workoutPlansProvider);
+    final activitiesAsync = ref.watch(workoutActivitiesProvider);
     final healthProfileAsync = ref.watch(healthProfileProvider);
     final schedulesAsync = ref.watch(schedulesProvider);
     final plans = plansAsync.maybeWhen(
       data: (value) => value,
       orElse: () => const <WorkoutPlan>[],
+    );
+    final activities = activitiesAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => const <WorkoutActivity>[],
     );
     final healthProfile = healthProfileAsync.maybeWhen(
       data: (value) => value,
@@ -51,9 +56,11 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
               _WorkoutContent(
                 plans: plans,
                 currentPlan: currentPlan,
+                activities: activities,
                 onCategorySelected: (category) =>
                     _openManualBuilder(healthProfile, schedules, category),
                 onGenerate: () => _generateDraft(healthProfile, schedules),
+                onViewAllActivities: () => _openActivityHistory(activities),
                 onOpenPlan: _openPlanDetail,
                 onStartExercise: _startExercise,
               ),
@@ -105,6 +112,16 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
       ),
     );
     if (saved == true) _showSnack('Generated workout saved.');
+  }
+
+  Future<void> _openActivityHistory(List<WorkoutActivity> activities) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          _WorkoutActivityHistorySheet(activities: activities),
+    );
   }
 
   Future<void> _openManualBuilder(
@@ -316,16 +333,20 @@ class _WorkoutContent extends StatelessWidget {
   const _WorkoutContent({
     required this.plans,
     required this.currentPlan,
+    required this.activities,
     required this.onCategorySelected,
     required this.onGenerate,
+    required this.onViewAllActivities,
     required this.onOpenPlan,
     required this.onStartExercise,
   });
 
   final List<WorkoutPlan> plans;
   final WorkoutPlan? currentPlan;
+  final List<WorkoutActivity> activities;
   final ValueChanged<WorkoutCategory> onCategorySelected;
   final VoidCallback onGenerate;
+  final VoidCallback onViewAllActivities;
   final ValueChanged<WorkoutPlan?> onOpenPlan;
   final void Function(WorkoutPlan plan, Map<String, dynamic> exercise)
   onStartExercise;
@@ -358,8 +379,6 @@ class _WorkoutContent extends StatelessWidget {
           const _SectionHeader(title: 'Workout Library'),
           const SizedBox(height: 14),
           _CategoryGrid(onCategorySelected: onCategorySelected),
-          const SizedBox(height: 24),
-          _BuilderActions(onGenerate: onGenerate),
           const SizedBox(height: 30),
           _SectionHeader(
             title: 'Current Plan',
@@ -374,6 +393,11 @@ class _WorkoutContent extends StatelessWidget {
           _SavedExercisesList(
             plan: currentPlan,
             onStartExercise: onStartExercise,
+          ),
+          const SizedBox(height: 30),
+          _RecentActivitySection(
+            activities: activities,
+            onViewAll: onViewAllActivities,
           ),
         ],
       ),
@@ -701,52 +725,6 @@ class _LibraryCategoryCard extends StatelessWidget {
   }
 }
 
-class _BuilderActions extends StatelessWidget {
-  const _BuilderActions({required this.onGenerate});
-
-  final VoidCallback onGenerate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: _surfaceDecoration(radius: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Create Custom Routine',
-            style: TextStyle(
-              color: _WorkoutColors.navy,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Answer a few questions and generate a focused routine.',
-            style: TextStyle(color: Color(0xFF667085), height: 1.4),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: onGenerate,
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('Quick Generate'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFDDC96),
-              foregroundColor: const Color(0xFF59440C),
-              minimumSize: const Size.fromHeight(50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SavedExercisesList extends StatelessWidget {
   const _SavedExercisesList({
     required this.plan,
@@ -863,6 +841,227 @@ class _SavedExerciseTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RecentActivitySection extends StatelessWidget {
+  const _RecentActivitySection({
+    required this.activities,
+    required this.onViewAll,
+  });
+
+  final List<WorkoutActivity> activities;
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = activities.take(3).toList(growable: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          title: 'Recent Activity',
+          trailing: TextButton(
+            onPressed: onViewAll,
+            child: const Text('View All'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (visible.isEmpty)
+          const _EmptyCard(
+            message:
+                'No workout activity yet. Log a workout or complete a plan to see it here.',
+          )
+        else
+          ...visible.map((activity) {
+            return _WorkoutActivityTile(activity: activity, compact: true);
+          }),
+      ],
+    );
+  }
+}
+
+class _WorkoutActivityTile extends StatelessWidget {
+  const _WorkoutActivityTile({required this.activity, this.compact = false});
+
+  final WorkoutActivity activity;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final calories = activity.calories;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: EdgeInsets.all(compact ? 14 : 16),
+        decoration: _surfaceDecoration(radius: compact ? 4 : 18),
+        child: Row(
+          children: [
+            Container(
+              width: compact ? 42 : 54,
+              height: compact ? 42 : 54,
+              decoration: BoxDecoration(
+                color: _activityAccent(activity).withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(compact ? 999 : 16),
+              ),
+              child: Icon(
+                _iconForActivity(activity.type),
+                color: _activityAccent(activity),
+                size: compact ? 21 : 26,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    activity.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _WorkoutColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    compact
+                        ? _activityDateLabel(activity)
+                        : '${activity.type}  •  ${_activityDateLabel(activity)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF667085),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (!compact && calories != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department,
+                          size: 16,
+                          color: Color(0xFF667085),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$calories kcal',
+                          style: const TextStyle(
+                            color: Color(0xFF667085),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              '${activity.durationMinutes} mins',
+              style: const TextStyle(
+                color: _WorkoutColors.navy,
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkoutActivityHistorySheet extends StatelessWidget {
+  const _WorkoutActivityHistorySheet({required this.activities});
+
+  final List<WorkoutActivity> activities;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.88,
+      minChildSize: 0.55,
+      maxChildSize: 0.96,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: _WorkoutColors.background,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 18, 8),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Activity History',
+                        style: TextStyle(
+                          color: _WorkoutColors.navy,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      color: _WorkoutColors.navy,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: activities.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: _EmptyCard(
+                          message:
+                              'No workout activity yet. Completed plans and logged workouts will appear here.',
+                        ),
+                      )
+                    : ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(24, 10, 24, 32),
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 13,
+                            ),
+                            decoration: _surfaceDecoration(radius: 999),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.search, color: Color(0xFF75777F)),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Search workouts...',
+                                  style: TextStyle(color: Color(0xFF75777F)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          ...activities.map(
+                            (activity) =>
+                                _WorkoutActivityTile(activity: activity),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -2274,4 +2473,70 @@ IconData _iconForExercise(String name) {
     return Icons.airline_seat_legroom_extra;
   }
   return Icons.fitness_center;
+}
+
+IconData _iconForActivity(String type) {
+  final value = type.toLowerCase();
+  if (value.contains('cardio') ||
+      value.contains('run') ||
+      value.contains('hiit')) {
+    return Icons.directions_run;
+  }
+  if (value.contains('yoga') || value.contains('flex')) {
+    return Icons.self_improvement;
+  }
+  return Icons.fitness_center;
+}
+
+Color _activityAccent(WorkoutActivity activity) {
+  final value = activity.type.toLowerCase();
+  if (value.contains('cardio') || value.contains('hiit')) {
+    return _WorkoutColors.navy;
+  }
+  if (value.contains('yoga') || value.contains('flex')) {
+    return const Color(0xFF775F26);
+  }
+  return _WorkoutColors.gold;
+}
+
+String _activityDateLabel(WorkoutActivity activity) {
+  final date = _dateFromKey(activity.dateKey);
+  if (date == null) return activity.dateKey;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final target = DateTime(date.year, date.month, date.day);
+  final difference = today.difference(target).inDays;
+  if (difference == 0) return 'Today';
+  if (difference == 1) return 'Yesterday';
+  return _formatShortDate(date);
+}
+
+String _formatShortDate(DateTime date) {
+  const months = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[date.month - 1]} ${date.day}';
+}
+
+DateTime? _dateFromKey(String dateKey) {
+  final parsed = DateTime.tryParse(dateKey);
+  if (parsed != null) return parsed;
+  final parts = dateKey.split('-');
+  if (parts.length != 3) return null;
+  final year = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  final day = int.tryParse(parts[2]);
+  if (year == null || month == null || day == null) return null;
+  return DateTime(year, month, day);
 }

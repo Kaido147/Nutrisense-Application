@@ -89,6 +89,10 @@ final workoutPlansProvider = StreamProvider<List<WorkoutPlan>>((ref) {
   return ref.watch(prototypeDataServiceProvider).watchWorkoutPlans();
 });
 
+final workoutActivitiesProvider = StreamProvider<List<WorkoutActivity>>((ref) {
+  return ref.watch(prototypeDataServiceProvider).watchWorkoutActivities();
+});
+
 final mealLogsProvider = StreamProvider<List<MealLog>>((ref) {
   return ref.watch(prototypeDataServiceProvider).watchMealLogs();
 });
