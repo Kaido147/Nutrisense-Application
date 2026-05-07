@@ -22,7 +22,6 @@ class HealthProfileForm extends StatefulWidget {
 
 class _HealthProfileFormState extends State<HealthProfileForm> {
   static const Color _navy = Color(0xFF24376B);
-  static const Color _gold = Color(0xFFD6B66E);
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _ageController;
@@ -38,7 +37,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
   late String _moodStatus;
   late String _wellnessStatus;
   late double _weightGainPace;
-  late final Set<String> _medicalConditions;
   late final Set<String> _allergies;
   bool _isSaving = false;
 
@@ -64,15 +62,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     'Busy',
     'Low energy',
   ];
-  static const _conditionOptions = <String>[
-    'Diabetes',
-    'Hypertension',
-    'Lactose intolerance',
-    'Gluten sensitivity',
-    'Food allergies',
-  ];
-
-  /// Available pace options: kg lost/gained per week
   static const List<_PaceOption> _paceOptions = [
     _PaceOption(
       value: 0.25,
@@ -109,7 +98,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     _moodStatus = profile.moodStatus;
     _wellnessStatus = profile.wellnessStatus;
     _weightGainPace = profile.weightGainPaceKgPerWeek ?? 0.5;
-    _medicalConditions = profile.medicalConditions.toSet();
     _allergies = profile.allergies.toSet();
   }
 
@@ -137,7 +125,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
       activityLevel: _activityLevel,
       fitnessGoal: _fitnessGoal,
       dietaryPreference: _dietaryPreference,
-      medicalConditions: _medicalConditions.toList(growable: false),
       allergies: _allergies.toList(growable: false),
       moodStatus: _moodStatus,
       wellnessStatus: _wellnessStatus,
@@ -319,32 +306,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
             }).toList(),
           ),
 
-          const SizedBox(height: 18),
-          _sectionTitle('Medical conditions'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _conditionOptions.map((condition) {
-              final selected = _medicalConditions.contains(condition);
-              return FilterChip(
-                label: Text(condition),
-                selected: selected,
-                selectedColor: _gold.withValues(alpha: 0.35),
-                checkmarkColor: _navy,
-                onSelected: _isSaving
-                    ? null
-                    : (value) {
-                        setState(() {
-                          if (value) {
-                            _medicalConditions.add(condition);
-                          } else {
-                            _medicalConditions.remove(condition);
-                          }
-                        });
-                      },
-              );
-            }).toList(),
-          ),
           const SizedBox(height: 18),
           _sectionTitle('Allergies'),
           Row(

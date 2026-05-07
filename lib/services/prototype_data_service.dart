@@ -37,10 +37,11 @@ class PrototypeDataService {
 
   Future<void> saveHealthProfile(HealthProfile profile) async {
     final user = _requireUser();
-    await _userDoc(user.uid)
-        .collection('healthProfile')
-        .doc('current')
-        .set(profile.toFirestore(), SetOptions(merge: true));
+    await _userDoc(user.uid).collection('healthProfile').doc('current').set({
+      ...profile.toFirestore(),
+      'medicalCondition': FieldValue.delete(),
+      'medicalConditions': FieldValue.delete(),
+    }, SetOptions(merge: true));
     await _userDoc(user.uid).set({
       'healthProfileCompleted': true,
       'healthProfileUpdatedAt': FieldValue.serverTimestamp(),
@@ -309,7 +310,14 @@ class PrototypeDataService {
 
     void emit() {
       if (isClosed) return;
-      final merged = <WorkoutActivity>[...manualActivities, ...completedPlans]
+      final byKey = <String, WorkoutActivity>{};
+      for (final activity in completedPlans) {
+        byKey[_activityDedupeKey(activity)] = activity;
+      }
+      for (final activity in manualActivities) {
+        byKey[_activityDedupeKey(activity)] = activity;
+      }
+      final merged = byKey.values.toList(growable: false)
         ..sort((a, b) => b.sortDate.compareTo(a.sortDate));
       controller.add(merged.take(30).toList(growable: false));
     }
@@ -356,6 +364,7 @@ class PrototypeDataService {
     required String intensity,
     int? calories,
     String? notes,
+    String? planId,
   }) async {
     final user = _requireUser();
     if (title.trim().isEmpty) {
@@ -376,7 +385,35 @@ class PrototypeDataService {
       'source': 'manual',
       'completedAt': Timestamp.fromDate(_dateFromKey(dateKey)),
       'createdAt': FieldValue.serverTimestamp(),
+      ...?planId == null ? null : <String, Object?>{'planId': planId},
     });
+  }
+
+  Future<void> saveCompletedWorkoutActivity({
+    required WorkoutPlan plan,
+    required List<Map<String, dynamic>> completedExercises,
+  }) async {
+    final user = _requireUser();
+    final completedNames = completedExercises
+        .map((exercise) => exercise['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .join(', ');
+
+    await _userDoc(
+      user.uid,
+    ).collection('workoutActivities').doc('plan_${plan.id}').set({
+      'title': plan.title,
+      'type': plan.category,
+      'dateKey': plan.dateKey,
+      'durationMinutes': plan.durationMinutes,
+      'intensity': plan.intensity,
+      'calories': (plan.durationMinutes * 7).clamp(60, 650),
+      'notes': completedNames.isEmpty ? null : completedNames,
+      'source': plan.source,
+      'planId': plan.id,
+      'completedAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> generateWorkoutPlan({
@@ -643,9 +680,6 @@ class PrototypeDataService {
           final allergens = (recipe['allergens']! as List<String>)
               .map((item) => item.toLowerCase())
               .toSet();
-          final conditions = healthProfile.medicalConditions
-              .map((item) => item.toLowerCase())
-              .toSet();
           final allergyFilters = healthProfile.allergies
               .map((item) => item.toLowerCase())
               .toSet();
@@ -663,19 +697,11 @@ class PrototypeDataService {
           final matchesDiet =
               healthProfile.dietaryPreference == 'No preference' ||
               tags.contains(healthProfile.dietaryPreference.toLowerCase());
-          final conditionSafe =
-              !conditions.contains('Diabetes'.toLowerCase()) ||
-              tags.contains('low sugar');
-          final hypertensionSafe =
-              !conditions.contains('Hypertension'.toLowerCase()) ||
-              tags.contains('low sodium');
 
           return hasIngredientMatch &&
               matchesMealType &&
               avoidsAllergy &&
-              matchesDiet &&
-              conditionSafe &&
-              hypertensionSafe;
+              matchesDiet;
         })
         .take(3)
         .toList(growable: false);
@@ -689,7 +715,6 @@ class PrototypeDataService {
       'mood': healthProfile.moodStatus,
       'dietaryPreference': healthProfile.dietaryPreference,
       'allergies': healthProfile.allergies,
-      'medicalConditions': healthProfile.medicalConditions,
       'recommendedMeals': fallback,
       'selectedMealName': null,
       'createdAt': FieldValue.serverTimestamp(),
@@ -764,9 +789,9 @@ class PrototypeDataService {
     final todayWorkouts = results[4] as QuerySnapshot<Map<String, dynamic>>;
     final weeklyWorkouts = results[5] as QuerySnapshot<Map<String, dynamic>>;
     final weeklySessions = results[6] as QuerySnapshot<Map<String, dynamic>>;
-    final meals = results[7] as QuerySnapshot<Map<String, dynamic>>;
-    final quests = results[8] as QuerySnapshot<Map<String, dynamic>>;
-    final wellness = results[9] as DocumentSnapshot<Map<String, dynamic>>;
+    final todayMeals = results[8] as QuerySnapshot<Map<String, dynamic>>;
+    final quests = results[9] as QuerySnapshot<Map<String, dynamic>>;
+    final wellness = results[10] as DocumentSnapshot<Map<String, dynamic>>;
 
     final completedTasks = tasks.docs
         .where((doc) => doc.data()['isCompleted'] == true)
@@ -806,7 +831,7 @@ class PrototypeDataService {
       workoutExercisesTotal: workoutExercisesTotal,
       weeklyCompletedWorkoutDays: weeklyCompletedWorkoutDays,
       weeklyStudyMinutes: weeklyStudyMinutes,
-      mealsLogged: meals.docs.length,
+      mealsLogged: todayMeals.docs.length,
       completedQuests: completedQuests,
       totalQuests: quests.docs.length,
       waterGlasses: wellnessData['waterGlasses'] as int? ?? 0,
@@ -838,6 +863,12 @@ QueryDocumentSnapshot<Map<String, dynamic>>? _latestWorkoutDoc(
       ).compareTo(_timestampMillis(a.data()['createdAt']));
     });
   return sorted.first;
+}
+
+String _activityDedupeKey(WorkoutActivity activity) {
+  final planId = activity.planId;
+  if (planId != null && planId.isNotEmpty) return 'plan_$planId';
+  return activity.id;
 }
 
 int _timestampMillis(Object? value) {

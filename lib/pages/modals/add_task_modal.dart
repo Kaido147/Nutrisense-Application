@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:nutrisense/Core/task_validators.dart';
 import 'package:nutrisense/pages/study/study_models.dart';
 
 class AddTaskModal extends StatefulWidget {
@@ -54,6 +55,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
   String _selectedPriority = 'Medium';
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  String? _dateTimeError;
   bool _isSaving = false;
 
   final List<String> _priorities = ['Low', 'Medium', 'High', 'Urgent'];
@@ -97,10 +99,16 @@ class _AddTaskModalState extends State<AddTaskModal> {
   }
 
   Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDate = _selectedDate;
+    final initialDate = selectedDate == null || selectedDate.isBefore(today)
+        ? today
+        : selectedDate;
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
+      initialDate: initialDate,
+      firstDate: today,
       lastDate: DateTime(2030),
     );
     if (!mounted || picked == null) {
@@ -109,6 +117,11 @@ class _AddTaskModalState extends State<AddTaskModal> {
 
     setState(() {
       _selectedDate = picked;
+      if (_selectedTime != null && isTimeInPastToday(picked, _selectedTime!)) {
+        _selectedTime = null;
+        _dueTime.clear();
+      }
+      _dateTimeError = validateTaskDueDateTime(_selectedDate, _selectedTime);
       _dueDate.text =
           '${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}';
     });
@@ -123,9 +136,17 @@ class _AddTaskModalState extends State<AddTaskModal> {
       return;
     }
 
+    final error = validateTaskDueDateTime(_selectedDate, picked);
     setState(() {
-      _selectedTime = picked;
-      _dueTime.text = picked.format(context);
+      if (error == null) {
+        _selectedTime = picked;
+        _dueTime.text = picked.format(context);
+        _dateTimeError = null;
+      } else {
+        _selectedTime = null;
+        _dueTime.clear();
+        _dateTimeError = error;
+      }
     });
   }
 
@@ -139,6 +160,12 @@ class _AddTaskModalState extends State<AddTaskModal> {
 
     setState(() {
       _selectedDate = DateTime(date.year, date.month, date.day);
+      if (_selectedTime != null &&
+          isTimeInPastToday(_selectedDate!, _selectedTime!)) {
+        _selectedTime = null;
+        _dueTime.clear();
+      }
+      _dateTimeError = validateTaskDueDateTime(_selectedDate, _selectedTime);
       _dueDate.text =
           '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
     });
@@ -171,6 +198,15 @@ class _AddTaskModalState extends State<AddTaskModal> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a task title')),
       );
+      return;
+    }
+
+    final dateTimeError = validateTaskDueDateTime(_selectedDate, _selectedTime);
+    if (dateTimeError != null) {
+      setState(() => _dateTimeError = dateTimeError);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(dateTimeError)));
       return;
     }
 
@@ -650,6 +686,17 @@ class _AddTaskModalState extends State<AddTaskModal> {
                                 ),
                               ],
                             ),
+                            if (_dateTimeError != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _dateTimeError!,
+                                style: const TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 16),
                             Text(
                               'Quick Date Presets',

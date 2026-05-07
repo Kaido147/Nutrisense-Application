@@ -210,10 +210,29 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
       await ref
           .read(prototypeDataServiceProvider)
           .setWorkoutExerciseCompleted(plan.id, exerciseId, true);
+
+      final completedExercises = plan.exercises
+          .map((item) {
+            if (item['id']?.toString() != exerciseId) return item;
+            return <String, dynamic>{...item, 'completed': true};
+          })
+          .toList(growable: false);
+
+      if (allCompleted) {
+        await ref
+            .read(prototypeDataServiceProvider)
+            .saveCompletedWorkoutActivity(
+              plan: plan,
+              completedExercises: completedExercises,
+            );
+      }
+
       ref.invalidate(workoutPlansProvider);
       ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(workoutActivitiesProvider);
+
       if (allCompleted && mounted) {
-        await _showWorkoutSummary(plan, completedExerciseId: exerciseId);
+        await _showWorkoutSummary(plan, completedExercises);
       } else {
         _showSnack('${exercise['name'] ?? 'Exercise'} completed.');
       }
@@ -225,23 +244,17 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
   }
 
   Future<void> _showWorkoutSummary(
-    WorkoutPlan plan, {
-    required String completedExerciseId,
-  }) {
-    final exercises = plan.exercises
-        .map((exercise) {
-          if (exercise['id']?.toString() != completedExerciseId) {
-            return exercise;
-          }
-          return <String, dynamic>{...exercise, 'completed': true};
-        })
-        .toList(growable: false);
+    WorkoutPlan plan,
+    List<Map<String, dynamic>> completedExercises,
+  ) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          _WorkoutSummarySheet(plan: plan, completedExercises: exercises),
+      builder: (context) => _WorkoutSummarySheet(
+        plan: plan,
+        completedExercises: completedExercises,
+      ),
     );
   }
 
@@ -2285,36 +2298,41 @@ class _WorkoutSummarySheet extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFF667085)),
               ),
               const SizedBox(height: 28),
-              GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.35,
-                children: [
-                  _SummaryStat(
-                    icon: Icons.timer_outlined,
-                    label: 'Total Time',
-                    value: '${plan.durationMinutes}m',
-                  ),
-                  _SummaryStat(
-                    icon: Icons.local_fire_department,
-                    label: 'Calories',
-                    value: '$estimatedCalories',
-                  ),
-                  _SummaryStat(
-                    icon: Icons.fitness_center,
-                    label: 'Exercises',
-                    value: '$completed',
-                  ),
-                  _SummaryStat(
-                    icon: Icons.trending_up,
-                    label: 'Progress',
-                    value: '100%',
-                    accent: true,
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 340;
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: compact ? 1.05 : 1.18,
+                    children: [
+                      _SummaryStat(
+                        icon: Icons.timer_outlined,
+                        label: 'Total Time',
+                        value: '${plan.durationMinutes}m',
+                      ),
+                      _SummaryStat(
+                        icon: Icons.local_fire_department,
+                        label: 'Calories',
+                        value: '$estimatedCalories',
+                      ),
+                      _SummaryStat(
+                        icon: Icons.fitness_center,
+                        label: 'Exercises',
+                        value: '$completed',
+                      ),
+                      _SummaryStat(
+                        icon: Icons.trending_up,
+                        label: 'Progress',
+                        value: '100%',
+                        accent: true,
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
               Container(
@@ -2415,7 +2433,7 @@ class _SummaryStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: accent ? const Color(0xFFFDDC96) : Colors.white,
         borderRadius: BorderRadius.circular(22),
@@ -2429,6 +2447,8 @@ class _SummaryStat extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Color(0xFF667085),
               fontSize: 12,
@@ -2438,6 +2458,8 @@ class _SummaryStat extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: _WorkoutColors.navy,
               fontSize: 24,

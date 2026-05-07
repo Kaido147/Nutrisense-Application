@@ -433,12 +433,6 @@ class _ProfileContent extends ConsumerWidget {
                   _buildInfoRow('Fitness goal', health.fitnessGoal),
                   _buildInfoRow('Diet', health.dietaryPreference),
                   _buildInfoRow(
-                    'Medical',
-                    health.medicalConditions.isEmpty
-                        ? 'None'
-                        : health.medicalConditions.join(', '),
-                  ),
-                  _buildInfoRow(
                     'Allergies',
                     health.allergies.isEmpty
                         ? 'None'

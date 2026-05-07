@@ -24,6 +24,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   bool obscurePassword = true;
   bool obscureConfirm = true;
   bool _isSubmitting = false;
+  DateTime? _selectedBirthDate;
 
   @override
   void dispose() {
@@ -37,8 +38,27 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   String? _validateRequired(String? value, String fieldName) {
-    if ((value ?? '').trim().isEmpty) {
+    final trimmed = (value ?? '').trim();
+    if (trimmed.isEmpty) {
       return '$fieldName is required.';
+    }
+
+    if (trimmed.length < 2) {
+      return '$fieldName is too short.';
+    }
+
+    return null;
+  }
+
+  String? _validateBirthDate(String? value) {
+    if ((value ?? '').trim().isEmpty || _selectedBirthDate == null) {
+      return 'Date of birth is required.';
+    }
+
+    final today = DateTime.now();
+    final latestAllowed = DateTime(today.year - 10, today.month, today.day);
+    if (_selectedBirthDate!.isAfter(latestAllowed)) {
+      return 'You must be at least 10 years old.';
     }
 
     return null;
@@ -83,6 +103,22 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     return null;
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedBirthDate = picked;
+        _dateController.text =
+            "${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}";
+      });
+    }
+  }
+
   Future<void> _submit() async {
     final FormState? form = _formKey.currentState;
     if (form == null || !form.validate()) {
@@ -98,6 +134,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       return;
     }
 
+    final birthDate = _selectedBirthDate;
+    if (birthDate == null) {
+      return;
+    }
+
     if (_isSubmitting) {
       return;
     }
@@ -106,16 +147,21 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _isSubmitting = true;
     });
 
-    final String displayName =
-        '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}';
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final email = _emailController.text.trim();
+    final String displayName = '$firstName $lastName';
 
     try {
       await ref
           .read(authServiceProvider)
           .register(
-            email: _emailController.text,
+            email: email,
             password: _passwordController.text,
             displayName: displayName,
+            firstName: firstName,
+            lastName: lastName,
+            birthDate: birthDate,
           );
 
       if (!mounted) {
@@ -185,10 +231,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       child: Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.08),
+                          color: Colors.white.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Column(
@@ -266,10 +312,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             // DATE
                             TextFormField(
                               controller: _dateController,
+                              readOnly: true,
+                              onTap: () => _selectDate(context),
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                              validator: _validateBirthDate,
                               style: const TextStyle(color: Colors.white),
                               decoration: const InputDecoration(
                                 hintText: "mm/dd/yyyy",
                                 hintStyle: TextStyle(color: Colors.white54),
+                                errorStyle: TextStyle(color: Colors.white70),
                                 suffixIcon: Icon(
                                   Icons.calendar_today,
                                   color: Colors.white54,
@@ -431,7 +483,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                 ),
-                                onPressed: _isSubmitting ? null : _submit,
+                                onPressed: _isSubmitting || !isChecked
+                                    ? null
+                                    : _submit,
                                 child: _isSubmitting
                                     ? const SizedBox(
                                         width: 20,

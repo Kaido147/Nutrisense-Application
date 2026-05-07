@@ -51,12 +51,19 @@ class AuthService {
     required String email,
     required String password,
     required String displayName,
+    required String firstName,
+    required String lastName,
+    required DateTime birthDate,
   }) async {
     UserCredential credential;
+    final trimmedEmail = email.trim();
+    final trimmedFirstName = firstName.trim();
+    final trimmedLastName = lastName.trim();
+    final trimmedDisplayName = displayName.trim();
 
     try {
       credential = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
+        email: trimmedEmail,
         password: password,
       );
     } on FirebaseAuthException catch (error) {
@@ -75,12 +82,15 @@ class AuthService {
     }
 
     try {
-      await user.updateDisplayName(displayName);
+      await user.updateDisplayName(trimmedDisplayName);
       await user.reload();
 
       await _firestore.collection('users').doc(user.uid).set({
-        'email': email.trim(),
-        'displayName': displayName,
+        'email': trimmedEmail,
+        'displayName': trimmedDisplayName,
+        'firstName': trimmedFirstName,
+        'lastName': trimmedLastName,
+        'birthDate': Timestamp.fromDate(birthDate),
         'createdAt': FieldValue.serverTimestamp(),
       });
 
