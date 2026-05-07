@@ -4,6 +4,8 @@ import 'package:nutrisense/models/user_profile.dart';
 import 'package:nutrisense/pages/modals/profile/profile_modal_shell.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 import 'package:nutrisense/services/profile_service.dart';
+import 'package:nutrisense/theme_provider.dart';
+import 'package:provider/provider.dart' as p;
 
 class GoalsPreferencesModal extends ConsumerStatefulWidget {
   const GoalsPreferencesModal({super.key, required this.profile});
@@ -33,6 +35,7 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
   late bool _workoutReminders;
   late bool _mealReminders;
   bool _isSaving = false;
+  late Color _primaryColor;
 
   @override
   void initState() {
@@ -96,6 +99,9 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = p.Provider.of<ThemeProvider>(context);
+    _primaryColor = themeProvider.primaryForegroundColor;
+
     return ProfileModalShell(
       title: 'Goals & Preferences',
       child: Column(
@@ -333,8 +339,8 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xFF24376B),
+                style: TextStyle(
+                  color: _primaryColor,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -362,8 +368,8 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF24376B),
+          style: TextStyle(
+            color: _primaryColor,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -401,8 +407,8 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
               ),
               child: Text(
                 valueLabel,
-                style: const TextStyle(
-                  color: Color(0xFF24376B),
+                style: TextStyle(
+                  color: _primaryColor,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -424,8 +430,8 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF24376B),
+          style: TextStyle(
+            color: _primaryColor,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -450,8 +456,8 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
                 child: Center(
                   child: Text(
                     '$value',
-                    style: const TextStyle(
-                      color: Color(0xFF24376B),
+                    style: TextStyle(
+                      color: _primaryColor,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -485,9 +491,7 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
         ),
         child: Icon(
           icon,
-          color: onTap == null
-              ? const Color(0xFFB9C0D0)
-              : const Color(0xFF24376B),
+          color: onTap == null ? const Color(0xFFB9C0D0) : _primaryColor,
           size: 18,
         ),
       ),
@@ -513,8 +517,8 @@ class _GoalsPreferencesModalState extends ConsumerState<GoalsPreferencesModal> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: Color(0xFF24376B),
+                style: TextStyle(
+                  color: _primaryColor,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),

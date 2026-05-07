@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
-import 'package:nutrisense/pages/modals/profile/edit_health_profile_modal.dart';
+import 'package:nutrisense/pages/modals/journal_entry_modal.dart';
+import 'package:nutrisense/pages/modals/add_task_modal.dart';
 import 'package:nutrisense/pages/modals/profile/edit_profile_modal.dart';
 import 'package:nutrisense/pages/modals/profile/goals_preferences_modal.dart';
 import 'package:nutrisense/pages/modals/profile/reminder_settings_modal.dart';
@@ -91,29 +92,30 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
-class _ProfileContent extends StatelessWidget {
-  const _ProfileContent({
-    required this.profile,
-    required this.healthProfile,
-    required this.dashboardStats,
-    required this.onLogout,
-  });
+class _ProfileContent extends StatefulWidget {
+  const _ProfileContent({required this.profile, required this.onLogout});
 
   final UserProfile profile;
   final HealthProfile? healthProfile;
   final DashboardStats? dashboardStats;
   final VoidCallback onLogout;
 
+  @override
+  State<_ProfileContent> createState() => _ProfileContentState();
+}
+
+class _ProfileContentState extends State<_ProfileContent> {
   static const Color _backgroundColor = Color(0xFFF4F0E8);
-  static const Color _navyBlue = Color(0xFF243A6E);
   static const Color _goldTan = Color(0xFFD8B56D);
-  static const Color _textPrimary = Color(0xFF24376B);
   static const Color _textSecondary = Color(0xFF6B7280);
   static const Color _cardColor = Colors.white;
+
+  late Color _textPrimary;
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = p.Provider.of<ThemeProvider>(context);
+    _textPrimary = themeProvider.primaryForegroundColor;
 
     return Scaffold(
       backgroundColor: _backgroundColor,
@@ -128,9 +130,7 @@ class _ProfileContent extends StatelessWidget {
                 children: [
                   _buildGoalProgressCard(),
                   const SizedBox(height: 18),
-                  _buildHealthProfileCard(context),
-                  const SizedBox(height: 18),
-                  _buildAnalyticsCard(),
+                  _buildQuickAccessSection(context),
                   const SizedBox(height: 18),
                   _buildSettingsSection(context, themeProvider),
                   const SizedBox(height: 20),
@@ -149,9 +149,9 @@ class _ProfileContent extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(top: 36, left: 24, right: 24, bottom: 78),
-      decoration: const BoxDecoration(
-        color: _navyBlue,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: _themeProviderPrimaryColor(context),
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(34),
           bottomRight: Radius.circular(34),
         ),
@@ -171,7 +171,7 @@ class _ProfileContent extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            profile.fullName,
+            widget.profile.fullName,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
@@ -182,7 +182,7 @@ class _ProfileContent extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            profile.displayEmail,
+            widget.profile.displayEmail,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 10,
@@ -214,7 +214,7 @@ class _ProfileContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Goal Progress',
             style: TextStyle(
               color: _textPrimary,
@@ -226,16 +226,16 @@ class _ProfileContent extends StatelessWidget {
           _buildProgressRow(
             icon: LucideIcons.target,
             title: 'Weekly Study Goal',
-            value: profile.studySummaryValue,
-            progress: profile.studySummaryProgress,
-            color: _navyBlue,
+            value: widget.profile.studySummaryValue,
+            progress: widget.profile.studySummaryProgress,
+            color: _textPrimary,
           ),
           const SizedBox(height: 24),
           _buildProgressRow(
             icon: Icons.trending_up_rounded,
             title: 'Workout Streak',
-            value: profile.workoutSummaryValue,
-            progress: profile.workoutSummaryProgress,
+            value: widget.profile.workoutSummaryValue,
+            progress: widget.profile.workoutSummaryProgress,
             color: _goldTan,
           ),
         ],
@@ -259,7 +259,7 @@ class _ProfileContent extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,
                   color: _textPrimary,
@@ -268,7 +268,7 @@ class _ProfileContent extends StatelessWidget {
             ),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
                 color: _textPrimary,
@@ -504,7 +504,7 @@ class _ProfileContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(left: 2, bottom: 12),
             child: Text(
               'Settings',
@@ -531,11 +531,11 @@ class _ProfileContent extends StatelessWidget {
               children: [
                 _buildSettingsTile(
                   icon: LucideIcons.user,
-                  iconColor: _navyBlue,
+                  iconColor: _textPrimary,
                   iconBackground: const Color(0xFFF1F3F8),
                   title: 'Edit Profile',
                   subtitle: 'Update your information',
-                  onTap: () => EditProfileModal.show(context, profile),
+                  onTap: () => EditProfileModal.show(context, widget.profile),
                 ),
                 const Divider(
                   height: 1,
@@ -550,7 +550,8 @@ class _ProfileContent extends StatelessWidget {
                   iconBackground: const Color(0xFFF8F4EA),
                   title: 'Goals & Preferences',
                   subtitle: 'Manage your targets',
-                  onTap: () => GoalsPreferencesModal.show(context, profile),
+                  onTap: () =>
+                      GoalsPreferencesModal.show(context, widget.profile),
                 ),
                 const Divider(
                   height: 1,
@@ -590,6 +591,125 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
+  Widget _buildQuickAccessSection(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            child: Text(
+              'Quick Access',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: _textPrimary,
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionTile(
+                  context: context,
+                  label: 'Add Task',
+                  subtitle: 'Create a task',
+                  icon: Icons.check_circle_outline,
+                  iconColor: const Color(0xFF7C4DFF),
+                  iconBackground: const Color(0xFFF3E8FF),
+                  onTap: () => AddTaskModal.show(context),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildQuickActionTile(
+                  context: context,
+                  label: 'New Entry',
+                  subtitle: 'Write a journal note',
+                  icon: Icons.edit_note_outlined,
+                  iconColor: const Color(0xFF1E88E5),
+                  iconBackground: const Color(0xFFEAF2FF),
+                  onTap: () => JournalEntryModal.show(context),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionTile({
+    required BuildContext context,
+    required String label,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBackground,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0E000000),
+                blurRadius: 16,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: _textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: _textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSettingsTile({
     required IconData icon,
     required Color iconColor,
@@ -623,7 +743,7 @@ class _ProfileContent extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: _textPrimary,
@@ -632,7 +752,7 @@ class _ProfileContent extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: _textSecondary,
                         fontWeight: FontWeight.w500,
@@ -660,7 +780,7 @@ class _ProfileContent extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
-          onTap: onLogout,
+          onTap: widget.onLogout,
           borderRadius: BorderRadius.circular(24),
           child: Container(
             width: double.infinity,
@@ -759,12 +879,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
                     child: Row(
                       children: [
-                        const Text(
+                        Text(
                           'Theme Settings',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF24376B),
+                            color: themeProvider.primaryForegroundColor,
                           ),
                         ),
                         const Spacer(),
@@ -794,12 +914,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
                         // --- Appearance Section ---
-                        const Text(
+                        Text(
                           'Appearance',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF24376B),
+                            color: themeProvider.primaryForegroundColor,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -810,7 +930,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
                           icon: Icons.wb_sunny_rounded,
                           label: 'Light',
                           subtitle: 'Always use light mode',
-                          iconBgColor: const Color(0xFF243A6E),
+                          iconBgColor: themeProvider.primaryColorValue,
                           iconColor: Colors.white,
                         ),
                         const SizedBox(height: 10),
@@ -838,32 +958,18 @@ class _ThemeSettingsSheet extends StatelessWidget {
 
                         const SizedBox(height: 24),
 
-                        // --- Accent Color Section ---
-                        const Text(
-                          'Accent Color',
+                        // --- Primary Color Wheel Section ---
+                        Text(
+                          'Primary Color',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF24376B),
+                            color: themeProvider.primaryForegroundColor,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        GridView.count(
-                          crossAxisCount: 3,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          children: [
-                            for (final accent in AccentColor.values)
-                              _buildAccentColorTile(
-                                themeProvider: themeProvider,
-                                accent: accent,
-                              ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
+                        _buildPrimaryColorPalette(themeProvider),
+                        const SizedBox(height: 24),
 
                         // --- Preview Section ---
                         Container(
@@ -876,12 +982,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Preview',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF24376B),
+                                  color: themeProvider.primaryForegroundColor,
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -903,12 +1009,11 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                     CircleAvatar(
                                       radius: 22,
                                       backgroundColor: themeProvider
-                                          .accentColor
-                                          .color
+                                          .primaryColorValue
                                           .withValues(alpha: 0.25),
                                     ),
                                     const SizedBox(width: 12),
-                                    const Expanded(
+                                    Expanded(
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -918,11 +1023,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 13,
-                                              color: Color(0xFF24376B),
+                                              color: themeProvider
+                                                  .primaryForegroundColor,
                                             ),
                                           ),
-                                          SizedBox(height: 2),
-                                          Text(
+                                          const SizedBox(height: 2),
+                                          const Text(
                                             'This is how your theme will look',
                                             style: TextStyle(
                                               fontSize: 11,
@@ -944,22 +1050,22 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                         vertical: 10,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: themeProvider.accentColor.color
+                                        color: themeProvider.primaryColorValue
                                             .withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color:
-                                              themeProvider.accentColor.color,
+                                              themeProvider.primaryColorValue,
                                         ),
                                       ),
                                       child: Center(
                                         child: Text(
-                                          'Primary Button',
+                                          'Primary Color',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
-                                            color:
-                                                themeProvider.accentColor.color,
+                                            color: themeProvider
+                                                .primaryForegroundColor,
                                           ),
                                         ),
                                       ),
@@ -972,12 +1078,12 @@ class _ThemeSettingsSheet extends StatelessWidget {
                                         vertical: 10,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF243A6E),
+                                        color: themeProvider.primaryColorValue,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Center(
                                         child: Text(
-                                          'Secondary',
+                                          'Primary',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
@@ -1006,11 +1112,11 @@ class _ThemeSettingsSheet extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFD0DAF8)),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Note: Theme changes will be applied immediately and saved to your preferences.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF24376B),
+                              color: themeProvider.primaryForegroundColor,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1050,7 +1156,8 @@ class _ThemeSettingsSheet extends StatelessWidget {
                               child: ElevatedButton(
                                 onPressed: () => Navigator.pop(context),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF243A6E),
+                                  backgroundColor:
+                                      themeProvider.primaryColorValue,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
                                   ),
@@ -1104,7 +1211,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF243A6E)
+                ? themeProvider.primaryColorValue
                 : const Color(0xFFE4E7EC),
             width: isSelected ? 2 : 1,
           ),
@@ -1116,7 +1223,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFF243A6E)
+                    ? themeProvider.primaryColorValue
                     : const Color(0xFFF2F4F7),
                 shape: BoxShape.circle,
               ),
@@ -1137,7 +1244,7 @@ class _ThemeSettingsSheet extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: isSelected
-                          ? const Color(0xFF243A6E)
+                          ? themeProvider.primaryForegroundColor
                           : const Color(0xFF344054),
                     ),
                   ),
@@ -1155,8 +1262,8 @@ class _ThemeSettingsSheet extends StatelessWidget {
               Container(
                 width: 22,
                 height: 22,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF243A6E),
+                decoration: BoxDecoration(
+                  color: themeProvider.primaryColorValue,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check, size: 14, color: Colors.white),
@@ -1167,39 +1274,70 @@ class _ThemeSettingsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildAccentColorTile({
-    required ThemeProvider themeProvider,
-    required AccentColor accent,
-  }) {
-    final bool isSelected = themeProvider.accentColor == accent;
+  Widget _buildPrimaryColorPalette(ThemeProvider themeProvider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE4E7EC)),
+      ),
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.92,
+        children: [
+          for (final color in PrimaryColor.values)
+            _buildPrimaryColorOption(themeProvider, color),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryColorOption(
+    ThemeProvider themeProvider,
+    PrimaryColor color,
+  ) {
+    final bool isSelected = themeProvider.primaryColor == color;
+
     return GestureDetector(
-      onTap: () => themeProvider.setAccentColor(accent),
+      onTap: () => themeProvider.setPrimaryColor(color),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF243A6E)
-                : const Color(0xFFE4E7EC),
+            color: isSelected ? color.color : const Color(0xFFE4E7EC),
             width: isSelected ? 2 : 1,
           ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x08000000),
+              blurRadius: 10,
+              offset: Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: accent.color,
+                color: color.color,
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
-              accent.label,
+              color.label,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 11,

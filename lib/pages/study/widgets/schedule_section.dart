@@ -114,6 +114,8 @@ class _ScheduleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -132,11 +134,9 @@ class _ScheduleTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.courseCode.isEmpty
-                      ? item.title
-                      : '${item.courseCode}: ${item.title}',
-                  style: const TextStyle(
-                    color: StudyTheme.textPrimary,
+                  item.title,
+                  style: TextStyle(
+                    color: primaryColor,
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
                   ),

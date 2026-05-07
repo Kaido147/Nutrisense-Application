@@ -317,6 +317,7 @@ class _GenerateMealIdeasModalState
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final screenHeight = MediaQuery.of(context).size.height;
     final modalHeight = screenHeight * 0.7;
 
@@ -360,7 +361,7 @@ class _GenerateMealIdeasModalState
                             Text(
                               'Generate Meal Ideas',
                               style: TextStyle(
-                                color: _navyBlue,
+                                color: primaryColor,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -369,7 +370,11 @@ class _GenerateMealIdeasModalState
                         ),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
-                          child: Icon(Icons.close, color: _navyBlue, size: 24),
+                          child: Icon(
+                            Icons.close,
+                            color: primaryColor,
+                            size: 24,
+                          ),
                         ),
                       ],
                     ),
@@ -379,7 +384,7 @@ class _GenerateMealIdeasModalState
                     Text(
                       "What's in your fridge? *",
                       style: TextStyle(
-                        color: _navyBlue,
+                        color: primaryColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -426,7 +431,7 @@ class _GenerateMealIdeasModalState
                             width: 46,
                             height: 46,
                             decoration: BoxDecoration(
-                              color: _navyBlue,
+                              color: primaryColor,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
@@ -448,7 +453,7 @@ class _GenerateMealIdeasModalState
                           Text(
                             'Your Ingredients (${_fridgeItems.length})',
                             style: TextStyle(
-                              color: _navyBlue,
+                              color: primaryColor,
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
@@ -488,7 +493,7 @@ class _GenerateMealIdeasModalState
                     Text(
                       'Meal Type',
                       style: TextStyle(
-                        color: _navyBlue,
+                        color: primaryColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -510,11 +515,13 @@ class _GenerateMealIdeasModalState
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? _navyBlue : Colors.white,
+                                  color: isSelected
+                                      ? primaryColor
+                                      : Colors.white,
                                   border: Border.all(
                                     color: isSelected
-                                        ? _navyBlue
-                                        : const Color(0xFFDDDDDD),
+                                        ? primaryColor
+                                        : Color(0xFFDDDDDD),
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
@@ -523,7 +530,7 @@ class _GenerateMealIdeasModalState
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white
-                                        : _navyBlue,
+                                        : primaryColor,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -540,7 +547,7 @@ class _GenerateMealIdeasModalState
                     Text(
                       'Dietary Preferences (Optional)',
                       style: TextStyle(
-                        color: _navyBlue,
+                        color: primaryColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -585,7 +592,7 @@ class _GenerateMealIdeasModalState
                                 pref,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: _navyBlue,
+                                  color: primaryColor,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),

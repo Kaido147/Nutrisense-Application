@@ -6,6 +6,81 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ─────────────────────────────────────────────
 enum AppThemeMode { light, dark, auto }
 
+enum PrimaryColor {
+  navyBlue,
+  deepTeal,
+  darkPurple,
+  forestGreen,
+  charcoal,
+  pinkRose,
+  coralRed,
+  sunflowerYellow,
+  skyBlue,
+  mintGreen,
+  coralOrange,
+  violet,
+}
+
+extension PrimaryColorExt on PrimaryColor {
+  Color get color {
+    switch (this) {
+      case PrimaryColor.navyBlue:
+        return const Color(0xFF243A6E);
+      case PrimaryColor.deepTeal:
+        return const Color(0xFF1B5E6D);
+      case PrimaryColor.darkPurple:
+        return const Color(0xFF5B2CA0);
+      case PrimaryColor.forestGreen:
+        return const Color(0xFF2D5F3F);
+      case PrimaryColor.charcoal:
+        return const Color(0xFF2C2C2C);
+      case PrimaryColor.pinkRose:
+        return const Color(0xFFFFB3D9);
+      case PrimaryColor.coralRed:
+        return const Color(0xFFD32F2F);
+      case PrimaryColor.sunflowerYellow:
+        return const Color(0xFFFFF9C4);
+      case PrimaryColor.skyBlue:
+        return const Color(0xFFB3E5FC);
+      case PrimaryColor.mintGreen:
+        return const Color(0xFFB8E6D1);
+      case PrimaryColor.coralOrange:
+        return const Color(0xFFFFCCB3);
+      case PrimaryColor.violet:
+        return const Color(0xFF7C4DFF);
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case PrimaryColor.navyBlue:
+        return 'Navy Blue';
+      case PrimaryColor.deepTeal:
+        return 'Deep Teal';
+      case PrimaryColor.darkPurple:
+        return 'Dark Purple';
+      case PrimaryColor.forestGreen:
+        return 'Forest Green';
+      case PrimaryColor.charcoal:
+        return 'Charcoal';
+      case PrimaryColor.pinkRose:
+        return 'Pink Rose';
+      case PrimaryColor.coralRed:
+        return 'Coral Red';
+      case PrimaryColor.sunflowerYellow:
+        return 'Sunflower Yellow';
+      case PrimaryColor.skyBlue:
+        return 'Sky Blue';
+      case PrimaryColor.mintGreen:
+        return 'Mint Green';
+      case PrimaryColor.coralOrange:
+        return 'Coral Orange';
+      case PrimaryColor.violet:
+        return 'Violet';
+    }
+  }
+}
+
 enum AccentColor {
   softGold,
   oceanBlue,
@@ -57,10 +132,12 @@ extension AccentColorExt on AccentColor {
 class ThemeProvider extends ChangeNotifier {
   static const String _themeModeKey = 'appThemeMode';
   static const String _accentColorKey = 'accentColor';
+  static const String _primaryColorKey = 'primaryColor';
 
   late SharedPreferences _prefs;
   AppThemeMode _themeMode = AppThemeMode.light;
   AccentColor _accentColor = AccentColor.softGold;
+  PrimaryColor _primaryColor = PrimaryColor.navyBlue;
   bool _isInitialized = false;
 
   ThemeProvider() {
@@ -69,7 +146,23 @@ class ThemeProvider extends ChangeNotifier {
 
   AppThemeMode get themeMode => _themeMode;
   AccentColor get accentColor => _accentColor;
+  PrimaryColor get primaryColor => _primaryColor;
   bool get isInitialized => _isInitialized;
+
+  Color get primaryColorValue => _primaryColor.color;
+
+  Color get primaryForegroundColor {
+    final color = _primaryColor.color;
+
+    if (color.computeLuminance() < 0.6) {
+      return color;
+    }
+
+    final hslColor = HSLColor.fromColor(color);
+    return hslColor
+        .withLightness((hslColor.lightness * 0.55).clamp(0.0, 1.0))
+        .toColor();
+  }
 
   ThemeMode get flutterThemeMode {
     switch (_themeMode) {
@@ -90,6 +183,7 @@ class ThemeProvider extends ChangeNotifier {
   void _loadSettings() {
     final savedTheme = _prefs.getString(_themeModeKey);
     final savedAccent = _prefs.getString(_accentColorKey);
+    final savedPrimary = _prefs.getString(_primaryColorKey);
 
     if (savedTheme != null) {
       _themeMode = AppThemeMode.values.firstWhere(
@@ -102,6 +196,13 @@ class ThemeProvider extends ChangeNotifier {
       _accentColor = AccentColor.values.firstWhere(
         (color) => color.toString() == savedAccent,
         orElse: () => AccentColor.softGold,
+      );
+    }
+
+    if (savedPrimary != null) {
+      _primaryColor = PrimaryColor.values.firstWhere(
+        (color) => color.toString() == savedPrimary,
+        orElse: () => PrimaryColor.navyBlue,
       );
     }
 
@@ -118,6 +219,12 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> setAccentColor(AccentColor color) async {
     _accentColor = color;
     await _prefs.setString(_accentColorKey, color.toString());
+    notifyListeners();
+  }
+
+  Future<void> setPrimaryColor(PrimaryColor color) async {
+    _primaryColor = color;
+    await _prefs.setString(_primaryColorKey, color.toString());
     notifyListeners();
   }
 }

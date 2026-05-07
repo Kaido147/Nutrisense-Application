@@ -105,9 +105,10 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final Color titleColor = task.isCompleted
         ? StudyTheme.textSecondary
-        : StudyTheme.textPrimary;
+        : primaryColor;
 
     return Opacity(
       opacity: task.isCompleted ? 0.72 : 1,

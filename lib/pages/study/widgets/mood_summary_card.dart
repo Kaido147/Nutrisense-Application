@@ -10,6 +10,8 @@ class MoodSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
@@ -21,10 +23,10 @@ class MoodSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "This Week's Mood",
             style: TextStyle(
-              color: StudyTheme.textPrimary,
+              color: primaryColor,
               fontSize: 20,
               fontWeight: FontWeight.w700,
             ),

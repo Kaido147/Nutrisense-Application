@@ -15,7 +15,6 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  static const Color _navyBlue = Color(0xFF1E2A4A);
   static const Color _goldTan = Color(0xFFD4B896);
 
   // Only 4 real pages — no FAB page
@@ -40,6 +39,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final Color primary = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: SizedBox(
@@ -48,7 +49,7 @@ class _MainNavigationState extends State<MainNavigation> {
           children: [
             // Nav bar background
             Container(
-              decoration: const BoxDecoration(color: _navyBlue),
+              decoration: BoxDecoration(color: primary),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -83,7 +84,7 @@ class _MainNavigationState extends State<MainNavigation> {
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.add, color: _navyBlue, size: 28),
+                    child: Icon(Icons.add, color: primary, size: 28),
                   ),
                 ),
               ),

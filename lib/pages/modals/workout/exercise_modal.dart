@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:ui';
 import 'rest_timer_dialog.dart';
 import 'exercise_complete_dialog.dart';
 
@@ -13,13 +12,12 @@ void showExerciseModal(
   int currentSet = 0;
   final List<bool> setCompleted = [false, false, false];
 
-  const Color _navyBlue = Color(0xFF273967);
-
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (BuildContext context) {
+      final Color primary = Theme.of(context).colorScheme.primary;
       return DraggableScrollableSheet(
         initialChildSize: 0.95,
         minChildSize: 0.5,
@@ -46,7 +44,7 @@ void showExerciseModal(
                           Text(
                             exerciseName,
                             style: TextStyle(
-                              color: _navyBlue,
+                              color: primary,
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
                             ),
@@ -62,7 +60,7 @@ void showExerciseModal(
                               ),
                               child: Icon(
                                 Icons.close,
-                                color: _navyBlue,
+                                color: primary,
                                 size: 20,
                               ),
                             ),
@@ -108,7 +106,7 @@ void showExerciseModal(
                                         Text(
                                           'Current Set',
                                           style: TextStyle(
-                                            color: _navyBlue.withValues(
+                                            color: primary.withValues(
                                               alpha: 0.6,
                                             ),
                                             fontSize: 12,
@@ -118,8 +116,8 @@ void showExerciseModal(
                                         const SizedBox(height: 6),
                                         Text(
                                           '${currentSet + 1} / ${setCompleted.length}',
-                                          style: TextStyle(
-                                            color: _navyBlue,
+                                            style: TextStyle(
+                                            color: primary,
                                             fontSize: 28,
                                             fontWeight: FontWeight.w700,
                                           ),
@@ -133,7 +131,7 @@ void showExerciseModal(
                                         Text(
                                           'Target',
                                           style: TextStyle(
-                                            color: _navyBlue.withValues(
+                                            color: primary.withValues(
                                               alpha: 0.6,
                                             ),
                                             fontSize: 12,
@@ -165,8 +163,8 @@ void showExerciseModal(
                                     backgroundColor: Colors.grey.withValues(
                                       alpha: 0.2,
                                     ),
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      _navyBlue,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                      primary,
                                     ),
                                   ),
                                 ),
@@ -179,7 +177,7 @@ void showExerciseModal(
                           Text(
                             'Sets Progress',
                             style: TextStyle(
-                              color: _navyBlue,
+                              color: primary,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -194,7 +192,7 @@ void showExerciseModal(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Container(
                                 padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
+                                    decoration: BoxDecoration(
                                   color: isDone
                                       ? const Color(0xFFE8F7EC)
                                       : isActive
@@ -204,7 +202,7 @@ void showExerciseModal(
                                     color: isDone
                                         ? Colors.green
                                         : isActive
-                                        ? _navyBlue
+                                        ? primary
                                         : Colors.grey.withValues(alpha: 0.2),
                                     width: isActive || isDone ? 2 : 1,
                                   ),
@@ -219,11 +217,11 @@ void showExerciseModal(
                                         Container(
                                           width: 40,
                                           height: 40,
-                                          decoration: BoxDecoration(
+                                            decoration: BoxDecoration(
                                             color: isDone
                                                 ? Colors.green
                                                 : isActive
-                                                ? _navyBlue
+                                                ? primary
                                                 : Colors.grey.withValues(
                                                     alpha: 0.2,
                                                   ),
@@ -241,9 +239,9 @@ void showExerciseModal(
                                                 : Text(
                                                     setNum.toString(),
                                                     style: TextStyle(
-                                                      color: isActive
+                                                        color: isActive
                                                           ? Colors.white
-                                                          : _navyBlue,
+                                                          : primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -259,7 +257,7 @@ void showExerciseModal(
                                             Text(
                                               'Set $setNum',
                                               style: TextStyle(
-                                                color: _navyBlue,
+                                                color: primary,
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: 14,
                                               ),
@@ -267,7 +265,7 @@ void showExerciseModal(
                                             Text(
                                               '12 reps',
                                               style: TextStyle(
-                                                color: _navyBlue.withValues(
+                                                color: primary.withValues(
                                                   alpha: 0.6,
                                                 ),
                                                 fontWeight: FontWeight.w500,
@@ -312,7 +310,7 @@ void showExerciseModal(
                                 Text(
                                   'Description',
                                   style: TextStyle(
-                                    color: _navyBlue,
+                                    color: primary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -321,7 +319,7 @@ void showExerciseModal(
                                 Text(
                                   'Build strong, defined shoulders with this fundamental pressing movement.',
                                   style: TextStyle(
-                                    color: _navyBlue.withValues(alpha: 0.7),
+                                    color: primary.withValues(alpha: 0.7),
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     height: 1.5,
@@ -333,7 +331,7 @@ void showExerciseModal(
                                 Text(
                                   'Tips',
                                   style: TextStyle(
-                                    color: _navyBlue,
+                                    color: primary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -359,10 +357,10 @@ void showExerciseModal(
                                         ),
                                         const SizedBox(width: 6),
                                         Expanded(
-                                          child: Text(
+                                            child: Text(
                                             tip,
                                             style: TextStyle(
-                                              color: _navyBlue.withValues(
+                                              color: primary.withValues(
                                                 alpha: 0.7,
                                               ),
                                               fontSize: 13,

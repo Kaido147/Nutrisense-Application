@@ -19,6 +19,8 @@ class FocusSessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
@@ -54,12 +56,8 @@ class FocusSessionCard extends StatelessWidget {
                       child: CircularProgressIndicator(
                         value: timerState.progress,
                         strokeWidth: 8,
-                        backgroundColor: StudyTheme.navyBlue.withValues(
-                          alpha: 0.12,
-                        ),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          StudyTheme.navyBlue,
-                        ),
+                        backgroundColor: primaryColor.withValues(alpha: 0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                       ),
                     ),
                     Column(
@@ -67,8 +65,8 @@ class FocusSessionCard extends StatelessWidget {
                       children: [
                         Text(
                           timerState.durationLabel,
-                          style: const TextStyle(
-                            color: StudyTheme.navyBlue,
+                          style: TextStyle(
+                            color: primaryColor,
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
                           ),
@@ -97,8 +95,8 @@ class FocusSessionCard extends StatelessWidget {
                 child: Container(
                   width: 46,
                   height: 46,
-                  decoration: const BoxDecoration(
-                    color: StudyTheme.navyBlue,
+                  decoration: BoxDecoration(
+                    color: primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -163,6 +161,8 @@ class _PresetChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -173,13 +173,13 @@ class _PresetChip extends StatelessWidget {
               : StudyTheme.chipBackground.withValues(alpha: 0.72),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? StudyTheme.navyBlue : Colors.transparent,
+            color: isSelected ? primaryColor : Colors.transparent,
           ),
         ),
         child: Text(
           label,
-          style: const TextStyle(
-            color: StudyTheme.textPrimary,
+          style: TextStyle(
+            color: primaryColor,
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../study_models.dart';
-import '../study_theme.dart';
 import 'study_section_header.dart';
 
 class InsightsCard extends StatelessWidget {
@@ -11,6 +10,8 @@ class InsightsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -20,7 +21,7 @@ class InsightsCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: StudyTheme.subtlePurple,
+            color: primaryColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -35,18 +36,18 @@ class InsightsCard extends StatelessWidget {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.sentiment_very_satisfied_outlined,
                       size: 16,
-                      color: StudyTheme.subtlePurpleText,
+                      color: primaryColor,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       data.title,
-                      style: const TextStyle(
-                        color: StudyTheme.subtlePurpleText,
+                      style: TextStyle(
+                        color: primaryColor,
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
@@ -57,8 +58,8 @@ class InsightsCard extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 data.message,
-                style: const TextStyle(
-                  color: StudyTheme.subtlePurpleText,
+                style: TextStyle(
+                  color: primaryColor,
                   fontSize: 14,
                   height: 1.45,
                 ),
@@ -66,8 +67,8 @@ class InsightsCard extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 data.tip,
-                style: const TextStyle(
-                  color: StudyTheme.subtlePurpleText,
+                style: TextStyle(
+                  color: primaryColor,
                   fontSize: 12,
                   height: 1.45,
                   fontWeight: FontWeight.w600,
