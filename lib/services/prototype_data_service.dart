@@ -717,6 +717,26 @@ class PrototypeDataService {
     });
   }
 
+  Future<void> saveCompletedWorkoutActivity({
+    required WorkoutPlan plan,
+    required List<Map<String, dynamic>> completedExercises,
+  }) async {
+    final user = _requireUser();
+    await _userDoc(user.uid).collection('workoutActivities').add({
+      'title': plan.title,
+      'type': plan.category,
+      'dateKey': plan.dateKey,
+      'durationMinutes': plan.durationMinutes,
+      'intensity': plan.intensity,
+      'exercises': completedExercises,
+      'fitnessGoal': plan.fitnessGoal,
+      'activityLevel': plan.activityLevel,
+      'source': plan.source,
+      'completedAt': Timestamp.fromDate(_dateFromKey(plan.dateKey)),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<DashboardStats> loadDashboardStats() async {
     final user = _requireUser();
     final uidDoc = _userDoc(user.uid);
@@ -764,7 +784,6 @@ class PrototypeDataService {
     final todayWorkouts = results[4] as QuerySnapshot<Map<String, dynamic>>;
     final weeklyWorkouts = results[5] as QuerySnapshot<Map<String, dynamic>>;
     final weeklySessions = results[6] as QuerySnapshot<Map<String, dynamic>>;
-    final meals = results[7] as QuerySnapshot<Map<String, dynamic>>;
     final todayMeals = results[8] as QuerySnapshot<Map<String, dynamic>>;
     final quests = results[9] as QuerySnapshot<Map<String, dynamic>>;
     final wellness = results[10] as DocumentSnapshot<Map<String, dynamic>>;

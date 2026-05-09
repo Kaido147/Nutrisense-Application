@@ -8,7 +8,11 @@ import 'modals/nutrition/generate_meal_ideas_modal.dart';
 import 'modals/nutrition/nutrition_modal.dart';
 
 class NutritionTab extends ConsumerStatefulWidget {
-  const NutritionTab({super.key});
+  /// Optional callback invoked when the user taps "Go to Workout".
+  /// The parent scaffold should switch to the workout tab when this fires.
+  final VoidCallback? onGoToWorkout;
+
+  const NutritionTab({super.key, this.onGoToWorkout});
 
   @override
   ConsumerState<NutritionTab> createState() => _NutritionTabState();
@@ -115,7 +119,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
   }
 
   /// Detects allergens in a meal by checking ingredients against user allergies.
-  /// Returns a list of allergen names found in the meal (case-insensitive match).
   List<String> _detectMealAllergens(
     Map<String, dynamic> meal,
     List<String> userAllergies,
@@ -143,7 +146,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     return allergens;
   }
 
-  // Safely parses a numeric value that may arrive as int, double, or String.
   static double _parseDecimal(dynamic raw) {
     if (raw == null) return 0;
     if (raw is num) return raw.toDouble();
@@ -153,7 +155,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     return 0;
   }
 
-  // Safely parses a numeric value for whole-number dashboard totals.
   static int _parseNumeric(dynamic raw) => _parseDecimal(raw).round();
 
   static String _formatDecimal(dynamic raw) {
@@ -168,7 +169,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     return _formatDecimal(nutrition['calories'] ?? meal['calories']);
   }
 
-  // Safely converts any Map type returned by Firestore or AI JSON.
   static Map<String, dynamic> _safeMap(dynamic raw) {
     if (raw == null) return {};
     if (raw is Map<String, dynamic>) return raw;
@@ -336,6 +336,167 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     });
   }
 
+  // ── Insight / Reminder Banner ─────────────────────────────────────────────
+
+  /// Evaluates calories, protein, fat, and carbs and surfaces the single most
+  /// important insight using a strict priority order.
+  ///
+  /// Calorie tiers (highest priority, checked first):
+  ///   1. Significantly exceeded  (≥ 125%)
+  ///   2. Exceeded                (110–124%)
+  ///   3. Target reached          (100–109%)
+  ///   4. Near limit              (90–99%)
+  ///   5. Approaching limit       (75–89%)
+  ///   6. Safe zone               (< 75%) → no calorie banner
+  ///
+  /// Macro tiers (only shown when calories are in the safe zone):
+  ///   7. Protein low  (< 60%)
+  ///   8. Fat low      (< 60%)
+  ///   9. Carbs low    (< 60%)
+  ///
+  /// Only one banner is shown at a time.
+  Widget? _buildNutritionInsightBanner({
+    required int totalCalories,
+    required int dailyCalories,
+    required int totalProtein,
+    required int dailyProtein,
+    required int totalFat,
+    required int dailyFat,
+    required int totalCarbs,
+    required int dailyCarbs,
+  }) {
+    final calRatio = dailyCalories > 0 ? totalCalories / dailyCalories : 0.0;
+    final calPercent = (calRatio * 100).round();
+
+    // ── 1. Significantly exceeded (≥ 125%) ───────────────────────────────
+    if (calRatio >= 1.25) {
+      return _InsightBanner(
+        icon: Icons.warning_rounded,
+        iconColor: const Color(0xFFD32F2F),
+        backgroundColor: const Color(0xFFFFF0F0),
+        borderColor: const Color(0xFFD32F2F),
+        title:
+            "Today's intake is significantly above your target ($calPercent%)",
+        message:
+            'Consider balancing tomorrow\'s meals and activity levels. Every step counts.',
+        action: _InsightAction(
+          label: 'Go to Workout',
+          icon: Icons.fitness_center_rounded,
+          onTap: widget.onGoToWorkout ?? () {},
+        ),
+      );
+    }
+
+    // ── 2. Exceeded (110–124%) ────────────────────────────────────────────
+    if (calRatio >= 1.10) {
+      final overCal = totalCalories - dailyCalories;
+      return _InsightBanner(
+        icon: Icons.warning_amber_rounded,
+        iconColor: const Color(0xFFE65100),
+        backgroundColor: const Color(0xFFFFF3E0),
+        borderColor: const Color(0xFFE65100),
+        title: 'You exceeded your target by $overCal calories',
+        message:
+            'A short walk or a lighter dinner may help balance your intake today.',
+        action: _InsightAction(
+          label: 'Go to Workout',
+          icon: Icons.fitness_center_rounded,
+          onTap: widget.onGoToWorkout ?? () {},
+        ),
+      );
+    }
+
+    // ── 3. Target reached (100–109%) ─────────────────────────────────────
+    if (calRatio >= 1.0) {
+      return _InsightBanner(
+        icon: Icons.check_circle_outline_rounded,
+        iconColor: const Color(0xFF2E7D32),
+        backgroundColor: const Color(0xFFF1F8E9),
+        borderColor: const Color(0xFF2E7D32),
+        title: "You've reached today's calorie goal ($calPercent%)",
+        message:
+            'Additional meals may push you over your target intake. Listen to your body.',
+      );
+    }
+
+    // ── 4. Near limit (90–99%) ────────────────────────────────────────────
+    if (calRatio >= 0.9) {
+      return _InsightBanner(
+        icon: Icons.info_outline_rounded,
+        iconColor: const Color(0xFFE8A200),
+        backgroundColor: const Color(0xFFFFFBED),
+        borderColor: const Color(0xFFE8A200),
+        title: "You're close to your daily calorie target ($calPercent%)",
+        message: 'Consider lighter meals or snacks for the rest of the day.',
+      );
+    }
+
+    // ── 5. Approaching limit (75–89%) ─────────────────────────────────────
+    if (calRatio >= 0.75) {
+      return _InsightBanner(
+        icon: Icons.info_outline_rounded,
+        iconColor: const Color(0xFF1565C0),
+        backgroundColor: const Color(0xFFE3F2FD),
+        borderColor: const Color(0xFF1565C0),
+        title: "You've consumed $calPercent% of your daily calories",
+        message: 'Keep an eye on portion sizes for your next meals.',
+      );
+    }
+
+    // ── 6. Safe zone (< 75%) — check macros instead ───────────────────────
+
+    // ── 7. Protein low (< 60%) ────────────────────────────────────────────
+    final proRatio = dailyProtein > 0 ? totalProtein / dailyProtein : 1.0;
+    if (proRatio < 0.6 && totalCalories > 0) {
+      final remaining = dailyProtein - totalProtein;
+      return _InsightBanner(
+        icon: Icons.fitness_center_outlined,
+        iconColor: const Color(0xFF1976D2),
+        backgroundColor: const Color(0xFFE3F2FD),
+        borderColor: const Color(0xFF1976D2),
+        title: 'Protein is at ${(proRatio * 100).round()}% of your daily goal',
+        message:
+            'You still need ${remaining}g. Try adding eggs, chicken, or legumes to your next meal.',
+      );
+    }
+
+    // ── 8. Fat low (< 60%) ────────────────────────────────────────────────
+    final fatRatio = dailyFat > 0 ? totalFat / dailyFat : 1.0;
+    if (fatRatio < 0.6 && totalCalories > 0) {
+      final remaining = dailyFat - totalFat;
+      return _InsightBanner(
+        icon: Icons.water_drop_outlined,
+        iconColor: const Color(0xFF00897B),
+        backgroundColor: const Color(0xFFE0F2F1),
+        borderColor: const Color(0xFF00897B),
+        title:
+            'Healthy fats are at ${(fatRatio * 100).round()}% of your daily goal',
+        message:
+            'You still need ${remaining}g. Nuts, avocado, or olive oil can help.',
+      );
+    }
+
+    // ── 9. Carbs low (< 60%) ─────────────────────────────────────────────
+    final carbRatio = dailyCarbs > 0 ? totalCarbs / dailyCarbs : 1.0;
+    if (carbRatio < 0.6 && totalCalories > 0) {
+      final remaining = dailyCarbs - totalCarbs;
+      return _InsightBanner(
+        icon: Icons.bolt_outlined,
+        iconColor: const Color(0xFF6A1B9A),
+        backgroundColor: const Color(0xFFF3E5F5),
+        borderColor: const Color(0xFF6A1B9A),
+        title: 'Carbs are at ${(carbRatio * 100).round()}% of your daily goal',
+        message:
+            'You still need ${remaining}g. Whole grains or fruit can give you a quick energy boost.',
+      );
+    }
+
+    // No notable issue
+    return null;
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -393,13 +554,11 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
           totalCalcium: totalCalcium,
           totalIron: totalIron,
           totalVitaminD: totalVitaminD,
-          // ── Core macros (personalised from health profile) ──────────────
           dailyCalories: dailyMacros?.calories ?? 2000,
           dailyProtein: dailyMacros?.protein ?? 150,
           dailyCarbs: dailyMacros?.carbs ?? 225,
           dailyFat: dailyMacros?.fat ?? 65,
           dailyFiber: dailyMacros?.fiber ?? 25,
-          // ── Extended nutrients (from DailyMacros, fall back to FDA/WHO) ─
           dailySugar: dailyMacros?.sugar ?? 50,
           dailySodium: dailyMacros?.sodium ?? 2300,
           dailyCholesterol: dailyMacros?.cholesterol ?? 300,
@@ -478,7 +637,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     required int totalCalcium,
     required int totalIron,
     required int totalVitaminD,
-    // ── Daily targets — core macros are personalised, extended are FDA/WHO ──
     required int dailyCalories,
     required int dailyProtein,
     required int dailyCarbs,
@@ -494,6 +652,17 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     required int dailyIron,
     required int dailyVitaminD,
   }) {
+    final insightBanner = _buildNutritionInsightBanner(
+      totalCalories: totalCalories,
+      dailyCalories: dailyCalories,
+      totalProtein: totalProtein,
+      dailyProtein: dailyProtein,
+      totalFat: totalFat,
+      dailyFat: dailyFat,
+      totalCarbs: totalCarbs,
+      dailyCarbs: dailyCarbs,
+    );
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -548,6 +717,12 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
               ),
             ],
           ),
+
+          // ── Insight / Reminder Banner ────────────────────────────────────
+          if (insightBanner != null) ...[
+            const SizedBox(height: 16),
+            insightBanner,
+          ],
 
           // ── "Show / Hide other nutrients" toggle button ──
           const SizedBox(height: 16),
@@ -609,7 +784,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
               children: [
                 const SizedBox(height: 20),
 
-                // ── Group: Fats ───────────────────────────────────────────
                 _buildGroupTitle('Fats'),
                 const SizedBox(height: 12),
                 _buildHorizontalMacroBar(
@@ -648,7 +822,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
 
                 const SizedBox(height: 20),
 
-                // ── Group: Carbohydrates ──────────────────────────────────
                 _buildGroupTitle('Carbohydrates'),
                 const SizedBox(height: 12),
                 _buildHorizontalMacroBar(
@@ -669,7 +842,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
 
                 const SizedBox(height: 20),
 
-                // ── Group: Minerals & Others ──────────────────────────────
                 _buildGroupTitle('Minerals & Others'),
                 const SizedBox(height: 12),
                 _buildHorizontalMacroBar(
@@ -704,9 +876,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                   color: const Color(0xFF993C1D),
                 ),
                 const SizedBox(height: 14),
-                // Vitamin D: USDA nutrient ID 1114 may return 0 when the food
-                // entry lacks data — the bar still renders at 0% width so the
-                // track and label are always visible.
                 _buildHorizontalMacroBar(
                   label: 'Vitamin D',
                   current: totalVitaminD,
@@ -728,7 +897,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     );
   }
 
-  /// Small uppercase label that separates nutrient groups.
   Widget _buildGroupTitle(String title) {
     return Text(
       title.toUpperCase(),
@@ -741,13 +909,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
     );
   }
 
-  /// Renders a labelled horizontal progress bar.
-  ///
-  /// [isLimitOnly] — true for trans fat: label shows "X g (keep minimal)"
-  ///   and any non-zero value turns the bar orange as a gentle alert.
-  ///
-  /// [alwaysShowTrack] — true for nutrients that may legitimately read 0
-  ///   (Vitamin D, trans fat) so the empty track is always visible.
   Widget _buildHorizontalMacroBar({
     required String label,
     required int current,
@@ -795,7 +956,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
           ],
         ),
         const SizedBox(height: 8),
-        // Track — always rendered so the bar is visible even at 0%.
         Container(
           height: 8,
           width: double.infinity,
@@ -1038,7 +1198,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
       },
       child: Column(
         children: [
-          // ── Allergy Warning Banner ──────────────────────────────────────
           Consumer(
             builder: (context, ref, child) {
               final healthProfileAsync = ref.watch(healthProfileProvider);
@@ -1106,7 +1265,6 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
               return const SizedBox.shrink();
             },
           ),
-          // ── Meal Card ───────────────────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1184,29 +1342,141 @@ class _NutritionTabState extends ConsumerState<NutritionTab> {
                   ],
                 ),
                 const SizedBox(width: 12),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _viewNutrition(meal),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.bar_chart_rounded,
-                          color: Color(0xFF1976D2),
-                          size: 18,
-                        ),
-                      ),
+                GestureDetector(
+                  onTap: () => _viewNutrition(meal),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  ],
+                    child: const Icon(
+                      Icons.bar_chart_rounded,
+                      color: Color(0xFF1976D2),
+                      size: 18,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reusable insight banner widget ────────────────────────────────────────────
+
+class _InsightAction {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _InsightAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+}
+
+class _InsightBanner extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color backgroundColor;
+  final Color borderColor;
+  final String title;
+  final String message;
+  final _InsightAction? action;
+
+  const _InsightBanner({
+    required this.icon,
+    required this.iconColor,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.title,
+    required this.message,
+    this.action,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: borderColor.withValues(alpha: 0.35),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: iconColor, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: iconColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      message,
+                      style: TextStyle(
+                        color: iconColor.withValues(alpha: 0.85),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (action != null) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: action!.onTap,
+                  icon: Icon(action!.icon, size: 15, color: Colors.white),
+                  label: Text(
+                    action!.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: iconColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

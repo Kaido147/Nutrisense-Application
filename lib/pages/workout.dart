@@ -75,7 +75,10 @@ class _WorkoutPageState extends ConsumerState<WorkoutPage> {
                 onOpenPlan: _openPlanDetail,
                 onStartExercise: _startExercise,
               ),
-            if (_selectedTab == 1) const NutritionTab(),
+            if (_selectedTab == 1)
+              NutritionTab(
+                onGoToWorkout: () => setState(() => _selectedTab = 0),
+              ),
             const SizedBox(height: 28),
           ],
         ),
