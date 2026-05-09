@@ -10,7 +10,6 @@ class HealthProfile {
     required this.activityLevel,
     required this.fitnessGoal,
     required this.dietaryPreference,
-    required this.medicalConditions,
     required this.allergies,
     required this.moodStatus,
     required this.wellnessStatus,
@@ -28,7 +27,6 @@ class HealthProfile {
       activityLevel: 'Moderate',
       fitnessGoal: 'General fitness',
       dietaryPreference: 'No preference',
-      medicalConditions: <String>[],
       allergies: <String>[],
       moodStatus: 'Balanced',
       wellnessStatus: 'Good',
@@ -49,7 +47,6 @@ class HealthProfile {
       fitnessGoal: _readString(source['fitnessGoal']) ?? 'General fitness',
       dietaryPreference:
           _readString(source['dietaryPreference']) ?? 'No preference',
-      medicalConditions: _readStringList(source['medicalConditions']),
       allergies: _readStringList(source['allergies']),
       moodStatus: _readString(source['moodStatus']) ?? 'Balanced',
       wellnessStatus: _readString(source['wellnessStatus']) ?? 'Good',
@@ -66,7 +63,6 @@ class HealthProfile {
   final String activityLevel;
   final String fitnessGoal;
   final String dietaryPreference;
-  final List<String> medicalConditions;
   final List<String> allergies;
   final String moodStatus;
   final String wellnessStatus;
@@ -94,7 +90,6 @@ class HealthProfile {
       'activityLevel': activityLevel,
       'fitnessGoal': fitnessGoal,
       'dietaryPreference': dietaryPreference,
-      'medicalConditions': medicalConditions,
       'allergies': allergies,
       'moodStatus': moodStatus,
       'wellnessStatus': wellnessStatus,
@@ -258,6 +253,7 @@ class WorkoutActivity {
     required this.source,
     required this.completedAt,
     required this.createdAt,
+    this.planId,
   });
 
   factory WorkoutActivity.fromFirestore(
@@ -280,6 +276,7 @@ class WorkoutActivity {
       source: _readString(source['source']) ?? 'manual',
       completedAt: _readDateTime(source['completedAt']),
       createdAt: _readDateTime(source['createdAt']),
+      planId: _readString(source['planId']),
     );
   }
 
@@ -296,6 +293,7 @@ class WorkoutActivity {
       source: plan.source,
       completedAt: plan.completedAt,
       createdAt: plan.createdAt,
+      planId: plan.id,
     );
   }
 
@@ -310,6 +308,7 @@ class WorkoutActivity {
   final String source;
   final DateTime? completedAt;
   final DateTime? createdAt;
+  final String? planId;
 
   DateTime get sortDate {
     return completedAt ?? _dateFromKey(dateKey) ?? createdAt ?? DateTime(1970);

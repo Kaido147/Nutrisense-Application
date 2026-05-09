@@ -215,15 +215,6 @@ class _LogMealModalState extends ConsumerState<LogMealModal> {
     );
   }
 
-  String _caloriesWithUnit(dynamic raw) {
-    final value = raw?.toString().trim() ?? '';
-    if (value.isEmpty) return '0 kcal';
-    final lower = value.toLowerCase();
-    return lower.contains('kcal') || lower.contains('cal')
-        ? value
-        : '$value kcal';
-  }
-
   Future<void> _logMeal() async {
     final validationMessage = _validateMeal();
     if (validationMessage != null) {

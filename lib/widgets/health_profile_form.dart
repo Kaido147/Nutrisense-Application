@@ -9,12 +9,14 @@ class HealthProfileForm extends StatefulWidget {
     required this.submitLabel,
     required this.onSubmit,
     this.header,
+    this.birthDate,
   });
 
   final HealthProfile initialProfile;
   final String submitLabel;
   final Future<void> Function(HealthProfile profile) onSubmit;
   final Widget? header;
+  final DateTime? birthDate;
 
   @override
   State<HealthProfileForm> createState() => _HealthProfileFormState();
@@ -22,7 +24,6 @@ class HealthProfileForm extends StatefulWidget {
 
 class _HealthProfileFormState extends State<HealthProfileForm> {
   static const Color _navy = Color(0xFF24376B);
-  static const Color _gold = Color(0xFFD6B66E);
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _ageController;
@@ -38,8 +39,8 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
   late String _moodStatus;
   late String _wellnessStatus;
   late double _weightGainPace;
-  late final Set<String> _medicalConditions;
   late final Set<String> _allergies;
+  bool _isAgeAutoCalculated = false;
   bool _isSaving = false;
 
   static const _genders = <String>['Female', 'Male', 'Prefer not to say'];
@@ -64,15 +65,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     'Busy',
     'Low energy',
   ];
-  static const _conditionOptions = <String>[
-    'Diabetes',
-    'Hypertension',
-    'Lactose intolerance',
-    'Gluten sensitivity',
-    'Food allergies',
-  ];
-
-  /// Available pace options: kg lost/gained per week
   static const List<_PaceOption> _paceOptions = [
     _PaceOption(
       value: 0.25,
@@ -92,7 +84,10 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
   void initState() {
     super.initState();
     final profile = widget.initialProfile;
-    _ageController = TextEditingController(text: _formatInt(profile.age));
+    final calculatedAge = _initialCalculatedAge();
+    _ageController = TextEditingController(
+      text: _formatInt(profile.age ?? calculatedAge),
+    );
     _heightController = TextEditingController(
       text: _formatDouble(profile.heightCm),
     );
@@ -109,8 +104,21 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     _moodStatus = profile.moodStatus;
     _wellnessStatus = profile.wellnessStatus;
     _weightGainPace = profile.weightGainPaceKgPerWeek ?? 0.5;
-    _medicalConditions = profile.medicalConditions.toSet();
     _allergies = profile.allergies.toSet();
+  }
+
+  @override
+  void didUpdateWidget(covariant HealthProfileForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialProfile.age == widget.initialProfile.age &&
+        oldWidget.birthDate == widget.birthDate) {
+      return;
+    }
+
+    final calculatedAge = _initialCalculatedAge();
+    _ageController.text = _formatInt(
+      widget.initialProfile.age ?? calculatedAge,
+    );
   }
 
   @override
@@ -137,7 +145,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
       activityLevel: _activityLevel,
       fitnessGoal: _fitnessGoal,
       dietaryPreference: _dietaryPreference,
-      medicalConditions: _medicalConditions.toList(growable: false),
       allergies: _allergies.toList(growable: false),
       moodStatus: _moodStatus,
       wellnessStatus: _wellnessStatus,
@@ -188,6 +195,10 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
                       min: 10,
                       max: 100,
                       decimal: false,
+                      readOnly: _isAgeAutoCalculated,
+                      helperText: _isAgeAutoCalculated
+                          ? 'Calculated from your date of birth'
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -195,8 +206,8 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
                     child: _numberField(
                       _heightController,
                       'Height (cm)',
-                      min: 90,
-                      max: 250,
+                      min: 50,
+                      max: 300,
                     ),
                   ),
                 ],
@@ -208,8 +219,8 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
                     child: _numberField(
                       _weightController,
                       'Current weight (kg)',
-                      min: 25,
-                      max: 300,
+                      min: 20,
+                      max: 500,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -217,8 +228,8 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
                     child: _numberField(
                       _targetWeightController,
                       'Target weight (kg)',
-                      min: 25,
-                      max: 300,
+                      min: 20,
+                      max: 500,
                     ),
                   ),
                 ],
@@ -320,32 +331,6 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
           ),
 
           const SizedBox(height: 18),
-          _sectionTitle('Medical conditions'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _conditionOptions.map((condition) {
-              final selected = _medicalConditions.contains(condition);
-              return FilterChip(
-                label: Text(condition),
-                selected: selected,
-                selectedColor: _gold.withValues(alpha: 0.35),
-                checkmarkColor: _navy,
-                onSelected: _isSaving
-                    ? null
-                    : (value) {
-                        setState(() {
-                          if (value) {
-                            _medicalConditions.add(condition);
-                          } else {
-                            _medicalConditions.remove(condition);
-                          }
-                        });
-                      },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 18),
           _sectionTitle('Allergies'),
           Row(
             children: [
@@ -439,9 +424,12 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
     required num min,
     required num max,
     bool decimal = true,
+    bool readOnly = false,
+    String? helperText,
   }) {
     return TextFormField(
       controller: controller,
+      readOnly: readOnly,
       style: const TextStyle(
         color: Color(0xFF1F2A44),
         fontWeight: FontWeight.w600,
@@ -458,7 +446,13 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
         if (parsed < min || parsed > max) return '$min-$max';
         return null;
       },
-      decoration: _inputDecoration(label),
+      decoration: _inputDecoration(label).copyWith(
+        helperText: helperText,
+        helperStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 11),
+        suffixIcon: readOnly
+            ? const Icon(Icons.lock_outline, color: Color(0xFF9CA3AF), size: 18)
+            : null,
+      ),
     );
   }
 
@@ -536,6 +530,33 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
   }
 
   String _formatInt(int? value) => value?.toString() ?? '';
+
+  int? _initialCalculatedAge() {
+    final birthDate = widget.birthDate;
+    if (widget.initialProfile.age != null || birthDate == null) {
+      _isAgeAutoCalculated = false;
+      return null;
+    }
+
+    final calculatedAge = _calculateAge(birthDate);
+    _isAgeAutoCalculated = calculatedAge != null;
+    return calculatedAge;
+  }
+
+  int? _calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    if (birthDate.isAfter(now)) return null;
+
+    var age = now.year - birthDate.year;
+    final hasHadBirthdayThisYear =
+        now.month > birthDate.month ||
+        (now.month == birthDate.month && now.day >= birthDate.day);
+    if (!hasHadBirthdayThisYear) {
+      age--;
+    }
+
+    return age;
+  }
 
   String _formatDouble(double? value) {
     if (value == null) return '';

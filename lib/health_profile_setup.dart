@@ -12,6 +12,12 @@ class HealthProfileSetupPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final birthDate = ref
+        .watch(currentUserProfileProvider)
+        .asData
+        ?.value
+        ?.birthDate;
+
     return Scaffold(
       backgroundColor: _background,
       body: SafeArea(
@@ -21,6 +27,7 @@ class HealthProfileSetupPage extends ConsumerWidget {
             initialProfile: HealthProfile.empty(),
             submitLabel: 'Continue to Dashboard',
             header: const _HealthProfileHeader(),
+            birthDate: birthDate,
             onSubmit: (profile) async {
               final service = ref.read(prototypeDataServiceProvider);
               await service.saveHealthProfile(profile);

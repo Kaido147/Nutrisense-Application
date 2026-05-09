@@ -52,6 +52,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           onRefresh: () async {
             ref.invalidate(dashboardStatsProvider);
             ref.invalidate(todayQuestsProvider);
+            ref.invalidate(enabledRemindersProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),

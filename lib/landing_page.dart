@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
@@ -80,6 +81,7 @@ class LandingPage extends StatelessWidget {
                           elevation: 0,
                         ),
                         onPressed: () {
+                          HapticFeedback.lightImpact();
                           Navigator.pushNamed(context, '/login');
                         },
                         child: const Text(
@@ -105,6 +107,7 @@ class LandingPage extends StatelessWidget {
                           elevation: 0,
                         ),
                         onPressed: () {
+                          HapticFeedback.lightImpact();
                           Navigator.pushNamed(context, '/register');
                         },
                         child: const Text(

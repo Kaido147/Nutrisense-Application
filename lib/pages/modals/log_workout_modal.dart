@@ -442,7 +442,7 @@ class _LogWorkoutModalState extends State<LogWorkoutModal> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? _goldTan.withOpacity(0.15)
+                                          ? _goldTan.withValues(alpha: 0.15)
                                           : Colors.white,
                                       border: Border.all(
                                         color: isSelected

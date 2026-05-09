@@ -10,6 +10,7 @@ class StudyTaskDocument {
     required this.isCompleted,
     required this.createdAt,
     required this.updatedAt,
+    required this.completedAt,
     required this.dueAt,
   });
 
@@ -19,6 +20,7 @@ class StudyTaskDocument {
   final bool isCompleted;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DateTime? completedAt;
   final DateTime? dueAt;
 
   factory StudyTaskDocument.fromFirestore(
@@ -38,6 +40,7 @@ class StudyTaskDocument {
           : false,
       createdAt: _readTimestamp(source['createdAt']),
       updatedAt: _readTimestamp(source['updatedAt']),
+      completedAt: _readTimestamp(source['completedAt']),
       dueAt: _readTimestamp(source['dueAt']),
     );
   }
@@ -51,6 +54,7 @@ class StudyTaskDocument {
       description: description,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      completedAt: completedAt,
       dueAt: dueAt,
     );
   }

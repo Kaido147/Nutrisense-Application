@@ -40,6 +40,15 @@ class _SetGoalsPageState extends ConsumerState<SetGoalsPage> {
       return;
     }
 
+    if (_studyGoals.isEmpty &&
+        _workoutGoals.isEmpty &&
+        _wellnessGoals.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one goal.')),
+      );
+      return;
+    }
+
     setState(() {
       _isSaving = true;
     });

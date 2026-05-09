@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+const Object _studyTaskCopyUnset = Object();
+
 enum StudyTab { focusMode, journalMood }
 
 enum FocusPresetId { focus25, break5, focus50 }
@@ -96,6 +98,7 @@ class StudyTask {
     this.description,
     this.createdAt,
     this.updatedAt,
+    this.completedAt,
     this.dueAt,
   });
 
@@ -106,6 +109,7 @@ class StudyTask {
   final String? description;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DateTime? completedAt;
   final DateTime? dueAt;
 
   StudyTask copyWith({
@@ -116,6 +120,7 @@ class StudyTask {
     String? description,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Object? completedAt = _studyTaskCopyUnset,
     DateTime? dueAt,
   }) {
     return StudyTask(
@@ -126,6 +131,9 @@ class StudyTask {
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      completedAt: identical(completedAt, _studyTaskCopyUnset)
+          ? this.completedAt
+          : completedAt as DateTime?,
       dueAt: dueAt ?? this.dueAt,
     );
   }

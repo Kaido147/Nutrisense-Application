@@ -97,10 +97,12 @@ class _JournalEntryModalState extends ConsumerState<JournalEntryModal> {
     try {
       final service = ref.read(prototypeDataServiceProvider);
       final entry = widget.entry;
+      final title = _resolvedTitle();
+      final content = _content.text.trim();
       if (entry == null) {
         await service.addJournalEntry(
-          title: _title.text,
-          content: _content.text,
+          title: title,
+          content: content,
           mood: _selectedMood,
           entryDate: _selectedDate,
           tags: _selectedTags.toList(growable: false),
@@ -108,8 +110,8 @@ class _JournalEntryModalState extends ConsumerState<JournalEntryModal> {
       } else {
         await service.updateJournalEntry(
           entryId: entry.id,
-          title: _title.text,
-          content: _content.text,
+          title: title,
+          content: content,
           mood: _selectedMood,
           entryDate: _selectedDate,
           tags: _selectedTags.toList(growable: false),
@@ -134,6 +136,28 @@ class _JournalEntryModalState extends ConsumerState<JournalEntryModal> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  String _resolvedTitle() {
+    final trimmedTitle = _title.text.trim();
+    if (trimmedTitle.isNotEmpty) return trimmedTitle;
+
+    const months = <String>[
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    final month = months[_selectedDate.month - 1];
+    return '$month ${_selectedDate.day}, ${_selectedDate.year}';
   }
 
   @override

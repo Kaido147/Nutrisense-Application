@@ -33,8 +33,10 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
   final TextEditingController _startTime = TextEditingController();
   final TextEditingController _endTime = TextEditingController();
   final TextEditingController _location = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   TimeOfDay? _startTimeValue;
   TimeOfDay? _endTimeValue;
+  String? _timeError;
   bool _isSaving = false;
 
   String _selectedDay = 'Monday';
@@ -105,6 +107,7 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
       setState(() {
         controller.text = picked.format(context);
         onSelected(picked);
+        _timeError = null;
       });
     }
   }
@@ -114,13 +117,14 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
       return;
     }
 
-    // Validate inputs
-    if (_classTitle.text.isEmpty ||
-        _startTimeValue == null ||
-        _endTimeValue == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all required fields')),
-      );
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) {
+      return;
+    }
+
+    final timeError = _validateTimes();
+    if (timeError != null) {
+      setState(() => _timeError = timeError);
       return;
     }
 
@@ -174,6 +178,18 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
     }
   }
 
+  String? _validateTimes() {
+    final start = _startTimeValue;
+    final end = _endTimeValue;
+    if (start == null || end == null) {
+      return 'Start and end time are required';
+    }
+    if (_toMinutes(end) <= _toMinutes(start)) {
+      return 'End time must be after start time';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -202,372 +218,427 @@ class _AddClassModalState extends ConsumerState<AddClassModal> {
                 topRight: Radius.circular(24),
               ),
             ),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          widget.schedule == null
-                              ? 'Add Class Schedule'
-                              : 'Edit Class Schedule',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: _navyBlue,
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            widget.schedule == null
+                                ? 'Add Class Schedule'
+                                : 'Edit Class Schedule',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: _navyBlue,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Icon(
+                              Icons.close,
+                              color: _navyBlue,
+                              size: 24,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Class Title
+                      Text(
+                        'Class Title *',
+                        style: TextStyle(
+                          color: _navyBlue,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _classTitle,
+                        enabled: !_isSaving,
+                        style: _inputTextStyle,
+                        validator: (value) {
+                          if ((value ?? '').trim().isEmpty) {
+                            return 'Class title is required';
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'e.g., Introduction to Psychology',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFFCCCCCC),
+                            fontSize: 14,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.backpack_outlined,
+                            color: Color(0xFFCCCCCC),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: _lightGray,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Icon(Icons.close, color: _navyBlue, size: 24),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Class Title
-                    Text(
-                      'Class Title *',
-                      style: TextStyle(
-                        color: _navyBlue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _classTitle,
-                      style: _inputTextStyle,
-                      decoration: InputDecoration(
-                        hintText: 'e.g., Introduction to Psychology',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFFCCCCCC),
+                      const SizedBox(height: 16),
+
+                      // Course Code
+                      Text(
+                        'Course Code',
+                        style: TextStyle(
+                          color: _navyBlue,
                           fontSize: 14,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.backpack_outlined,
-                          color: Color(0xFFCCCCCC),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: _lightGray,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _courseCode,
+                        enabled: !_isSaving,
+                        style: _inputTextStyle,
+                        decoration: InputDecoration(
+                          hintText: 'e.g., PSYCH 101',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFFCCCCCC),
+                            fontSize: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: _lightGray,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Course Code
-                    Text(
-                      'Course Code',
-                      style: TextStyle(
-                        color: _navyBlue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _courseCode,
-                      style: _inputTextStyle,
-                      decoration: InputDecoration(
-                        hintText: 'e.g., PSYCH 101',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFFCCCCCC),
+                      // Day of Week
+                      Text(
+                        'Day of Week *',
+                        style: TextStyle(
+                          color: _navyBlue,
                           fontSize: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: _lightGray,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Day of Week
-                    Text(
-                      'Day of Week *',
-                      style: TextStyle(
-                        color: _navyBlue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (context) => Container(
-                            color: Colors.white,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: _days.map((day) {
-                                return ListTile(
-                                  title: Text(day),
-                                  onTap: () {
-                                    setState(() => _selectedDay = day);
-                                    Navigator.pop(context);
-                                  },
-                                  trailing: _selectedDay == day
-                                      ? Icon(Icons.check, color: _navyBlue)
-                                      : null,
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: _isSaving
+                            ? null
+                            : () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (context) => Container(
+                                    color: Colors.white,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: _days.map((day) {
+                                        return ListTile(
+                                          title: Text(day),
+                                          onTap: () {
+                                            setState(() => _selectedDay = day);
+                                            Navigator.pop(context);
+                                          },
+                                          trailing: _selectedDay == day
+                                              ? Icon(
+                                                  Icons.check,
+                                                  color: _navyBlue,
+                                                )
+                                              : null,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
                                 );
-                              }).toList(),
-                            ),
+                              },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _lightGray,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.calendar_today_outlined,
-                              color: Color(0xFFCCCCCC),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _selectedDay,
-                              style: const TextStyle(
-                                color: _navyBlue,
-                                fontSize: 14,
+                          decoration: BoxDecoration(
+                            color: _lightGray,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                color: Color(0xFFCCCCCC),
+                                size: 20,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              Text(
+                                _selectedDay,
+                                style: const TextStyle(
+                                  color: _navyBlue,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Start Time and End Time
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Start Time *',
-                                style: TextStyle(
-                                  color: _navyBlue,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              GestureDetector(
-                                onTap: () => _selectTime(
-                                  controller: _startTime,
-                                  onSelected: (value) =>
-                                      _startTimeValue = value,
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
+                      // Start Time and End Time
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Start Time *',
+                                  style: TextStyle(
+                                    color: _navyBlue,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: _lightGray,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.schedule_outlined,
-                                        color: Color(0xFFCCCCCC),
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _startTime.text.isEmpty
-                                              ? '--:-- --'
-                                              : _startTime.text,
-                                          style: const TextStyle(
-                                            color: _navyBlue,
-                                            fontSize: 14,
+                                ),
+                                const SizedBox(height: 8),
+                                GestureDetector(
+                                  onTap: _isSaving
+                                      ? null
+                                      : () => _selectTime(
+                                          controller: _startTime,
+                                          onSelected: (value) =>
+                                              _startTimeValue = value,
+                                        ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _lightGray,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.schedule_outlined,
+                                          color: Color(0xFFCCCCCC),
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _startTime.text.isEmpty
+                                                ? '--:-- --'
+                                                : _startTime.text,
+                                            style: const TextStyle(
+                                              color: _navyBlue,
+                                              fontSize: 14,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'End Time *',
-                                style: TextStyle(
-                                  color: _navyBlue,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              GestureDetector(
-                                onTap: () => _selectTime(
-                                  controller: _endTime,
-                                  onSelected: (value) => _endTimeValue = value,
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'End Time *',
+                                  style: TextStyle(
+                                    color: _navyBlue,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: _lightGray,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.schedule_outlined,
-                                        color: Color(0xFFCCCCCC),
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _endTime.text.isEmpty
-                                              ? '--:-- --'
-                                              : _endTime.text,
-                                          style: const TextStyle(
-                                            color: _navyBlue,
-                                            fontSize: 14,
+                                ),
+                                const SizedBox(height: 8),
+                                GestureDetector(
+                                  onTap: _isSaving
+                                      ? null
+                                      : () => _selectTime(
+                                          controller: _endTime,
+                                          onSelected: (value) =>
+                                              _endTimeValue = value,
+                                        ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _lightGray,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.schedule_outlined,
+                                          color: Color(0xFFCCCCCC),
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _endTime.text.isEmpty
+                                                ? '--:-- --'
+                                                : _endTime.text,
+                                            style: const TextStyle(
+                                              color: _navyBlue,
+                                              fontSize: 14,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_timeError != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _timeError!,
+                          style: const TextStyle(
+                            color: Color(0xFFEF4444),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Location
-                    Text(
-                      'Location',
-                      style: TextStyle(
-                        color: _navyBlue,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _location,
-                      style: _inputTextStyle,
-                      decoration: InputDecoration(
-                        hintText: 'e.g., Building A, Room 201',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFFCCCCCC),
+                      // Location
+                      Text(
+                        'Location',
+                        style: TextStyle(
+                          color: _navyBlue,
                           fontSize: 14,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.location_on_outlined,
-                          color: Color(0xFFCCCCCC),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: _lightGray,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _location,
+                        enabled: !_isSaving,
+                        style: _inputTextStyle,
+                        decoration: InputDecoration(
+                          hintText: 'e.g., Building A, Room 201',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFFCCCCCC),
+                            fontSize: 14,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.location_on_outlined,
+                            color: Color(0xFFCCCCCC),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: _lightGray,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
 
-                    // Cancel and Add Class Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: _lightGray,
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B7280),
+                      // Cancel and Add Class Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                backgroundColor: _lightGray,
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF6B7280),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextButton(
-                            onPressed: _isSaving ? null : _saveClass,
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: _navyBlue,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextButton(
+                              onPressed: _isSaving ? null : _saveClass,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                backgroundColor: _navyBlue,
+                              ),
+                              child: _isSaving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      widget.schedule == null
+                                          ? 'Add Class'
+                                          : 'Save Class',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
-                            child: _isSaving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Text(
-                                    widget.schedule == null
-                                        ? 'Add Class'
-                                        : 'Save Class',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

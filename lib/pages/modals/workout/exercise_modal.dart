@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:nutrisense/services/timer_completion_sound.dart';
 
 import 'exercise_complete_dialog.dart';
 
@@ -87,6 +88,7 @@ class _ExerciseModalState extends State<_ExerciseModal> {
           _secondsLeft = 0;
           _isRunning = false;
         });
+        unawaited(TimerCompletionSound.play());
         return;
       }
       setState(() => _secondsLeft -= 1);

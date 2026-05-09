@@ -187,27 +187,27 @@ class ProfileService {
 
       // Firestore may return numeric fields as int, double, or num depending
       // on how they were written. Using (x as num?)?.toInt() is safe for all.
-      int? _i(String key) => (m[key] as num?)?.toInt();
+      int? readInt(String key) => (m[key] as num?)?.toInt();
 
       return DailyMacros(
         // ── Core macros ───────────────────────────────────────────────────
-        calories: _i('calories') ?? 0,
-        protein: _i('protein') ?? 0,
-        carbs: _i('carbs') ?? 0,
-        fat: _i('fat') ?? 0,
-        fiber: _i('fiber') ?? 0,
+        calories: readInt('calories') ?? 0,
+        protein: readInt('protein') ?? 0,
+        carbs: readInt('carbs') ?? 0,
+        fat: readInt('fat') ?? 0,
+        fiber: readInt('fiber') ?? 0,
         // ── Extended nutrients ────────────────────────────────────────────
         // Fall back to canonical reference values so existing Firestore
         // documents (written before this update) still work correctly.
-        sugar: _i('sugar') ?? 50,
-        sodium: _i('sodium') ?? 2300,
-        cholesterol: _i('cholesterol') ?? 300,
-        saturatedFat: _i('saturatedFat') ?? 20,
-        transFat: _i('transFat') ?? 2,
-        potassium: _i('potassium') ?? 3500,
-        calcium: _i('calcium') ?? 1000,
-        iron: _i('iron') ?? 18,
-        vitaminD: _i('vitaminD') ?? 20,
+        sugar: readInt('sugar') ?? 50,
+        sodium: readInt('sodium') ?? 2300,
+        cholesterol: readInt('cholesterol') ?? 300,
+        saturatedFat: readInt('saturatedFat') ?? 20,
+        transFat: readInt('transFat') ?? 2,
+        potassium: readInt('potassium') ?? 3500,
+        calcium: readInt('calcium') ?? 1000,
+        iron: readInt('iron') ?? 18,
+        vitaminD: readInt('vitaminD') ?? 20,
       );
     } on FirebaseException catch (_) {
       throw const ProfileFlowException(
