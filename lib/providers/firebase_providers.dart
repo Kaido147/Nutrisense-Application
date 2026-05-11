@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
 import 'package:nutrisense/services/auth_service.dart';
 import 'package:nutrisense/services/goals_service.dart';
+import 'package:nutrisense/services/groq_ai_service.dart';
 import 'package:nutrisense/services/macro_calculator.dart';
 import 'package:nutrisense/services/nutrition_service.dart';
 import 'package:nutrisense/services/profile_service.dart';
@@ -59,6 +61,12 @@ final nutritionServiceProvider = Provider<NutritionService>((ref) {
     auth: ref.watch(firebaseAuthProvider),
     firestore: ref.watch(firebaseFirestoreProvider),
   );
+});
+
+final groqAiServiceProvider = Provider<GroqAiService>((ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return GroqAiService(client: client);
 });
 
 final healthProfileProvider = StreamProvider<HealthProfile?>((ref) {

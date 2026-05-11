@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/user_profile.dart';
+import 'package:nutrisense/pages/home_ai_chat_view.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 import 'package:nutrisense/widgets/profile_avatar.dart';
 
@@ -20,6 +21,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   static const Color gold = Color(0xFFD6B66E);
   static const Color green = Color(0xFF22C55E);
   static const Color textDark = Color(0xFF1F2A44);
+
+  bool _showAiChat = false;
 
   @override
   void initState() {
@@ -48,41 +51,62 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(dashboardStatsProvider);
-            ref.invalidate(todayQuestsProvider);
-            ref.invalidate(enabledRemindersProvider);
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              children: [
-                _Header(profile: profile),
-                Transform.translate(
-                  offset: const Offset(0, -22),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    child: Column(
-                      children: [
-                        _ProgressCard(stats: stats, profile: profile),
-                        const SizedBox(height: 26),
-                        _sectionTitle('Today Overview'),
-                        const SizedBox(height: 14),
-                        _OverviewGrid(stats: stats),
-                        const SizedBox(height: 26),
-                        _QuestSection(quests: quests),
-                        const SizedBox(height: 26),
-                        const _DailyQuoteCard(),
-                        const SizedBox(height: 30),
-                      ],
-                    ),
+        child: _showAiChat
+            ? Column(
+                children: [
+                  _Header(
+                    profile: profile,
+                    showAiChat: true,
+                    onDashboardSelected: () {
+                      setState(() => _showAiChat = false);
+                    },
+                    onAiChatSelected: () {},
+                  ),
+                  const Expanded(child: HomeAiChatView()),
+                ],
+              )
+            : RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(dashboardStatsProvider);
+                  ref.invalidate(todayQuestsProvider);
+                  ref.invalidate(enabledRemindersProvider);
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      _Header(
+                        profile: profile,
+                        showAiChat: false,
+                        onDashboardSelected: () {},
+                        onAiChatSelected: () {
+                          setState(() => _showAiChat = true);
+                        },
+                      ),
+                      Transform.translate(
+                        offset: const Offset(0, -22),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                          child: Column(
+                            children: [
+                              _ProgressCard(stats: stats, profile: profile),
+                              const SizedBox(height: 26),
+                              _sectionTitle('Today Overview'),
+                              const SizedBox(height: 14),
+                              _OverviewGrid(stats: stats),
+                              const SizedBox(height: 26),
+                              _QuestSection(quests: quests),
+                              const SizedBox(height: 26),
+                              const _DailyQuoteCard(),
+                              const SizedBox(height: 30),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
@@ -103,9 +127,17 @@ class _HomePageState extends ConsumerState<HomePage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.profile});
+  const _Header({
+    required this.profile,
+    required this.showAiChat,
+    required this.onDashboardSelected,
+    required this.onAiChatSelected,
+  });
 
   final UserProfile? profile;
+  final bool showAiChat;
+  final VoidCallback onDashboardSelected;
+  final VoidCallback onAiChatSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +148,7 @@ class _Header extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 28, 22, 36),
+      padding: EdgeInsets.fromLTRB(22, 28, 22, showAiChat ? 22 : 34),
       decoration: const BoxDecoration(
         color: _HomePageState.navy,
         borderRadius: BorderRadius.only(
@@ -124,58 +156,227 @@ class _Header extends StatelessWidget {
           bottomRight: Radius.circular(34),
         ),
       ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Good Morning, $displayName',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Ready to balance your day?',
+                      style: TextStyle(
+                        color: Color(0xFFE0E5F2),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              if (profile == null)
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFB8A98B),
+                      width: 2,
+                    ),
+                  ),
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.transparent,
+                    child: Icon(Icons.person, color: Color(0xFF7C5AA6)),
+                  ),
+                )
+              else
+                ProfileAvatar(
+                  uid: profile!.uid,
+                  size: 48,
+                  borderColor: const Color(0xFFB8A98B),
+                  backgroundColor: Colors.transparent,
+                  fallbackIconColor: const Color(0xFF7C5AA6),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _HomeModeToggle(
+            showAiChat: showAiChat,
+            onDashboardSelected: onDashboardSelected,
+            onAiChatSelected: onAiChatSelected,
+          ),
+          if (!showAiChat) ...[
+            const SizedBox(height: 18),
+            _AiIntroCard(onTap: onAiChatSelected),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeModeToggle extends StatelessWidget {
+  const _HomeModeToggle({
+    required this.showAiChat,
+    required this.onDashboardSelected,
+    required this.onAiChatSelected,
+  });
+
+  final bool showAiChat;
+  final VoidCallback onDashboardSelected;
+  final VoidCallback onAiChatSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F4ED),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Good Morning, $displayName',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Ready to balance your day?',
-                  style: TextStyle(
-                    color: Color(0xFFE0E5F2),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
+            child: _ToggleSegment(
+              label: 'Dashboard',
+              selected: !showAiChat,
+              onTap: onDashboardSelected,
             ),
           ),
-          const SizedBox(width: 14),
-          if (profile == null)
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFB8A98B), width: 2),
-              ),
-              child: const CircleAvatar(
-                backgroundColor: Colors.transparent,
-                child: Icon(Icons.person, color: Color(0xFF7C5AA6)),
-              ),
-            )
-          else
-            ProfileAvatar(
-              uid: profile!.uid,
-              size: 48,
-              borderColor: const Color(0xFFB8A98B),
-              backgroundColor: Colors.transparent,
-              fallbackIconColor: const Color(0xFF7C5AA6),
+          Expanded(
+            child: _ToggleSegment(
+              label: 'AI Chat',
+              selected: showAiChat,
+              onTap: onAiChatSelected,
             ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _ToggleSegment extends StatelessWidget {
+  const _ToggleSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? _HomePageState.navy : Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected
+                  ? Colors.white
+                  : _HomePageState.textDark.withValues(alpha: 0.72),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AiIntroCard extends StatelessWidget {
+  const _AiIntroCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFFFFBF0),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE2D8C9)),
+          ),
+          child: const Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Color(0xFFFDDC96),
+                child: Icon(
+                  Icons.school_outlined,
+                  color: _HomePageState.navy,
+                  size: 28,
+                ),
+              ),
+              SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  '"A balanced day starts with small steps. You\'ve got '
+                  'quests waiting. Let\'s make it a great one!"',
+                  style: TextStyle(
+                    color: Color(0xFF171714),
+                    fontSize: 14,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: _HomePageState.navy,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

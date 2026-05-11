@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Wellness Hub - AI Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#c9c6c1",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f5f3f3",
+                        "outline": "#75777f",
+                        "on-secondary-container": "#775f26",
+                        "on-tertiary-fixed": "#1c1c19",
+                        "on-tertiary-container": "#94928e",
+                        "on-primary-fixed-variant": "#364768",
+                        "on-error-container": "#93000a",
+                        "on-background": "#1b1c1c",
+                        "secondary-container": "#fddc96",
+                        "primary": "#031635",
+                        "secondary-fixed": "#ffdf9b",
+                        "on-surface-variant": "#44474e",
+                        "on-tertiary": "#ffffff",
+                        "inverse-primary": "#b6c6ef",
+                        "surface-container-highest": "#e3e2e2",
+                        "background": "#fbf9f9",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed": "#e6e2dd",
+                        "surface-dim": "#dbdad9",
+                        "on-tertiary-fixed-variant": "#484743",
+                        "outline-variant": "#c5c6cf",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f2f0f0",
+                        "tertiary-container": "#2c2b28",
+                        "surface-container": "#efeded",
+                        "surface-container-high": "#e9e8e7",
+                        "secondary-fixed-dim": "#e2c37f",
+                        "on-secondary-fixed": "#251a00",
+                        "surface-tint": "#4e5e81",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#e3e2e2",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#8293b8",
+                        "primary-fixed-dim": "#b6c6ef",
+                        "on-surface": "#1b1c1c",
+                        "tertiary": "#171714",
+                        "primary-fixed": "#d8e2ff",
+                        "surface": "#fbf9f9",
+                        "secondary": "#735b22",
+                        "inverse-surface": "#303031",
+                        "on-secondary-fixed-variant": "#59440c",
+                        "surface-bright": "#fbf9f9",
+                        "on-primary-fixed": "#081b3a",
+                        "primary-container": "#1a2b4b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "12px",
+                        "section-gap": "32px",
+                        "container-padding": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-sm": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "26px", "fontWeight": "400" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-sans selection:bg-secondary-container selection:text-on-secondary-container">
+<!-- Top App Bar -->
+<header class="bg-surface docked full-width top-0 z-40 px-container-padding py-4 shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
+<div class="flex justify-between items-center w-full max-w-7xl mx-auto">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/30 flex-shrink-0">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="A close-up portrait of a relaxed person, serving as a user profile picture in a modern app interface. Soft, natural lighting. Modern light-mode aesthetic with minimal background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAG-YcdTO2vKUCQUib9GDjqJU7ZGFKad6W-FTyBjVkiWKxb9p7d-b2G5D4He0EIcf2bv60B77BGWQNQ-zcfCKP9CiU1xi0FIIVVXcPGWC_B7amUo8U5s8FxDxiqlkIaPPnWC1VzlRNaoOWCZtTr7mSNHi71ihw5QWOAlV3DMqYKvY3i56M6j6FY79zW9jk_LQ5fa6UvCGFH9p7v3d_Hmpy3idcSgili6mG94DyFaNjv2ud6xnWvnf5In2CG0ZJZ-gmm-qwoLMLnLQ"/>
+</div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">Wellness Hub</h1>
+</div>
+<!-- Custom Top Toggle for Dashboard/AI Chat -->
+<div class="hidden md:flex bg-surface-container-low p-1 rounded-full border border-outline-variant/30 relative">
+<button class="px-6 py-2 rounded-full font-label-md text-label-md text-outline-variant hover:text-on-surface transition-colors z-10">Dashboard</button>
+<button class="px-6 py-2 rounded-full font-label-md text-label-md bg-primary-container text-on-primary shadow-sm z-10">AI Chat</button>
+</div>
+<button aria-label="notifications" class="w-10 h-10 flex items-center justify-center rounded-full text-outline hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[24px]">notifications</span>
+</button>
+</div>
+<!-- Mobile Toggle (Visible only on small screens) -->
+<div class="md:hidden flex justify-center mt-4">
+<div class="flex bg-surface-container-low p-1 rounded-full border border-outline-variant/30 w-full max-w-[300px]">
+<button class="flex-1 py-2 rounded-full font-label-md text-label-md text-outline-variant hover:text-on-surface transition-colors">Dashboard</button>
+<button class="flex-1 py-2 rounded-full font-label-md text-label-md bg-primary-container text-on-primary shadow-sm">AI Chat</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas - Chat Interface -->
+<main class="flex-1 flex flex-col w-full max-w-3xl mx-auto px-4 md:px-container-padding py-6 overflow-hidden relative pb-[140px] md:pb-[100px]">
+<!-- Chat History Area -->
+<div class="flex-1 overflow-y-auto flex flex-col gap-6 pr-2 custom-scrollbar">
+<!-- Date Divider -->
+<div class="flex justify-center my-2">
+<span class="text-label-sm font-label-sm text-outline-variant bg-surface-container-lowest px-3 py-1 rounded-full border border-outline-variant/20">Today</span>
+</div>
+<!-- AI Message -->
+<div class="flex items-start gap-3 w-full max-w-[85%]">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0 shadow-sm border border-secondary-fixed/50">
+<span class="material-symbols-outlined text-[18px] text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-outline ml-1">Wellness Owl</span>
+<div class="bg-surface-container-low text-on-surface rounded-2xl rounded-tl-sm px-4 py-3 font-body-md text-body-md shadow-sm border border-outline-variant/10">
+                        Hello! I'm here to help you balance your wellness journey today. How are you feeling after yesterday's light cardio?
+                    </div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-start justify-end gap-3 w-full max-w-[85%] self-end">
+<div class="flex flex-col gap-1 items-end">
+<span class="text-label-sm font-label-sm text-outline mr-1">You</span>
+<div class="bg-primary-container text-on-primary rounded-2xl rounded-tr-sm px-4 py-3 font-body-md text-body-md shadow-sm">
+                        Feeling a bit sore actually. I think I might need something more relaxing today.
+                    </div>
+</div>
+</div>
+<!-- AI Message -->
+<div class="flex items-start gap-3 w-full max-w-[85%]">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0 shadow-sm border border-secondary-fixed/50">
+<span class="material-symbols-outlined text-[18px] text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1 w-full">
+<span class="text-label-sm font-label-sm text-outline ml-1">Wellness Owl</span>
+<div class="bg-surface-container-low text-on-surface rounded-2xl rounded-tl-sm px-4 py-3 font-body-md text-body-md shadow-sm border border-outline-variant/10">
+<p class="mb-3">Soreness is normal, but listening to your body is great. Let's pivot to active recovery.</p>
+<p>I suggest a 15-minute gentle stretch routine focusing on your legs and lower back.</p>
+<!-- Embedded Action Card in Chat -->
+<div class="mt-4 bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/30 flex items-center gap-3">
+<div class="w-12 h-12 rounded-lg bg-tertiary-fixed-dim flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px] text-on-tertiary-fixed-variant">self_improvement</span>
+</div>
+<div class="flex-1">
+<h4 class="font-label-md text-label-md text-on-surface">Gentle Recovery Flow</h4>
+<p class="font-label-sm text-label-sm text-outline">15 mins • Low Intensity</p>
+</div>
+<button class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-secondary-fixed transition-colors">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-start justify-end gap-3 w-full max-w-[85%] self-end">
+<div class="flex flex-col gap-1 items-end">
+<div class="bg-primary-container text-on-primary rounded-2xl rounded-tr-sm px-4 py-3 font-body-md text-body-md shadow-sm">
+                        That sounds perfect. Thanks!
+                    </div>
+</div>
+</div>
+<!-- Typing Indicator (AI) -->
+<div class="flex items-start gap-3 w-full max-w-[85%]">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0 shadow-sm border border-secondary-fixed/50">
+<span class="material-symbols-outlined text-[18px] text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="bg-surface-container-low rounded-2xl rounded-tl-sm px-4 py-4 shadow-sm border border-outline-variant/10 flex gap-1.5 items-center">
+<div class="w-2 h-2 bg-outline-variant rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+<div class="w-2 h-2 bg-outline-variant rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+<div class="w-2 h-2 bg-outline-variant rounded-full animate-bounce" style="animation-delay: 0.4s;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Input Area -->
+<div class="absolute bottom-6 left-0 w-full px-4 md:px-container-padding bg-gradient-to-t from-background via-background to-transparent pt-6">
+<div class="flex items-end gap-2 bg-surface-container-lowest rounded-[24px] p-2 shadow-[0px_4px_20px_rgba(0,0,0,0.08)] border border-outline-variant/20">
+<button aria-label="Add attachment" class="w-10 h-10 rounded-full flex items-center justify-center text-outline hover:bg-surface-container-low transition-colors flex-shrink-0">
+<span class="material-symbols-outlined text-[24px]">add</span>
+</button>
+<div class="flex-1 min-h-[44px]">
+<textarea class="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-body-md text-on-surface placeholder:text-outline-variant py-2.5 px-2 max-h-[120px] overflow-y-auto" placeholder="Message Wellness Owl..." rows="1"></textarea>
+</div>
+<button aria-label="Send message" class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-secondary-fixed transition-colors flex-shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+<p class="text-center mt-2 font-label-sm text-label-sm text-outline-variant">AI responses may occasionally be inaccurate.</p>
+</div>
+</main>
+<!-- Bottom Nav Bar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe pt-2 bg-surface shadow-[0px_-4px_20px_rgba(0,0,0,0.05)] rounded-t-lg border-t-0">
+<a class="flex flex-col items-center justify-center text-outline px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-sm text-label-sm mt-1">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-label-sm text-label-sm mt-1">Progress</span>
+</a>
+<!-- Assume Home or some other tab is active normally, but for AI chat, we might not highlight a specific nav tab if it's considered a sub-view. If we must, let's leave them inactive or highlight Home if it's the main portal. Given constraints, no exact match for "AI Chat" in BottomNavBar labels. Suppressing active state on nav for focused chat view. -->
+<a class="flex flex-col items-center justify-center text-outline px-4 py-2 hover:text-secondary-fixed-dim transition-all scale-95 duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profile</span>
+</a>
+</nav>
+<!-- Safe area padding for mobile bottom nav -->
+<div class="h-20 md:hidden w-full bg-background"></div>
+<style>
+        /* Custom scrollbar for chat area to match modern minimal aesthetic */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: theme('colors.outline-variant');
+            border-radius: 10px;
+        }
+    </style>
+</body></html>
