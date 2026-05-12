@@ -148,6 +148,7 @@ class _HealthProfileFormState extends State<HealthProfileForm> {
       allergies: _allergies.toList(growable: false),
       moodStatus: _moodStatus,
       wellnessStatus: _wellnessStatus,
+      medicalConditions: widget.initialProfile.medicalConditions,
       weightGainPaceKgPerWeek: _weightGainPace,
       updatedAt: widget.initialProfile.updatedAt,
     );

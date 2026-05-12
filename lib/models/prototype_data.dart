@@ -13,6 +13,7 @@ class HealthProfile {
     required this.allergies,
     required this.moodStatus,
     required this.wellnessStatus,
+    required this.medicalConditions,
     required this.updatedAt,
     required this.weightGainPaceKgPerWeek,
   });
@@ -30,6 +31,7 @@ class HealthProfile {
       allergies: <String>[],
       moodStatus: 'Balanced',
       wellnessStatus: 'Good',
+      medicalConditions: <String>[],
       updatedAt: null,
       weightGainPaceKgPerWeek: null,
     );
@@ -49,6 +51,7 @@ class HealthProfile {
           _readString(source['dietaryPreference']) ?? 'No preference',
       allergies: _readStringList(source['allergies']),
       moodStatus: _readString(source['moodStatus']) ?? 'Balanced',
+      medicalConditions: _readStringList(source['medicalConditions']),
       wellnessStatus: _readString(source['wellnessStatus']) ?? 'Good',
       updatedAt: _readDateTime(source['updatedAt']),
       weightGainPaceKgPerWeek: _readDouble(source['weightGainPaceKgPerWeek']),
@@ -65,6 +68,7 @@ class HealthProfile {
   final String dietaryPreference;
   final List<String> allergies;
   final String moodStatus;
+  final List<String> medicalConditions;
   final String wellnessStatus;
   final DateTime? updatedAt;
   final double? weightGainPaceKgPerWeek;
@@ -92,6 +96,7 @@ class HealthProfile {
       'dietaryPreference': dietaryPreference,
       'allergies': allergies,
       'moodStatus': moodStatus,
+      'medicalConditions': medicalConditions,
       'wellnessStatus': wellnessStatus,
       'weightGainPaceKgPerWeek': weightGainPaceKgPerWeek,
       'updatedAt': FieldValue.serverTimestamp(),
