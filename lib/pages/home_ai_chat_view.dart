@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nutrisense/models/ai_chat_message.dart';
+import 'package:nutrisense/models/ai_user_context.dart';
 import 'package:nutrisense/providers/firebase_providers.dart';
 
 class HomeAiChatView extends ConsumerStatefulWidget {
@@ -30,9 +33,24 @@ class _HomeAiChatViewState extends ConsumerState<HomeAiChatView> {
   ];
 
   bool _isLoading = false;
+  bool _contextTimedOut = false;
+  AiUserContext? _latestContext;
+  Timer? _contextTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('[AI context] chat view mounted; starting context warmup');
+    _contextTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() => _contextTimedOut = true);
+      debugPrint('[AI context] initial context timeout reached');
+    });
+  }
 
   @override
   void dispose() {
+    _contextTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -50,9 +68,33 @@ class _HomeAiChatViewState extends ConsumerState<HomeAiChatView> {
     _scrollToLatest();
 
     try {
+      final cachedContext = _latestContext;
+      final AiUserContext currentContext =
+          cachedContext ?? ref.read(aiUserContextProvider);
+      final effectiveContext =
+          _contextTimedOut && currentContext.isOnlyWaitingForSources
+          ? currentContext.withTimedOutLoadingSources()
+          : currentContext;
+
+      if (currentContext.isOnlyWaitingForSources && !_contextTimedOut) {
+        setState(() {
+          _messages.add(
+            AiChatMessage.assistant(
+              "I'm still loading your latest app data. Please try again in a moment.",
+            ),
+          );
+          _isLoading = false;
+        });
+        _scrollToLatest();
+        return;
+      }
+
       final response = await ref
           .read(groqAiServiceProvider)
-          .sendMessage(List<AiChatMessage>.unmodifiable(_messages));
+          .sendMessage(
+            List<AiChatMessage>.unmodifiable(_messages),
+            context: effectiveContext,
+          );
 
       if (!mounted) return;
       setState(() {
@@ -82,6 +124,14 @@ class _HomeAiChatViewState extends ConsumerState<HomeAiChatView> {
 
   @override
   Widget build(BuildContext context) {
+    final aiContext = ref.watch(aiUserContextProvider);
+    _latestContext = aiContext;
+    if (!aiContext.isOnlyWaitingForSources && _contextTimedOut) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _contextTimedOut = false);
+      });
+    }
+
     return Container(
       color: _bg,
       child: Column(
@@ -363,10 +413,14 @@ class _OwlAvatar extends StatelessWidget {
         color: _HomeAiChatViewState._gold,
         shape: BoxShape.circle,
       ),
-      child: const Icon(
-        Icons.smart_toy_outlined,
-        color: Color(0xFF775F26),
-        size: 20,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Image.asset(
+          'assets/imgs/owl.png',
+          fit: BoxFit.contain,
+          semanticLabel: 'Wellness Owl',
+        ),
       ),
     );
   }
@@ -417,12 +471,7 @@ class _Composer extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  IconButton(
-                    onPressed: isLoading ? null : () {},
-                    icon: const Icon(Icons.add),
-                    color: const Color(0xFF70727B),
-                    tooltip: 'Add',
-                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: controller,

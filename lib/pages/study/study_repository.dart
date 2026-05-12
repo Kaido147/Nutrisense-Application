@@ -176,6 +176,25 @@ class StudyRepository {
         .toList(growable: false);
   }
 
+  Stream<List<StudyTask>> watchTasks() {
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(const <StudyTask>[]);
+
+      return _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('studyTasks')
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(StudyTaskDocument.fromFirestore)
+                .map((task) => task.toStudyTask())
+                .toList(growable: false),
+          );
+    });
+  }
+
   Future<void> addTask({
     required String title,
     String? description,

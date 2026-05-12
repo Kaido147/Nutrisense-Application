@@ -183,17 +183,18 @@ class PrototypeDataService {
   }
 
   Stream<List<DailyQuest>> watchTodayQuests() {
-    final user = _auth.currentUser;
-    if (user == null) return Stream.value(const <DailyQuest>[]);
-    return _userDoc(user.uid)
-        .collection('dailyQuests')
-        .where('dateKey', isEqualTo: todayKey())
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(DailyQuest.fromFirestore)
-              .toList(growable: false),
-        );
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(const <DailyQuest>[]);
+      return _userDoc(user.uid)
+          .collection('dailyQuests')
+          .where('dateKey', isEqualTo: todayKey())
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(DailyQuest.fromFirestore)
+                .toList(growable: false),
+          );
+    });
   }
 
   Future<void> setQuestCompleted(String questId, bool completed) async {
@@ -285,24 +286,29 @@ class PrototypeDataService {
   }
 
   Stream<List<WorkoutPlan>> watchWorkoutPlans() {
-    final user = _auth.currentUser;
-    if (user == null) return Stream.value(const <WorkoutPlan>[]);
-    return _userDoc(user.uid)
-        .collection('workoutPlans')
-        .orderBy('createdAt', descending: true)
-        .limit(10)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(WorkoutPlan.fromFirestore)
-              .toList(growable: false),
-        );
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(const <WorkoutPlan>[]);
+      return _userDoc(user.uid)
+          .collection('workoutPlans')
+          .orderBy('createdAt', descending: true)
+          .limit(10)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(WorkoutPlan.fromFirestore)
+                .toList(growable: false),
+          );
+    });
   }
 
   Stream<List<WorkoutActivity>> watchWorkoutActivities() {
-    final user = _auth.currentUser;
-    if (user == null) return Stream.value(const <WorkoutActivity>[]);
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(const <WorkoutActivity>[]);
+      return _watchWorkoutActivitiesForUser(user.uid);
+    });
+  }
 
+  Stream<List<WorkoutActivity>> _watchWorkoutActivitiesForUser(String uid) {
     final controller = StreamController<List<WorkoutActivity>>();
     var manualActivities = const <WorkoutActivity>[];
     var completedPlans = const <WorkoutActivity>[];
@@ -322,7 +328,7 @@ class PrototypeDataService {
       controller.add(merged.take(30).toList(growable: false));
     }
 
-    final manualSub = _userDoc(user.uid)
+    final manualSub = _userDoc(uid)
         .collection('workoutActivities')
         .orderBy('createdAt', descending: true)
         .limit(30)
@@ -334,7 +340,7 @@ class PrototypeDataService {
           emit();
         }, onError: controller.addError);
 
-    final planSub = _userDoc(user.uid)
+    final planSub = _userDoc(uid)
         .collection('workoutPlans')
         .where('completed', isEqualTo: true)
         .limit(30)
@@ -570,17 +576,19 @@ class PrototypeDataService {
   }
 
   Stream<List<MealLog>> watchMealLogs() {
-    final user = _auth.currentUser;
-    if (user == null) return Stream.value(const <MealLog>[]);
-    return _userDoc(user.uid)
-        .collection('mealLogs')
-        .orderBy('loggedAt', descending: true)
-        .limit(10)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map(MealLog.fromFirestore).toList(growable: false),
-        );
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(const <MealLog>[]);
+      return _userDoc(user.uid)
+          .collection('mealLogs')
+          .orderBy('loggedAt', descending: true)
+          .limit(10)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(MealLog.fromFirestore)
+                .toList(growable: false),
+          );
+    });
   }
 
   Stream<List<JournalRecord>> watchJournalEntries() {

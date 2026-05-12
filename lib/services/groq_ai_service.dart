@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:nutrisense/models/ai_chat_message.dart';
+import 'package:nutrisense/models/ai_user_context.dart';
 
 class MissingGroqApiKeyException implements Exception {
   const MissingGroqApiKeyException();
@@ -22,12 +24,22 @@ class GroqAiException implements Exception {
 class GroqAiService {
   GroqAiService({
     required http.Client client,
-    String apiKey = _environmentApiKey,
-    String model = _environmentModel,
+    String? apiKey,
+    String? model,
+    Map<String, String>? dotenvValues,
+    String dartDefineApiKey = _environmentApiKey,
+    String dartDefineModel = _environmentModel,
     Uri? endpoint,
   }) : _client = client,
-       _apiKey = apiKey,
-       _model = model,
+       _apiKey = _resolveConfigValue(
+         _dotenvValue(dotenvValues, 'GROQ_API_KEY'),
+         apiKey ?? dartDefineApiKey,
+       ),
+       _model = _resolveConfigValue(
+         _dotenvValue(dotenvValues, 'GROQ_MODEL'),
+         model ?? dartDefineModel,
+         fallback: 'llama-3.3-70b-versatile',
+       ),
        _endpoint =
            endpoint ??
            Uri.parse('https://api.groq.com/openai/v1/chat/completions');
@@ -42,8 +54,14 @@ class GroqAiService {
 
   static const String _systemPrompt =
       'You are Wellness Owl, Nutrisense\'s supportive wellness assistant. '
-      'Help students balance nutrition, workouts, study, rest, and daily '
-      'habits. Keep replies concise, practical, encouraging, and safe. '
+      'Answer as part of the Nutrisense app using the supplied live app '
+      'context when relevant. Be honest when data is missing, empty, or not '
+      'provided. Do not claim access to data outside the supplied context. '
+      'For workouts, only recommend exercises, categories, or plans listed in '
+      'the supplied in-app workout catalog. If a requested workout is not '
+      'available, suggest the closest available in-app option. Help students '
+      'balance nutrition, workouts, study, rest, and daily habits. Keep '
+      'replies concise, practical, encouraging, and app-focused. '
       'Do not diagnose medical conditions; recommend professional help for '
       'urgent, medical, mental health, or nutrition-specific concerns.';
 
@@ -52,7 +70,31 @@ class GroqAiService {
   final String _model;
   final Uri _endpoint;
 
-  Future<String> sendMessage(List<AiChatMessage> messages) async {
+  static String? _dotenvValue(Map<String, String>? dotenvValues, String key) {
+    if (dotenvValues != null) return dotenvValues[key];
+    try {
+      return dotenv.env[key];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _resolveConfigValue(
+    String? primary,
+    String? secondary, {
+    String fallback = '',
+  }) {
+    final primaryValue = primary?.trim() ?? '';
+    if (primaryValue.isNotEmpty) return primaryValue;
+    final secondaryValue = secondary?.trim() ?? '';
+    if (secondaryValue.isNotEmpty) return secondaryValue;
+    return fallback;
+  }
+
+  Future<String> sendMessage(
+    List<AiChatMessage> messages, {
+    required AiUserContext context,
+  }) async {
     final key = _apiKey.trim();
     if (key.isEmpty) {
       throw const MissingGroqApiKeyException();
@@ -82,6 +124,7 @@ class GroqAiService {
         'model': _model,
         'messages': [
           {'role': 'system', 'content': _systemPrompt},
+          {'role': 'system', 'content': context.toPromptContext()},
           ...conversation,
         ],
         'temperature': 0.7,

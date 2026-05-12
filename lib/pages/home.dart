@@ -349,10 +349,13 @@ class _AiIntroCard extends StatelessWidget {
               CircleAvatar(
                 radius: 28,
                 backgroundColor: Color(0xFFFDDC96),
-                child: Icon(
-                  Icons.school_outlined,
-                  color: _HomePageState.navy,
-                  size: 28,
+                child: Padding(
+                  padding: EdgeInsets.all(5),
+                  child: Image(
+                    image: AssetImage('assets/imgs/owl.png'),
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Wellness Owl',
+                  ),
                 ),
               ),
               SizedBox(width: 14),
