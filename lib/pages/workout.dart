@@ -1304,6 +1304,39 @@ class _QuickGenerateSheetState extends State<_QuickGenerateSheet> {
                           ),
                         ],
                       )
+                    : draft.exercises.isEmpty
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => setState(() => _draft = null),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: _WorkoutColors.navy,
+                                minimumSize: const Size.fromHeight(52),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              child: const Text('Try Again'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: null,
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(52),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              child: const Text('No Exercises Fit'),
+                            ),
+                          ),
+                        ],
+                      )
                     : ElevatedButton.icon(
                         onPressed: _isSaving ? null : _save,
                         icon: _isSaving
@@ -1394,7 +1427,7 @@ class _QuickGenerateSheetState extends State<_QuickGenerateSheet> {
 
   Future<void> _save() async {
     final draft = _draft;
-    if (draft == null) return;
+    if (draft == null || draft.exercises.isEmpty) return;
     setState(() => _isSaving = true);
     try {
       await widget.onSave(draft);
@@ -1550,35 +1583,71 @@ class _GeneratedWorkoutPreview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          ...draft.exercises.map(
-            (exercise) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Color(0xFFF5F3F3),
-                    child: Icon(
-                      Icons.fitness_center,
-                      color: _WorkoutColors.navy,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      exercise.name,
-                      style: const TextStyle(
-                        color: _WorkoutColors.text,
-                        fontWeight: FontWeight.w800,
+          if (draft.exercises.isEmpty)
+            const _NoGeneratedWorkoutMessage()
+          else
+            ...draft.exercises.map(
+              (exercise) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Color(0xFFF5F3F3),
+                      child: Icon(
+                        Icons.fitness_center,
+                        color: _WorkoutColors.navy,
+                        size: 18,
                       ),
                     ),
-                  ),
-                  Text(
-                    '${exercise.sets} x ${exercise.repsOrDuration}',
-                    style: const TextStyle(color: Color(0xFF667085)),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        exercise.name,
+                        style: const TextStyle(
+                          color: _WorkoutColors.text,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${exercise.sets} x ${exercise.repsOrDuration}',
+                      style: const TextStyle(color: Color(0xFF667085)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoGeneratedWorkoutMessage extends StatelessWidget {
+  const _NoGeneratedWorkoutMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF6E5),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: Color(0xFF59440C)),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No catalog exercises fit this time limit. Try a longer duration or a different focus area.',
+              style: TextStyle(
+                color: Color(0xFF59440C),
+                height: 1.4,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nutrisense/models/prototype_data.dart';
 import 'package:nutrisense/models/workout_catalog.dart';
+import 'package:nutrisense/services/smart_workout_routine_generator.dart';
 
 class PrototypeDataException implements Exception {
   const PrototypeDataException(this.message);
@@ -450,10 +451,11 @@ class PrototypeDataService {
     final resolvedIntensity = intensity ?? _intensityFor(healthProfile);
     final resolvedGoal = fitnessGoal ?? healthProfile.fitnessGoal;
     final resolvedActivity = activityLevel ?? healthProfile.activityLevel;
-    final exercises = _generatedExercisesFor(
+    final routine = generateSmartWorkoutRoutine(
       category: selectedCategory,
-      healthProfile: healthProfile,
-      duration: duration,
+      availableMinutes: duration,
+      goal: resolvedGoal,
+      intensity: resolvedIntensity,
     );
 
     return WorkoutPlanDraft(
@@ -463,11 +465,11 @@ class PrototypeDataService {
       ),
       category: selectedCategory.name,
       source: 'generated',
-      durationMinutes: duration,
+      durationMinutes: routine.estimatedMinutes.clamp(0, duration).toInt(),
       intensity: resolvedIntensity,
       fitnessGoal: resolvedGoal,
       activityLevel: resolvedActivity,
-      exercises: exercises,
+      exercises: routine.exercises,
     );
   }
 
@@ -482,7 +484,7 @@ class PrototypeDataService {
     }
     final duration = exercises.fold<int>(
       0,
-      (total, exercise) => total + _estimatedExerciseMinutes(exercise),
+      (total, exercise) => total + estimatedExerciseMinutes(exercise),
     );
     final draft = WorkoutPlanDraft(
       title: '$category Custom Plan',
@@ -933,33 +935,6 @@ String _intensityFor(HealthProfile healthProfile) {
     return 'Moderate';
   }
   return 'Moderate';
-}
-
-List<WorkoutExercise> _generatedExercisesFor({
-  required WorkoutCategory category,
-  required HealthProfile healthProfile,
-  required int duration,
-}) {
-  final targetCount = duration >= 45
-      ? 5
-      : duration >= 30
-      ? 4
-      : 3;
-  final exercises = category.exercises.toList();
-  if (healthProfile.activityLevel == 'Low') {
-    exercises.sort((a, b) => a.difficulty.compareTo(b.difficulty));
-  }
-  return exercises.take(targetCount).toList(growable: false);
-}
-
-int _estimatedExerciseMinutes(WorkoutExercise exercise) {
-  final value = exercise.repsOrDuration.toLowerCase();
-  final explicitMinutes = RegExp(r'(\d+)\s*min').firstMatch(value);
-  if (explicitMinutes != null) {
-    return int.tryParse(explicitMinutes.group(1) ?? '') ?? 5;
-  }
-  if (value.contains('sec')) return exercise.sets * 2;
-  return exercise.sets * 3;
 }
 
 String _workoutTitleFor({required String category, required String goal}) {
